@@ -32,6 +32,16 @@
     "speed": "Hız",
     "volume": "Ses"
   },
+  "timeline": {
+    "addAudioTrack": "+ Ses katmanı",
+    "split": "Böl",
+    "merge": "Birleştir",
+    "delete": "Sil",
+    "undo": "Geri al",
+    "redo": "İleri al",
+    "selected": "Seçili",
+    "dropHint": "Bin'den buraya klip sürükle"
+  },
   "common": {
     "detail": "Teknik ayrıntı",
     "retry": "Tekrar dene"

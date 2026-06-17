@@ -1,4 +1,6 @@
 export * from './core/result'
 export * from './media/types'
+export * from './timeline/types'
+export * from './timeline/model'
 export * from './ipc/channels'
 export * from './ipc/api'

@@ -32,6 +32,16 @@
     "speed": "Speed",
     "volume": "Volume"
   },
+  "timeline": {
+    "addAudioTrack": "+ Audio track",
+    "split": "Split",
+    "merge": "Merge",
+    "delete": "Delete",
+    "undo": "Undo",
+    "redo": "Redo",
+    "selected": "Selected",
+    "dropHint": "Drag clips here from the bin"
+  },
   "common": {
     "detail": "Technical detail",
     "retry": "Retry"

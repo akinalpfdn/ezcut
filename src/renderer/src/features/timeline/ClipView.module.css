@@ -1,0 +1,61 @@
+.clip {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  cursor: grab;
+  user-select: none;
+}
+
+.clip:active {
+  cursor: grabbing;
+}
+
+.video {
+  background-color: #243b53;
+  border-color: #2f5070;
+}
+
+.audio {
+  background-color: #1f4037;
+  border-color: #2a5a4c;
+}
+
+.selected {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -1px;
+}
+
+.label {
+  flex: 1;
+  padding: 0 var(--space-3);
+  font-size: var(--text-xs);
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+
+.handle {
+  flex-shrink: 0;
+  width: 8px;
+  height: 100%;
+  cursor: ew-resize;
+  background-color: rgba(255, 255, 255, 0.12);
+}
+
+.handle:hover {
+  background-color: var(--color-primary);
+}
+
+.handleLeft {
+  border-right: 1px solid rgba(0, 0, 0, 0.3);
+}
+
+.handleRight {
+  border-left: 1px solid rgba(0, 0, 0, 0.3);
+}

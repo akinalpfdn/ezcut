@@ -1,0 +1,83 @@
+.timeline {
+  display: flex;
+  flex-direction: column;
+  height: 280px;
+  flex-shrink: 0;
+  background-color: var(--color-surface);
+  border-top: 1px solid var(--color-border);
+}
+
+.body {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.gutter {
+  width: 56px;
+  flex-shrink: 0;
+  background-color: var(--color-surface);
+  border-right: 1px solid var(--color-border);
+}
+
+.gutterSpacer {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.trackHeader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-bottom: 1px solid var(--color-border);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.scroll {
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.content {
+  position: relative;
+  min-width: 100%;
+}
+
+.tracks {
+  position: relative;
+  width: 100%;
+  background-color: var(--color-bg);
+}
+
+.lane {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  border-bottom: 1px solid var(--color-border);
+  pointer-events: none;
+}
+
+.laneAlt {
+  background-color: rgba(255, 255, 255, 0.02);
+}
+
+.playhead {
+  position: absolute;
+  top: 0;
+  width: 2px;
+  background-color: var(--color-primary);
+  pointer-events: none;
+  z-index: 5;
+}
+
+.empty {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: var(--color-text-faint);
+  font-size: var(--text-sm);
+  pointer-events: none;
+}

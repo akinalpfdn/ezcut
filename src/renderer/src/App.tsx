@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { LanguageSwitcher } from './components/LanguageSwitcher'
 import { MediaBin } from './features/mediaBin/MediaBin'
 import { Preview } from './features/preview/Preview'
+import { Timeline } from './features/timeline/Timeline'
 import styles from './App.module.css'
 
 export function App() {
@@ -30,9 +31,12 @@ export function App() {
         <LanguageSwitcher />
       </header>
 
-      <main className={styles.main}>
-        <MediaBin />
-        <Preview />
+      <main className={styles.workspace}>
+        <div className={styles.top}>
+          <MediaBin />
+          <Preview />
+        </div>
+        <Timeline />
       </main>
     </div>
   )

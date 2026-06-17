@@ -1,9 +1,10 @@
-import type { KeyboardEvent, MouseEvent } from 'react'
+import type { DragEvent, KeyboardEvent, MouseEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { MediaItem } from '@shared'
 import { Waveform } from './Waveform'
 import { toMediaUrl } from '../../utils/mediaUrl'
 import { formatDuration } from '../../utils/format'
+import { MEDIA_DRAG_TYPE } from '../timeline/dragTypes'
 import styles from './MediaCard.module.css'
 
 interface MediaCardProps {
@@ -28,12 +29,19 @@ export function MediaCard({ item, selected, onSelect, onRemove }: MediaCardProps
     onRemove()
   }
 
+  function handleDragStart(event: DragEvent<HTMLDivElement>) {
+    event.dataTransfer.setData(MEDIA_DRAG_TYPE, item.id)
+    event.dataTransfer.effectAllowed = 'copy'
+  }
+
   return (
     <div
       className={selected ? `${styles.card} ${styles.selected}` : styles.card}
       role="button"
       tabIndex={0}
       aria-pressed={selected}
+      draggable
+      onDragStart={handleDragStart}
       onClick={onSelect}
       onKeyDown={handleKeyDown}
     >
