@@ -1,5 +1,5 @@
 import type { Result } from '../core/result'
-import type { MediaProbeResult, MediaToolingInfo } from '../media/types'
+import type { MediaItem, MediaProbeResult, MediaToolingInfo } from '../media/types'
 
 /**
  * The typed surface the preload bridge exposes on `window.electronAPI`.
@@ -13,6 +13,17 @@ export interface ElectronAPI {
   /** Opens a native file picker; resolves to the chosen path, or null if cancelled. */
   openMediaFileDialog(): Promise<Result<string | null>>
 
+  /** Opens a native multi-select file picker; resolves to the chosen paths (empty if cancelled). */
+  openMediaFilesDialog(): Promise<Result<string[]>>
+
   /** Probes a media file and returns structured metadata. */
   probeMediaFile(path: string): Promise<Result<MediaProbeResult>>
+
+  /** Probes a file and generates its derived assets (thumbnail or waveform),
+   * returning a library-ready MediaItem. */
+  importMediaFile(path: string): Promise<Result<MediaItem>>
+
+  /** Resolves the absolute path of a dropped File (Electron `webUtils`).
+   * Synchronous; not a Result — it cannot fail meaningfully. */
+  getPathForFile(file: File): string
 }

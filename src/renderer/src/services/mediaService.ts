@@ -1,4 +1,4 @@
-import type { MediaProbeResult, MediaToolingInfo, Result } from '@shared'
+import type { MediaItem, MediaProbeResult, MediaToolingInfo, Result } from '@shared'
 
 /**
  * Renderer-side facade over the preload bridge. Components/hooks call this — never
@@ -8,10 +8,16 @@ export const mediaService = {
   getToolingInfo(): Promise<Result<MediaToolingInfo>> {
     return window.electronAPI.getMediaToolingInfo()
   },
-  openMediaFileDialog(): Promise<Result<string | null>> {
-    return window.electronAPI.openMediaFileDialog()
+  openMediaFilesDialog(): Promise<Result<string[]>> {
+    return window.electronAPI.openMediaFilesDialog()
   },
   probe(filePath: string): Promise<Result<MediaProbeResult>> {
     return window.electronAPI.probeMediaFile(filePath)
+  },
+  importFile(filePath: string): Promise<Result<MediaItem>> {
+    return window.electronAPI.importMediaFile(filePath)
+  },
+  getPathForFile(file: File): string {
+    return window.electronAPI.getPathForFile(file)
   }
 }

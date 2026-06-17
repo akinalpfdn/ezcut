@@ -1,0 +1,56 @@
+.preview {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background-color: var(--color-bg);
+}
+
+.stage {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  padding: var(--space-5);
+}
+
+.video {
+  max-width: 100%;
+  max-height: 100%;
+  background-color: #000000;
+}
+
+/* Kept in the DOM so audio still plays through it, but not shown. */
+.videoHidden {
+  display: none;
+}
+
+.audioOverlay {
+  position: absolute;
+  inset: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  pointer-events: none;
+}
+
+.audioWave {
+  width: 100%;
+  max-width: 640px;
+  height: 120px;
+}
+
+.audioName {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.empty {
+  color: var(--color-text-faint);
+  font-size: var(--text-md);
+}

@@ -1,7 +1,38 @@
 /** ffmpeg/ffprobe argument profiles. No inline argument arrays elsewhere. */
 
+import { THUMBNAIL_CONFIG } from './thumbnail'
+import { WAVEFORM_CONFIG } from './waveform'
+
 export const FFMPEG_ARGS = {
-  version: ['-version']
+  version: ['-version'],
+  thumbnail: (input: string, seekSeconds: number, output: string): string[] => [
+    '-y',
+    '-ss',
+    seekSeconds.toFixed(3),
+    '-i',
+    input,
+    '-frames:v',
+    '1',
+    '-vf',
+    `scale=${THUMBNAIL_CONFIG.width}:-1`,
+    '-q:v',
+    String(THUMBNAIL_CONFIG.quality),
+    output
+  ],
+  /** Decode audio to raw mono s16le PCM on stdout for waveform downsampling. */
+  pcm: (input: string): string[] => [
+    '-v',
+    'error',
+    '-i',
+    input,
+    '-ac',
+    String(WAVEFORM_CONFIG.channels),
+    '-ar',
+    String(WAVEFORM_CONFIG.sampleRate),
+    '-f',
+    's16le',
+    '-'
+  ]
 } as const
 
 export const FFPROBE_ARGS = {

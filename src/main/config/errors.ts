@@ -7,6 +7,7 @@ export const ErrorCodes = {
   ffmpegExited: 'FFMPEG_EXITED',
   probeFailed: 'PROBE_FAILED',
   probeParseFailed: 'PROBE_PARSE_FAILED',
+  importFailed: 'IMPORT_FAILED',
   unknown: 'UNKNOWN'
 } as const
 
@@ -16,5 +17,6 @@ export const ErrorKeys = {
   ffmpegExited: 'errors.ffmpegExited',
   probeFailed: 'errors.probeFailed',
   probeParseFailed: 'errors.probeParseFailed',
+  importFailed: 'errors.importFailed',
   unknown: 'errors.unknown'
 } as const

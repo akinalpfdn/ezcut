@@ -40,3 +40,33 @@ export interface MediaToolingInfo {
   ffmpegPath: string
   ffprobePath: string
 }
+
+export type MediaKind = 'video' | 'audio'
+
+/** Downsampled audio envelope for waveform rendering: one normalized 0..1 peak
+ * magnitude per bucket. */
+export interface WaveformData {
+  peaks: number[]
+  bucketCount: number
+}
+
+/** A library item: a probed source file plus its derived display assets.
+ * The single source of truth for imported media; the timeline references these
+ * by id (Phase 3+). */
+export interface MediaItem {
+  id: string
+  path: string
+  name: string
+  kind: MediaKind
+  durationSeconds: number
+  sizeBytes: number
+  hasVideo: boolean
+  hasAudio: boolean
+  width?: number
+  height?: number
+  fps?: number
+  /** Video: absolute path to a generated thumbnail frame (served via ezmedia://). */
+  thumbnailPath?: string
+  /** Audio: downsampled waveform peaks. */
+  waveform?: WaveformData
+}

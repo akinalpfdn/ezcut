@@ -10,13 +10,14 @@ export const WINDOW_CONFIG = {
   backgroundColor: '#121214'
 } as const
 
-/** Production Content-Security-Policy. Dev relies on Vite's own dev-server policy. */
+/** Production Content-Security-Policy. Dev relies on Vite's own dev-server policy.
+ * `ezmedia:` is the custom protocol that streams imported local files. */
 export const CONTENT_SECURITY_POLICY = [
   "default-src 'self'",
   "script-src 'self'",
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob:",
-  "media-src 'self' blob: file:",
+  "img-src 'self' data: blob: ezmedia:",
+  "media-src 'self' blob: ezmedia:",
   "font-src 'self'",
-  "connect-src 'self'"
+  "connect-src 'self' ezmedia:"
 ].join('; ')

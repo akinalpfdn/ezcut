@@ -8,37 +8,29 @@
     "tr": "Türkçe",
     "en": "English"
   },
-  "diagnostics": {
-    "toolingTitle": "Medya araçları",
-    "toolingDescription": "Paketlenmiş ffmpeg ve ffprobe ikili dosyalarının çalıştığı doğrulanıyor.",
-    "loading": "Kontrol ediliyor…",
-    "version": "Sürüm",
-    "path": "Yol",
-    "statusOk": "Çalışıyor",
-    "statusFailed": "Başarısız"
+  "media": {
+    "binTitle": "Medya",
+    "import": "İçe aktar",
+    "importing": "Aktarılıyor…",
+    "emptyTitle": "Henüz medya yok",
+    "emptyHint": "Dosyaları buraya sürükle ya da İçe aktar'a tıkla",
+    "remove": "Kaldır",
+    "kind": {
+      "video": "Video",
+      "audio": "Ses"
+    }
   },
-  "probe": {
-    "title": "Medya incele",
-    "description": "Bir medya dosyası seçin; ana süreç ffprobe ile çözümleyip meta verisini döndürsün.",
-    "selectButton": "Dosya seç ve incele",
-    "probing": "İnceleniyor…",
-    "empty": "Henüz bir dosya seçilmedi.",
-    "fields": {
-      "format": "Biçim",
-      "duration": "Süre",
-      "size": "Boyut",
-      "resolution": "Çözünürlük",
-      "fps": "Kare hızı",
-      "video": "Görüntü",
-      "audio": "Ses",
-      "streams": "Akışlar",
-      "codec": "Kodek",
-      "channels": "Kanal",
-      "sampleRate": "Örnekleme"
-    },
-    "seconds": "{{value}} sn",
-    "yes": "Var",
-    "no": "Yok"
+  "preview": {
+    "empty": "Önizlemek için bir klip seç"
+  },
+  "transport": {
+    "play": "Oynat",
+    "pause": "Duraklat",
+    "prevFrame": "Önceki kare",
+    "nextFrame": "Sonraki kare",
+    "seek": "Konum",
+    "speed": "Hız",
+    "volume": "Ses"
   },
   "common": {
     "detail": "Teknik ayrıntı",
@@ -50,6 +42,7 @@
     "ffmpegExited": "ffmpeg/ffprobe bir hatayla sonlandı.",
     "probeFailed": "Dosya incelenemedi. Desteklenmeyen veya bozuk bir medya olabilir.",
     "probeParseFailed": "İnceleme çıktısı çözümlenemedi.",
+    "importFailed": "Dosya içe aktarılamadı.",
     "unknown": "Beklenmeyen bir hata oluştu."
   }
 }

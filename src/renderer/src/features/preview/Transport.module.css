@@ -1,0 +1,88 @@
+.transport {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  background-color: var(--color-surface);
+  border-top: 1px solid var(--color-border);
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: var(--radius-md);
+  background-color: transparent;
+  color: var(--color-text);
+  font-size: var(--text-md);
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+
+.button:hover {
+  background-color: var(--color-surface-2);
+}
+
+.play {
+  background-color: var(--color-surface-2);
+}
+
+.timecode {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}
+
+.sep {
+  color: var(--color-text-faint);
+}
+
+.muted {
+  color: var(--color-text-muted);
+}
+
+.scrub {
+  flex: 1;
+  min-width: 80px;
+  accent-color: var(--color-primary);
+  cursor: pointer;
+}
+
+.field {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.fieldLabel {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.select {
+  background-color: var(--color-surface-2);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.volume {
+  width: 90px;
+  accent-color: var(--color-primary);
+  cursor: pointer;
+}

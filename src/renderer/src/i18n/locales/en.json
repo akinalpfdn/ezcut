@@ -8,37 +8,29 @@
     "tr": "Türkçe",
     "en": "English"
   },
-  "diagnostics": {
-    "toolingTitle": "Media tooling",
-    "toolingDescription": "Verifying the bundled ffmpeg and ffprobe binaries execute.",
-    "loading": "Checking…",
-    "version": "Version",
-    "path": "Path",
-    "statusOk": "Working",
-    "statusFailed": "Failed"
-  },
-  "probe": {
-    "title": "Inspect media",
-    "description": "Pick a media file and let the main process probe it with ffprobe and return its metadata.",
-    "selectButton": "Select file & inspect",
-    "probing": "Inspecting…",
-    "empty": "No file selected yet.",
-    "fields": {
-      "format": "Format",
-      "duration": "Duration",
-      "size": "Size",
-      "resolution": "Resolution",
-      "fps": "Frame rate",
+  "media": {
+    "binTitle": "Media",
+    "import": "Import",
+    "importing": "Importing…",
+    "emptyTitle": "No media yet",
+    "emptyHint": "Drag files here or click Import",
+    "remove": "Remove",
+    "kind": {
       "video": "Video",
-      "audio": "Audio",
-      "streams": "Streams",
-      "codec": "Codec",
-      "channels": "Channels",
-      "sampleRate": "Sample rate"
-    },
-    "seconds": "{{value}} s",
-    "yes": "Yes",
-    "no": "No"
+      "audio": "Audio"
+    }
+  },
+  "preview": {
+    "empty": "Select a clip to preview"
+  },
+  "transport": {
+    "play": "Play",
+    "pause": "Pause",
+    "prevFrame": "Previous frame",
+    "nextFrame": "Next frame",
+    "seek": "Seek",
+    "speed": "Speed",
+    "volume": "Volume"
   },
   "common": {
     "detail": "Technical detail",
@@ -50,6 +42,7 @@
     "ffmpegExited": "ffmpeg/ffprobe exited with an error.",
     "probeFailed": "Could not inspect the file. It may be unsupported or corrupted.",
     "probeParseFailed": "Could not parse the inspection output.",
+    "importFailed": "Could not import the file.",
     "unknown": "An unexpected error occurred."
   }
 }
