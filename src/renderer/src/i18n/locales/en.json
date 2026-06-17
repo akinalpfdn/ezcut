@@ -42,6 +42,10 @@
     "selected": "Selected",
     "dropHint": "Drag clips here from the bin"
   },
+  "inspector": {
+    "speed": "Speed",
+    "volume": "Volume"
+  },
   "common": {
     "detail": "Technical detail",
     "retry": "Retry"

@@ -1,0 +1,8 @@
+.playhead {
+  position: absolute;
+  top: 0;
+  width: 2px;
+  background-color: var(--color-primary);
+  pointer-events: none;
+  z-index: 5;
+}

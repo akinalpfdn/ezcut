@@ -63,15 +63,6 @@
   background-color: rgba(255, 255, 255, 0.02);
 }
 
-.playhead {
-  position: absolute;
-  top: 0;
-  width: 2px;
-  background-color: var(--color-primary);
-  pointer-events: none;
-  z-index: 5;
-}
-
 .empty {
   position: absolute;
   top: 50%;

@@ -42,6 +42,10 @@
     "selected": "Seçili",
     "dropHint": "Bin'den buraya klip sürükle"
   },
+  "inspector": {
+    "speed": "Hız",
+    "volume": "Ses"
+  },
   "common": {
     "detail": "Teknik ayrıntı",
     "retry": "Tekrar dene"

@@ -94,3 +94,11 @@ export function addTrackCommand(track: Track): Command {
     invert: (model) => withoutTrack(model, track.id)
   }
 }
+
+/** Generic clip-property edit (e.g. speed, volume). */
+export function setClipPropertyCommand(clipId: string, before: Partial<Clip>, after: Partial<Clip>): Command {
+  return {
+    apply: (model) => patchClip(model, clipId, after),
+    invert: (model) => patchClip(model, clipId, before)
+  }
+}

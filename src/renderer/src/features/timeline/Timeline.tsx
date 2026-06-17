@@ -14,6 +14,7 @@ import { MEDIA_DRAG_TYPE } from './dragTypes'
 import { TimelineToolbar } from './TimelineToolbar'
 import { TimeRuler } from './TimeRuler'
 import { ClipView } from './ClipView'
+import { Playhead } from './Playhead'
 import styles from './Timeline.module.css'
 
 interface DragState {
@@ -32,7 +33,6 @@ export function Timeline() {
   const model = useTimelineStore((state) => state.model)
   const pxPerSec = useTimelineStore((state) => state.pxPerSec)
   const selectedClipId = useTimelineStore((state) => state.selectedClipId)
-  const playheadTime = useTimelineStore((state) => state.playheadTime)
   const mediaItems = useMediaStore((state) => state.items)
 
   const tracksRef = useRef<HTMLDivElement>(null)
@@ -153,7 +153,8 @@ export function Timeline() {
     if (!target) return
 
     const time = Math.max(0, (event.clientX - rect.left) / pxPerSec)
-    const snapped = Math.max(0, snapValue(time, collectSnapPoints(model, null, playheadTime), snapThresholdPx / pxPerSec))
+    const playhead = useTimelineStore.getState().playheadTime
+    const snapped = Math.max(0, snapValue(time, collectSnapPoints(model, null, playhead), snapThresholdPx / pxPerSec))
     useTimelineStore.getState().addClipFromMedia(mediaId, target.id, snapped, media.durationSeconds)
   }
 
@@ -218,10 +219,7 @@ export function Timeline() {
               {isEmpty ? <div className={styles.empty}>{t('timeline.dropHint')}</div> : null}
             </div>
 
-            <div
-              className={styles.playhead}
-              style={{ left: playheadTime * pxPerSec, height: rulerHeight + tracksHeight }}
-            />
+            <Playhead height={rulerHeight + tracksHeight} />
           </div>
         </div>
       </div>

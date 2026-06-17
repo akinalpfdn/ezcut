@@ -12,6 +12,7 @@ import {
   mergeClipsCommand,
   moveClipCommand,
   removeClipCommand,
+  setClipPropertyCommand,
   splitClipCommand,
   trimClipCommand,
   type ClipPlacement,
@@ -19,6 +20,7 @@ import {
   type Command
 } from '../features/timeline/commands'
 import { MERGE_TOLERANCE_SECONDS, TIMELINE_CONFIG } from '../config/timeline'
+import { DEFAULT_MASTER_VOLUME } from '../config/playback'
 
 function uuid(): string {
   return crypto.randomUUID()
@@ -45,6 +47,8 @@ interface TimelineState {
   selectedClipId: string | null
   playheadTime: number
   pxPerSec: number
+  isPlaying: boolean
+  masterVolume: number
 
   execute: (command: Command) => void
   undo: () => void
@@ -62,12 +66,19 @@ interface TimelineState {
   mergeWithNext: (clipId: string) => boolean
   deleteClip: (clipId: string) => void
   addAudioTrack: () => void
+  setClipSpeed: (clipId: string, speed: number) => void
+  setClipVolume: (clipId: string, volume: number) => void
 
   selectClip: (clipId: string | null) => void
   setPlayhead: (time: number) => void
   setPxPerSec: (pxPerSec: number) => void
   zoomIn: () => void
   zoomOut: () => void
+
+  play: () => void
+  pause: () => void
+  togglePlay: () => void
+  setMasterVolume: (volume: number) => void
 }
 
 export const useTimelineStore = create<TimelineState>((set, get) => ({
@@ -77,6 +88,8 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
   selectedClipId: null,
   playheadTime: 0,
   pxPerSec: TIMELINE_CONFIG.defaultPxPerSec,
+  isPlaying: false,
+  masterVolume: DEFAULT_MASTER_VOLUME,
 
   execute: (command) =>
     set((state) => ({
@@ -213,6 +226,18 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
     )
   },
 
+  setClipSpeed: (clipId, speed) => {
+    const clip = get().model.clips[clipId]
+    if (!clip || speed <= 0 || speed === clip.speed) return
+    get().execute(setClipPropertyCommand(clipId, { speed: clip.speed }, { speed }))
+  },
+
+  setClipVolume: (clipId, volume) => {
+    const clip = get().model.clips[clipId]
+    if (!clip || volume === clip.volume) return
+    get().execute(setClipPropertyCommand(clipId, { volume: clip.volume }, { volume }))
+  },
+
   selectClip: (clipId) => set({ selectedClipId: clipId }),
   setPlayhead: (time) => set({ playheadTime: Math.max(0, time) }),
   setPxPerSec: (pxPerSec) =>
@@ -220,5 +245,10 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
       pxPerSec: Math.min(Math.max(pxPerSec, TIMELINE_CONFIG.minPxPerSec), TIMELINE_CONFIG.maxPxPerSec)
     }),
   zoomIn: () => get().setPxPerSec(get().pxPerSec * TIMELINE_CONFIG.zoomFactor),
-  zoomOut: () => get().setPxPerSec(get().pxPerSec / TIMELINE_CONFIG.zoomFactor)
+  zoomOut: () => get().setPxPerSec(get().pxPerSec / TIMELINE_CONFIG.zoomFactor),
+
+  play: () => set({ isPlaying: true }),
+  pause: () => set({ isPlaying: false }),
+  togglePlay: () => set((state) => ({ isPlaying: !state.isPlaying })),
+  setMasterVolume: (volume) => set({ masterVolume: Math.min(Math.max(volume, 0), 1) })
 }))

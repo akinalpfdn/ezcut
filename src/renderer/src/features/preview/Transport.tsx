@@ -1,19 +1,35 @@
 import { useTranslation } from 'react-i18next'
-import type { MediaItem } from '@shared'
-import type { PreviewEngine } from './usePreviewEngine'
-import { PLAYBACK_SPEEDS } from '../../config/playback'
+import { clipTimelineEnd, getTrackClips, timelineDuration } from '@shared'
+import { useTimelineStore } from '../../stores/timelineStore'
+import { useMediaStore } from '../../stores/mediaStore'
 import { formatTimecode } from '../../utils/timecode'
+import { FALLBACK_FPS } from '../../config/playback'
 import styles from './Transport.module.css'
 
-interface TransportProps {
-  engine: PreviewEngine
-  item: MediaItem
-}
-
-export function Transport({ engine, item }: TransportProps) {
+export function Transport() {
   const { t } = useTranslation()
-  const fps = item.kind === 'video' ? item.fps : undefined
-  const max = engine.duration || 0
+  const isPlaying = useTimelineStore((state) => state.isPlaying)
+  const playheadTime = useTimelineStore((state) => state.playheadTime)
+  const masterVolume = useTimelineStore((state) => state.masterVolume)
+  const duration = useTimelineStore((state) => timelineDuration(state.model))
+
+  function stepFrames(frames: number): void {
+    const state = useTimelineStore.getState()
+    const videoTrack = state.model.tracks.find((track) => track.kind === 'video')
+    let fps = FALLBACK_FPS
+    if (videoTrack) {
+      const clip = getTrackClips(state.model, videoTrack.id).find(
+        (candidate) =>
+          state.playheadTime >= candidate.startOnTimeline && state.playheadTime < clipTimelineEnd(candidate)
+      )
+      const media = clip ? useMediaStore.getState().items.find((item) => item.id === clip.mediaId) : undefined
+      if (media?.fps) fps = media.fps
+    }
+    state.pause()
+    state.setPlayhead(Math.max(0, state.playheadTime + frames / fps))
+  }
+
+  const max = duration || 0
 
   return (
     <div className={styles.transport}>
@@ -23,34 +39,34 @@ export function Transport({ engine, item }: TransportProps) {
           className={styles.button}
           aria-label={t('transport.prevFrame')}
           title={t('transport.prevFrame')}
-          onClick={() => engine.stepFrames(-1)}
+          onClick={() => stepFrames(-1)}
         >
           ⏮
         </button>
         <button
           type="button"
           className={`${styles.button} ${styles.play}`}
-          aria-label={engine.isPlaying ? t('transport.pause') : t('transport.play')}
-          title={engine.isPlaying ? t('transport.pause') : t('transport.play')}
-          onClick={engine.togglePlay}
+          aria-label={isPlaying ? t('transport.pause') : t('transport.play')}
+          title={isPlaying ? t('transport.pause') : t('transport.play')}
+          onClick={() => useTimelineStore.getState().togglePlay()}
         >
-          {engine.isPlaying ? '⏸' : '▶'}
+          {isPlaying ? '⏸' : '▶'}
         </button>
         <button
           type="button"
           className={styles.button}
           aria-label={t('transport.nextFrame')}
           title={t('transport.nextFrame')}
-          onClick={() => engine.stepFrames(1)}
+          onClick={() => stepFrames(1)}
         >
           ⏭
         </button>
       </div>
 
       <div className={styles.timecode}>
-        <span>{formatTimecode(engine.currentTime, fps)}</span>
+        <span>{formatTimecode(playheadTime)}</span>
         <span className={styles.sep}>/</span>
-        <span className={styles.muted}>{formatTimecode(engine.duration, fps)}</span>
+        <span className={styles.muted}>{formatTimecode(duration)}</span>
       </div>
 
       <input
@@ -59,25 +75,10 @@ export function Transport({ engine, item }: TransportProps) {
         min={0}
         max={max}
         step={0.01}
-        value={Math.min(engine.currentTime, max)}
-        onChange={(event) => engine.seek(Number(event.target.value))}
+        value={Math.min(playheadTime, max)}
+        onChange={(event) => useTimelineStore.getState().setPlayhead(Number(event.target.value))}
         aria-label={t('transport.seek')}
       />
-
-      <label className={styles.field}>
-        <span className={styles.fieldLabel}>{t('transport.speed')}</span>
-        <select
-          className={styles.select}
-          value={engine.speed}
-          onChange={(event) => engine.setSpeed(Number(event.target.value))}
-        >
-          {PLAYBACK_SPEEDS.map((speed) => (
-            <option key={speed} value={speed}>
-              {speed}×
-            </option>
-          ))}
-        </select>
-      </label>
 
       <label className={styles.field}>
         <span className={styles.fieldLabel}>{t('transport.volume')}</span>
@@ -87,8 +88,8 @@ export function Transport({ engine, item }: TransportProps) {
           min={0}
           max={1}
           step={0.01}
-          value={engine.volume}
-          onChange={(event) => engine.setVolume(Number(event.target.value))}
+          value={masterVolume}
+          onChange={(event) => useTimelineStore.getState().setMasterVolume(Number(event.target.value))}
           aria-label={t('transport.volume')}
         />
       </label>
