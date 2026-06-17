@@ -15,6 +15,7 @@
     "emptyTitle": "Henüz medya yok",
     "emptyHint": "Dosyaları buraya sürükle ya da İçe aktar'a tıkla",
     "remove": "Kaldır",
+    "addToTimeline": "Zaman çizelgesine ekle",
     "kind": {
       "video": "Video",
       "audio": "Ses"
@@ -45,6 +46,25 @@
   "inspector": {
     "speed": "Hız",
     "volume": "Ses"
+  },
+  "shortcuts": {
+    "playPause": "Oynat / Duraklat",
+    "split": "Böl",
+    "delete": "Sil",
+    "frameBack": "Önceki kare",
+    "frameForward": "Sonraki kare",
+    "undo": "Geri al",
+    "redo": "İleri al"
+  },
+  "settings": {
+    "open": "Ayarlar",
+    "title": "Ayarlar",
+    "close": "Kapat",
+    "done": "Tamam",
+    "reset": "Varsayılana dön",
+    "shortcutsHint": "Yeniden atamak için bir kısayola tıkla.",
+    "pressKey": "Bir tuşa bas…",
+    "conflict": "{{binding}} zaten '{{action}}' işlemine atanmış."
   },
   "common": {
     "detail": "Teknik ayrıntı",

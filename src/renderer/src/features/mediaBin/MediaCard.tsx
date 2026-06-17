@@ -12,9 +12,10 @@ interface MediaCardProps {
   selected: boolean
   onSelect: () => void
   onRemove: () => void
+  onContextMenu: (event: MouseEvent<HTMLDivElement>) => void
 }
 
-export function MediaCard({ item, selected, onSelect, onRemove }: MediaCardProps) {
+export function MediaCard({ item, selected, onSelect, onRemove, onContextMenu }: MediaCardProps) {
   const { t } = useTranslation()
 
   function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
@@ -44,6 +45,7 @@ export function MediaCard({ item, selected, onSelect, onRemove }: MediaCardProps
       onDragStart={handleDragStart}
       onClick={onSelect}
       onKeyDown={handleKeyDown}
+      onContextMenu={onContextMenu}
     >
       <div className={styles.thumb}>
         {item.thumbnailPath ? (

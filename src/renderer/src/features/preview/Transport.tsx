@@ -1,9 +1,8 @@
 import { useTranslation } from 'react-i18next'
-import { clipTimelineEnd, getTrackClips, timelineDuration } from '@shared'
+import { timelineDuration } from '@shared'
 import { useTimelineStore } from '../../stores/timelineStore'
-import { useMediaStore } from '../../stores/mediaStore'
+import { stepFrames } from '../timeline/editorActions'
 import { formatTimecode } from '../../utils/timecode'
-import { FALLBACK_FPS } from '../../config/playback'
 import styles from './Transport.module.css'
 
 export function Transport() {
@@ -12,22 +11,6 @@ export function Transport() {
   const playheadTime = useTimelineStore((state) => state.playheadTime)
   const masterVolume = useTimelineStore((state) => state.masterVolume)
   const duration = useTimelineStore((state) => timelineDuration(state.model))
-
-  function stepFrames(frames: number): void {
-    const state = useTimelineStore.getState()
-    const videoTrack = state.model.tracks.find((track) => track.kind === 'video')
-    let fps = FALLBACK_FPS
-    if (videoTrack) {
-      const clip = getTrackClips(state.model, videoTrack.id).find(
-        (candidate) =>
-          state.playheadTime >= candidate.startOnTimeline && state.playheadTime < clipTimelineEnd(candidate)
-      )
-      const media = clip ? useMediaStore.getState().items.find((item) => item.id === clip.mediaId) : undefined
-      if (media?.fps) fps = media.fps
-    }
-    state.pause()
-    state.setPlayhead(Math.max(0, state.playheadTime + frames / fps))
-  }
 
   const max = duration || 0
 

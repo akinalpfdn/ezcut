@@ -21,7 +21,7 @@ export function Preview() {
           <video
             key={videoTrack.id}
             ref={(element) => registerElement(videoTrack.id, element)}
-            className={styles.video}
+            className={hasClips ? styles.video : styles.videoHidden}
             playsInline
             crossOrigin="anonymous"
           />

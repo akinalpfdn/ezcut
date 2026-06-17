@@ -1,5 +1,6 @@
 import type { Result } from '../core/result'
 import type { MediaItem, MediaProbeResult, MediaToolingInfo } from '../media/types'
+import type { AppSettings } from '../settings/types'
 
 /**
  * The typed surface the preload bridge exposes on `window.electronAPI`.
@@ -26,4 +27,10 @@ export interface ElectronAPI {
   /** Resolves the absolute path of a dropped File (Electron `webUtils`).
    * Synchronous; not a Result — it cannot fail meaningfully. */
   getPathForFile(file: File): string
+
+  /** Loads persisted settings, or null if none saved yet. */
+  loadSettings(): Promise<Result<AppSettings | null>>
+
+  /** Persists settings to userData. */
+  saveSettings(settings: AppSettings): Promise<Result<void>>
 }

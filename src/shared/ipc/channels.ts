@@ -5,7 +5,9 @@ export const IpcChannels = {
   openMediaFileDialog: 'dialog:openMediaFile',
   openMediaFilesDialog: 'dialog:openMediaFiles',
   probeMediaFile: 'probe:mediaFile',
-  importMediaFile: 'media:import'
+  importMediaFile: 'media:import',
+  loadSettings: 'settings:load',
+  saveSettings: 'settings:save'
 } as const
 
 export type IpcChannel = (typeof IpcChannels)[keyof typeof IpcChannels]

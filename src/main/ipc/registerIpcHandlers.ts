@@ -1,9 +1,10 @@
 import { handle } from './handle'
-import { IpcChannels } from '@shared'
+import { IpcChannels, type AppSettings } from '@shared'
 import { getMediaToolingInfo } from '../services/ffmpeg/mediaToolingService'
 import { probeMediaFile } from '../services/ffmpeg/probeService'
 import { openMediaFileDialog, openMediaFilesDialog } from '../services/dialog/mediaDialog'
 import { importMediaFile } from '../services/media/mediaImportService'
+import { loadSettings, saveSettings } from '../services/settings/settingsService'
 
 export function registerIpcHandlers(): void {
   handle(IpcChannels.getMediaToolingInfo, () => getMediaToolingInfo())
@@ -17,4 +18,6 @@ export function registerIpcHandlers(): void {
     IpcChannels.importMediaFile,
     (filePath) => importMediaFile(filePath)
   )
+  handle(IpcChannels.loadSettings, () => loadSettings())
+  handle<[AppSettings], void>(IpcChannels.saveSettings, (settings) => saveSettings(settings))
 }

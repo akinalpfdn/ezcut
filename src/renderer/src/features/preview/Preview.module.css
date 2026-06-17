@@ -22,6 +22,11 @@
   background-color: #000000;
 }
 
+/* Kept mounted (engine drives it) but hidden when the timeline is empty. */
+.videoHidden {
+  display: none;
+}
+
 .empty {
   color: var(--color-text-faint);
   font-size: var(--text-md);

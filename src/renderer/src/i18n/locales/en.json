@@ -15,6 +15,7 @@
     "emptyTitle": "No media yet",
     "emptyHint": "Drag files here or click Import",
     "remove": "Remove",
+    "addToTimeline": "Add to timeline",
     "kind": {
       "video": "Video",
       "audio": "Audio"
@@ -45,6 +46,25 @@
   "inspector": {
     "speed": "Speed",
     "volume": "Volume"
+  },
+  "shortcuts": {
+    "playPause": "Play / Pause",
+    "split": "Split",
+    "delete": "Delete",
+    "frameBack": "Previous frame",
+    "frameForward": "Next frame",
+    "undo": "Undo",
+    "redo": "Redo"
+  },
+  "settings": {
+    "open": "Settings",
+    "title": "Settings",
+    "close": "Close",
+    "done": "Done",
+    "reset": "Reset to defaults",
+    "shortcutsHint": "Click a binding to reassign it.",
+    "pressKey": "Press a key…",
+    "conflict": "{{binding}} is already bound to '{{action}}'."
   },
   "common": {
     "detail": "Technical detail",

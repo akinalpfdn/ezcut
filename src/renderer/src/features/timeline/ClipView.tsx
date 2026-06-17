@@ -1,4 +1,4 @@
-import type { PointerEvent as ReactPointerEvent } from 'react'
+import type { MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from 'react'
 import { clipTimelineDuration, type Clip, type TrackKind } from '@shared'
 import styles from './ClipView.module.css'
 
@@ -12,6 +12,7 @@ interface ClipViewProps {
   height: number
   onMovePointerDown: (event: ReactPointerEvent) => void
   onTrimPointerDown: (side: 'l' | 'r', event: ReactPointerEvent) => void
+  onContextMenu: (event: ReactMouseEvent) => void
 }
 
 export function ClipView({
@@ -23,7 +24,8 @@ export function ClipView({
   top,
   height,
   onMovePointerDown,
-  onTrimPointerDown
+  onTrimPointerDown,
+  onContextMenu
 }: ClipViewProps) {
   const left = clip.startOnTimeline * pxPerSec
   const width = Math.max(2, clipTimelineDuration(clip) * pxPerSec)
@@ -37,6 +39,7 @@ export function ClipView({
       className={className}
       style={{ left, width, top, height }}
       onPointerDown={onMovePointerDown}
+      onContextMenu={onContextMenu}
     >
       <div
         className={`${styles.handle} ${styles.handleLeft}`}

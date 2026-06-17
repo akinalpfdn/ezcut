@@ -1,12 +1,27 @@
 import { useState, type DragEvent } from 'react'
 import { useTranslation } from 'react-i18next'
+import type { MediaItem } from '@shared'
 import { useMediaStore } from '../../stores/mediaStore'
+import { useTimelineStore } from '../../stores/timelineStore'
 import { useMediaImport } from '../../hooks/useMediaImport'
 import { mediaService } from '../../services/mediaService'
 import { Button } from '../../components/Button/Button'
 import { ErrorNotice } from '../../components/ErrorNotice'
+import { ContextMenu } from '../../components/ContextMenu/ContextMenu'
 import { MediaCard } from './MediaCard'
 import styles from './MediaBin.module.css'
+
+interface MediaMenuState {
+  item: MediaItem
+  x: number
+  y: number
+}
+
+function addToTimeline(item: MediaItem): void {
+  const timeline = useTimelineStore.getState()
+  const track = timeline.model.tracks.find((candidate) => candidate.kind === item.kind)
+  if (track) timeline.addClipFromMedia(item.id, track.id, timeline.playheadTime, item.durationSeconds)
+}
 
 export function MediaBin() {
   const { t } = useTranslation()
@@ -16,6 +31,7 @@ export function MediaBin() {
   const removeItem = useMediaStore((state) => state.removeItem)
   const { importing, errors, importViaDialog, importPaths } = useMediaImport()
   const [dragOver, setDragOver] = useState(false)
+  const [menu, setMenu] = useState<MediaMenuState | null>(null)
 
   function handleDrop(event: DragEvent<HTMLElement>) {
     event.preventDefault()
@@ -68,11 +84,27 @@ export function MediaBin() {
                 selected={item.id === selectedId}
                 onSelect={() => select(item.id)}
                 onRemove={() => removeItem(item.id)}
+                onContextMenu={(event) => {
+                  event.preventDefault()
+                  setMenu({ item, x: event.clientX, y: event.clientY })
+                }}
               />
             ))}
           </div>
         )}
       </div>
+
+      {menu ? (
+        <ContextMenu
+          x={menu.x}
+          y={menu.y}
+          onClose={() => setMenu(null)}
+          items={[
+            { label: t('media.addToTimeline'), onSelect: () => addToTimeline(menu.item) },
+            { label: t('media.remove'), onSelect: () => removeItem(menu.item.id) }
+          ]}
+        />
+      ) : null}
     </section>
   )
 }

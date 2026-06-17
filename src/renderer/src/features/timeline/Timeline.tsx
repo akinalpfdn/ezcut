@@ -1,4 +1,13 @@
-import { useCallback, useEffect, useReducer, useRef, type DragEvent, type PointerEvent as ReactPointerEvent } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useReducer,
+  useRef,
+  useState,
+  type DragEvent,
+  type MouseEvent as ReactMouseEvent,
+  type PointerEvent as ReactPointerEvent
+} from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   clipTimelineDuration,
@@ -8,14 +17,25 @@ import {
 } from '@shared'
 import { useTimelineStore } from '../../stores/timelineStore'
 import { useMediaStore } from '../../stores/mediaStore'
+import { useKeymapStore } from '../../stores/keymapStore'
 import { TIMELINE_CONFIG } from '../../config/timeline'
 import { collectSnapPoints, snapValue } from './geometry'
 import { MEDIA_DRAG_TYPE } from './dragTypes'
+import { deleteSelected, mergeSelected, splitSelected } from './editorActions'
+import { formatCombo } from '../shortcuts/keyCombo'
+import { ContextMenu, type ContextMenuItem } from '../../components/ContextMenu/ContextMenu'
 import { TimelineToolbar } from './TimelineToolbar'
 import { TimeRuler } from './TimeRuler'
 import { ClipView } from './ClipView'
 import { Playhead } from './Playhead'
 import styles from './Timeline.module.css'
+
+interface MenuState {
+  type: 'clip' | 'track'
+  id: string
+  x: number
+  y: number
+}
 
 interface DragState {
   kind: 'move' | 'trim-l' | 'trim-r'
@@ -34,10 +54,12 @@ export function Timeline() {
   const pxPerSec = useTimelineStore((state) => state.pxPerSec)
   const selectedClipId = useTimelineStore((state) => state.selectedClipId)
   const mediaItems = useMediaStore((state) => state.items)
+  const keymap = useKeymapStore((state) => state.keymap)
 
   const tracksRef = useRef<HTMLDivElement>(null)
   const dragRef = useRef<DragState | null>(null)
   const [, forceRender] = useReducer((tick: number) => tick + 1, 0)
+  const [menu, setMenu] = useState<MenuState | null>(null)
 
   const sortedTracks = getTracksSorted(model)
   const trackIndex = (trackId: string): number => sortedTracks.findIndex((track) => track.id === trackId)
@@ -158,6 +180,31 @@ export function Timeline() {
     useTimelineStore.getState().addClipFromMedia(mediaId, target.id, snapped, media.durationSeconds)
   }
 
+  function openClipMenu(clipId: string, event: ReactMouseEvent): void {
+    event.preventDefault()
+    event.stopPropagation()
+    useTimelineStore.getState().selectClip(clipId)
+    setMenu({ type: 'clip', id: clipId, x: event.clientX, y: event.clientY })
+  }
+
+  function openTrackMenu(event: ReactMouseEvent): void {
+    event.preventDefault()
+    const rect = tracksRef.current?.getBoundingClientRect()
+    if (!rect) return
+    const index = Math.min(Math.max(Math.floor((event.clientY - rect.top) / trackHeight), 0), sortedTracks.length - 1)
+    const track = sortedTracks[index]
+    if (track) setMenu({ type: 'track', id: track.id, x: event.clientX, y: event.clientY })
+  }
+
+  const menuItems: ContextMenuItem[] =
+    menu?.type === 'clip'
+      ? [
+          { label: t('timeline.split'), hint: formatCombo(keymap.split), onSelect: splitSelected },
+          { label: t('timeline.merge'), onSelect: mergeSelected },
+          { label: t('timeline.delete'), hint: formatCombo(keymap.delete), onSelect: deleteSelected }
+        ]
+      : [{ label: t('timeline.addAudioTrack'), onSelect: () => useTimelineStore.getState().addAudioTrack() }]
+
   const drag = dragRef.current
   const clips = Object.values(model.clips)
   const isEmpty = clips.length === 0
@@ -184,6 +231,7 @@ export function Timeline() {
               style={{ height: tracksHeight }}
               onDragOver={(event) => event.preventDefault()}
               onDrop={handleDrop}
+              onContextMenu={openTrackMenu}
               onPointerDown={(event) => {
                 if (event.target === event.currentTarget) useTimelineStore.getState().selectClip(null)
               }}
@@ -212,6 +260,7 @@ export function Timeline() {
                     height={trackHeight}
                     onMovePointerDown={(event) => beginDrag('move', clip, event)}
                     onTrimPointerDown={(side, event) => beginDrag(side === 'l' ? 'trim-l' : 'trim-r', clip, event)}
+                    onContextMenu={(event) => openClipMenu(clip.id, event)}
                   />
                 )
               })}
@@ -223,6 +272,10 @@ export function Timeline() {
           </div>
         </div>
       </div>
+
+      {menu ? (
+        <ContextMenu x={menu.x} y={menu.y} items={menuItems} onClose={() => setMenu(null)} />
+      ) : null}
     </section>
   )
 }

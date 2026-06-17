@@ -66,8 +66,8 @@
 .empty {
   position: absolute;
   top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  left: var(--space-6);
+  transform: translateY(-50%);
   color: var(--color-text-faint);
   font-size: var(--text-sm);
   pointer-events: none;
