@@ -1,0 +1,55 @@
+{
+  "app": {
+    "title": "ezcut",
+    "tagline": "Fast, no-friction video editing"
+  },
+  "language": {
+    "label": "Language",
+    "tr": "Türkçe",
+    "en": "English"
+  },
+  "diagnostics": {
+    "toolingTitle": "Media tooling",
+    "toolingDescription": "Verifying the bundled ffmpeg and ffprobe binaries execute.",
+    "loading": "Checking…",
+    "version": "Version",
+    "path": "Path",
+    "statusOk": "Working",
+    "statusFailed": "Failed"
+  },
+  "probe": {
+    "title": "Inspect media",
+    "description": "Pick a media file and let the main process probe it with ffprobe and return its metadata.",
+    "selectButton": "Select file & inspect",
+    "probing": "Inspecting…",
+    "empty": "No file selected yet.",
+    "fields": {
+      "format": "Format",
+      "duration": "Duration",
+      "size": "Size",
+      "resolution": "Resolution",
+      "fps": "Frame rate",
+      "video": "Video",
+      "audio": "Audio",
+      "streams": "Streams",
+      "codec": "Codec",
+      "channels": "Channels",
+      "sampleRate": "Sample rate"
+    },
+    "seconds": "{{value}} s",
+    "yes": "Yes",
+    "no": "No"
+  },
+  "common": {
+    "detail": "Technical detail",
+    "retry": "Retry"
+  },
+  "errors": {
+    "unsupportedPlatform": "No ffmpeg binary is available for this platform.",
+    "ffmpegSpawnFailed": "Could not start ffmpeg/ffprobe (binary not found).",
+    "ffmpegExited": "ffmpeg/ffprobe exited with an error.",
+    "probeFailed": "Could not inspect the file. It may be unsupported or corrupted.",
+    "probeParseFailed": "Could not parse the inspection output.",
+    "unknown": "An unexpected error occurred."
+  }
+}

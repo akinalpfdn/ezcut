@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+
+# Build & packaging output
+out/
+dist/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Env / secrets
+.env
+.env.local
+.env.*.local
+
+# TypeScript incremental cache
+*.tsbuildinfo
+node_modules/.cache/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Development docs — only README.md is public.
+# DEVPLAN.md, DECISIONS.md, CLAUDE.md and the phase files are development-only.
+*.md
+!README.md
+
+# Personal Claude tooling: phase tracking + command copies
+.claude/
