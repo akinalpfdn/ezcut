@@ -9,8 +9,8 @@
 
 .header {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: var(--space-3);
   padding: var(--space-4);
   border-bottom: 1px solid var(--color-border);
 }
@@ -20,6 +20,20 @@
   font-size: var(--text-md);
   font-weight: var(--font-weight-bold);
   color: var(--color-text);
+}
+
+.headerActions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.headerActions > * {
+  flex: 1;
+}
+
+.recording {
+  border-color: var(--color-danger);
+  color: var(--color-danger);
 }
 
 .errors {

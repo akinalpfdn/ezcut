@@ -16,6 +16,9 @@
     "emptyHint": "Dosyaları buraya sürükle ya da İçe aktar'a tıkla",
     "remove": "Kaldır",
     "addToTimeline": "Zaman çizelgesine ekle",
+    "record": "Sesi kaydet",
+    "stopRecording": "Kaydı durdur",
+    "saving": "Kaydediliyor…",
     "kind": {
       "video": "Video",
       "audio": "Ses"
@@ -45,7 +48,11 @@
   },
   "inspector": {
     "speed": "Hız",
-    "volume": "Ses"
+    "volume": "Ses",
+    "denoise": "Gürültü azalt",
+    "denoiseOff": "Gürültü azaltmayı kapat",
+    "denoiseStrength": "Şiddet",
+    "generating": "Hazırlanıyor…"
   },
   "shortcuts": {
     "playPause": "Oynat / Duraklat",
@@ -77,6 +84,7 @@
     "probeFailed": "Dosya incelenemedi. Desteklenmeyen veya bozuk bir medya olabilir.",
     "probeParseFailed": "İnceleme çıktısı çözümlenemedi.",
     "importFailed": "Dosya içe aktarılamadı.",
+    "micUnavailable": "Mikrofona erişilemedi. İzni kontrol et.",
     "unknown": "Beklenmeyen bir hata oluştu."
   }
 }

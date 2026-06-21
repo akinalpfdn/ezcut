@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { useTimelineStore } from '../../stores/timelineStore'
-import { useTimelinePlayback } from './useTimelinePlayback'
+import { denoiseElementKey, useTimelinePlayback } from './useTimelinePlayback'
 import { Transport } from './Transport'
 import { ClipInspector } from './ClipInspector'
 import styles from './Preview.module.css'
@@ -24,6 +24,14 @@ export function Preview() {
             className={hasClips ? styles.video : styles.videoHidden}
             playsInline
             crossOrigin="anonymous"
+          />
+        ) : null}
+        {videoTrack ? (
+          <audio
+            key={denoiseElementKey(videoTrack.id)}
+            ref={(element) => registerElement(denoiseElementKey(videoTrack.id), element)}
+            crossOrigin="anonymous"
+            hidden
           />
         ) : null}
         {audioTracks.map((track) => (

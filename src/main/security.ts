@@ -24,6 +24,12 @@ export function applySecurityHardening(): void {
     })
   })
 
+  // Microphone access for voiceover recording; everything else is denied.
+  session.defaultSession.setPermissionRequestHandler((_contents, permission, callback) => {
+    callback(permission === 'media')
+  })
+  session.defaultSession.setPermissionCheckHandler((_contents, permission) => permission === 'media')
+
   if (!isDev) {
     session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
       callback({

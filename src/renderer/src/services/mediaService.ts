@@ -17,6 +17,12 @@ export const mediaService = {
   importFile(filePath: string): Promise<Result<MediaItem>> {
     return window.electronAPI.importMediaFile(filePath)
   },
+  saveRecording(data: ArrayBuffer, extension: string): Promise<Result<MediaItem>> {
+    return window.electronAPI.saveRecording(data, extension)
+  },
+  generateDenoiseProxy(mediaPath: string, strength: number): Promise<Result<{ proxyPath: string }>> {
+    return window.electronAPI.generateDenoiseProxy(mediaPath, strength)
+  },
   getPathForFile(file: File): string {
     return window.electronAPI.getPathForFile(file)
   }

@@ -7,6 +7,9 @@ const electronAPI: ElectronAPI = {
   openMediaFilesDialog: () => ipcRenderer.invoke(IpcChannels.openMediaFilesDialog),
   probeMediaFile: (filePath) => ipcRenderer.invoke(IpcChannels.probeMediaFile, filePath),
   importMediaFile: (filePath) => ipcRenderer.invoke(IpcChannels.importMediaFile, filePath),
+  saveRecording: (data, extension) => ipcRenderer.invoke(IpcChannels.saveRecording, data, extension),
+  generateDenoiseProxy: (mediaPath, strength) =>
+    ipcRenderer.invoke(IpcChannels.generateDenoiseProxy, mediaPath, strength),
   getPathForFile: (file) => webUtils.getPathForFile(file),
   loadSettings: () => ipcRenderer.invoke(IpcChannels.loadSettings),
   saveSettings: (settings) => ipcRenderer.invoke(IpcChannels.saveSettings, settings)

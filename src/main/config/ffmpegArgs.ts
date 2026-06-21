@@ -2,6 +2,7 @@
 
 import { THUMBNAIL_CONFIG } from './thumbnail'
 import { WAVEFORM_CONFIG } from './waveform'
+import { DENOISE_CONFIG } from './denoise'
 
 export const FFMPEG_ARGS = {
   version: ['-version'],
@@ -32,6 +33,20 @@ export const FFMPEG_ARGS = {
     '-f',
     's16le',
     '-'
+  ],
+  /** Render a denoised audio-only proxy of the source. */
+  denoiseProxy: (input: string, audioFilter: string, output: string): string[] => [
+    '-y',
+    '-i',
+    input,
+    '-vn',
+    '-af',
+    audioFilter,
+    '-ar',
+    String(DENOISE_CONFIG.sampleRate),
+    '-ac',
+    String(DENOISE_CONFIG.channels),
+    output
   ]
 } as const
 

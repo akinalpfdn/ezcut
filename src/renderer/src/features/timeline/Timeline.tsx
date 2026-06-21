@@ -21,7 +21,7 @@ import { useKeymapStore } from '../../stores/keymapStore'
 import { TIMELINE_CONFIG } from '../../config/timeline'
 import { collectSnapPoints, snapValue } from './geometry'
 import { MEDIA_DRAG_TYPE } from './dragTypes'
-import { deleteSelected, mergeSelected, splitSelected } from './editorActions'
+import { deleteSelected, mergeSelected, splitSelected, toggleClipDenoise } from './editorActions'
 import { formatCombo } from '../shortcuts/keyCombo'
 import { ContextMenu, type ContextMenuItem } from '../../components/ContextMenu/ContextMenu'
 import { TimelineToolbar } from './TimelineToolbar'
@@ -196,11 +196,18 @@ export function Timeline() {
     if (track) setMenu({ type: 'track', id: track.id, x: event.clientX, y: event.clientY })
   }
 
+  const clipMenuId = menu?.type === 'clip' ? menu.id : null
+  const menuClip = clipMenuId ? (model.clips[clipMenuId] ?? null) : null
+
   const menuItems: ContextMenuItem[] =
-    menu?.type === 'clip'
+    clipMenuId
       ? [
           { label: t('timeline.split'), hint: formatCombo(keymap.split), onSelect: splitSelected },
           { label: t('timeline.merge'), onSelect: mergeSelected },
+          {
+            label: menuClip?.denoise.enabled ? t('inspector.denoiseOff') : t('inspector.denoise'),
+            onSelect: () => toggleClipDenoise(clipMenuId)
+          },
           { label: t('timeline.delete'), hint: formatCombo(keymap.delete), onSelect: deleteSelected }
         ]
       : [{ label: t('timeline.addAudioTrack'), onSelect: () => useTimelineStore.getState().addAudioTrack() }]

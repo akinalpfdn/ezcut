@@ -1,6 +1,7 @@
 import { clipTimelineEnd, getTrackClips } from '@shared'
 import { useTimelineStore } from '../../stores/timelineStore'
 import { useMediaStore } from '../../stores/mediaStore'
+import { useDenoiseStore } from '../../stores/denoiseStore'
 import { FALLBACK_FPS } from '../../config/playback'
 
 /**
@@ -21,6 +22,18 @@ export function deleteSelected(): void {
 export function mergeSelected(): void {
   const state = useTimelineStore.getState()
   if (state.selectedClipId) state.mergeWithNext(state.selectedClipId)
+}
+
+export function toggleClipDenoise(clipId: string): void {
+  const state = useTimelineStore.getState()
+  const clip = state.model.clips[clipId]
+  if (!clip) return
+  const enabled = !clip.denoise.enabled
+  state.setClipDenoise(clipId, { enabled })
+  if (enabled) {
+    const media = useMediaStore.getState().items.find((item) => item.id === clip.mediaId)
+    if (media) useDenoiseStore.getState().ensureProxy(media.path, clip.denoise.strength)
+  }
 }
 
 export function stepFrames(frames: number): void {

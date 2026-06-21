@@ -4,10 +4,12 @@ import type { MediaItem } from '@shared'
 import { useMediaStore } from '../../stores/mediaStore'
 import { useTimelineStore } from '../../stores/timelineStore'
 import { useMediaImport } from '../../hooks/useMediaImport'
+import { useRecorder } from '../recording/useRecorder'
 import { mediaService } from '../../services/mediaService'
 import { Button } from '../../components/Button/Button'
 import { ErrorNotice } from '../../components/ErrorNotice'
 import { ContextMenu } from '../../components/ContextMenu/ContextMenu'
+import { formatDuration } from '../../utils/format'
 import { MediaCard } from './MediaCard'
 import styles from './MediaBin.module.css'
 
@@ -30,6 +32,7 @@ export function MediaBin() {
   const select = useMediaStore((state) => state.select)
   const removeItem = useMediaStore((state) => state.removeItem)
   const { importing, errors, importViaDialog, importPaths } = useMediaImport()
+  const recorder = useRecorder()
   const [dragOver, setDragOver] = useState(false)
   const [menu, setMenu] = useState<MediaMenuState | null>(null)
 
@@ -56,16 +59,31 @@ export function MediaBin() {
     >
       <header className={styles.header}>
         <h2 className={styles.title}>{t('media.binTitle')}</h2>
-        <Button onClick={() => void importViaDialog()} disabled={importing}>
-          {importing ? t('media.importing') : t('media.import')}
-        </Button>
+        <div className={styles.headerActions}>
+          <Button
+            variant="ghost"
+            className={recorder.recording ? styles.recording : undefined}
+            disabled={recorder.saving}
+            onClick={() => (recorder.recording ? recorder.stop() : void recorder.start())}
+          >
+            {recorder.recording
+              ? `● ${formatDuration(recorder.elapsedMs / 1000)}`
+              : recorder.saving
+                ? t('media.saving')
+                : t('media.record')}
+          </Button>
+          <Button onClick={() => void importViaDialog()} disabled={importing}>
+            {importing ? t('media.importing') : t('media.import')}
+          </Button>
+        </div>
       </header>
 
-      {errors.length > 0 ? (
+      {errors.length > 0 || recorder.error ? (
         <div className={styles.errors}>
           {errors.map((error, index) => (
             <ErrorNotice key={`${error.code}-${index}`} error={error} />
           ))}
+          {recorder.error ? <ErrorNotice error={recorder.error} /> : null}
         </div>
       ) : null}
 

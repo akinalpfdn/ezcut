@@ -4,6 +4,7 @@ import {
   clipTimelineEnd,
   getTrackClips,
   type Clip,
+  type DenoiseSettings,
   type TimelineModel
 } from '@shared'
 import {
@@ -68,6 +69,7 @@ interface TimelineState {
   addAudioTrack: () => void
   setClipSpeed: (clipId: string, speed: number) => void
   setClipVolume: (clipId: string, volume: number) => void
+  setClipDenoise: (clipId: string, denoise: Partial<DenoiseSettings>) => void
 
   selectClip: (clipId: string | null) => void
   setPlayhead: (time: number) => void
@@ -236,6 +238,14 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
     const clip = get().model.clips[clipId]
     if (!clip || volume === clip.volume) return
     get().execute(setClipPropertyCommand(clipId, { volume: clip.volume }, { volume }))
+  },
+
+  setClipDenoise: (clipId, denoise) => {
+    const clip = get().model.clips[clipId]
+    if (!clip) return
+    const next = { ...clip.denoise, ...denoise }
+    if (next.enabled === clip.denoise.enabled && next.strength === clip.denoise.strength) return
+    get().execute(setClipPropertyCommand(clipId, { denoise: clip.denoise }, { denoise: next }))
   },
 
   selectClip: (clipId) => set({ selectedClipId: clipId }),

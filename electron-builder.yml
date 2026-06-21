@@ -32,12 +32,16 @@ nsis:
   perMachine: false
   allowToChangeInstallationDirectory: true
 
-# macOS signing/notarization is intentionally off for MVP (see DEVPLAN). The mic
-# usage string and hardened-runtime entitlement are wired in Phase 6.
+# macOS signing/notarization is off for MVP (see DEVPLAN), but the mic usage
+# string, hardened runtime, and audio-input entitlement are wired so notarized
+# recording works once signing is switched on.
 mac:
   target:
     - dmg
   category: public.app-category.video
+  hardenedRuntime: true
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
   extendInfo:
     NSMicrophoneUsageDescription: ezcut needs microphone access to record voiceovers.
 

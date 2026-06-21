@@ -24,6 +24,13 @@ export interface ElectronAPI {
    * returning a library-ready MediaItem. */
   importMediaFile(path: string): Promise<Result<MediaItem>>
 
+  /** Persists a recorded audio blob to disk and imports it as a MediaItem. */
+  saveRecording(data: ArrayBuffer, extension: string): Promise<Result<MediaItem>>
+
+  /** Generates (or returns a cached) denoised audio proxy for a source file at a
+   * given strength; resolves to the proxy's absolute path. */
+  generateDenoiseProxy(mediaPath: string, strength: number): Promise<Result<{ proxyPath: string }>>
+
   /** Resolves the absolute path of a dropped File (Electron `webUtils`).
    * Synchronous; not a Result — it cannot fail meaningfully. */
   getPathForFile(file: File): string

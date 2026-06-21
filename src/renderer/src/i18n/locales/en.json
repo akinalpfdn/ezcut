@@ -16,6 +16,9 @@
     "emptyHint": "Drag files here or click Import",
     "remove": "Remove",
     "addToTimeline": "Add to timeline",
+    "record": "Record audio",
+    "stopRecording": "Stop recording",
+    "saving": "Saving…",
     "kind": {
       "video": "Video",
       "audio": "Audio"
@@ -45,7 +48,11 @@
   },
   "inspector": {
     "speed": "Speed",
-    "volume": "Volume"
+    "volume": "Volume",
+    "denoise": "Reduce noise",
+    "denoiseOff": "Stop reducing noise",
+    "denoiseStrength": "Strength",
+    "generating": "Preparing…"
   },
   "shortcuts": {
     "playPause": "Play / Pause",
@@ -77,6 +84,7 @@
     "probeFailed": "Could not inspect the file. It may be unsupported or corrupted.",
     "probeParseFailed": "Could not parse the inspection output.",
     "importFailed": "Could not import the file.",
+    "micUnavailable": "Could not access the microphone. Check the permission.",
     "unknown": "An unexpected error occurred."
   }
 }
