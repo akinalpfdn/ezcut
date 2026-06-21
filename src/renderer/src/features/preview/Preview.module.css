@@ -14,26 +14,15 @@
   background-color: #000000;
 }
 
-/* canvas + video are replaced elements: they need explicit 100% sizing (not just
- * inset) or they render at their intrinsic resolution and overflow the stage. */
-.canvas,
-.video {
+/* The canvas is a replaced element: it needs explicit 100% sizing (not just
+ * inset) or it renders at its intrinsic resolution and overflows the stage. */
+.canvas {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
   object-fit: contain;
-}
-
-/* The WebCodecs canvas is the visible video surface. */
-.canvas {
-  z-index: 1;
-}
-
-/* Element slots are audio-only now; hidden regardless of the engine's opacity. */
-.video {
-  visibility: hidden;
 }
 
 .empty {
