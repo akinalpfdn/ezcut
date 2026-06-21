@@ -60,6 +60,14 @@ export function removeClipCommand(clip: Clip): Command {
   }
 }
 
+/** Removes many clips at once (e.g. when their source media is deleted). */
+export function removeClipsCommand(clips: Clip[]): Command {
+  return {
+    apply: (model) => clips.reduce((next, clip) => withoutClip(next, clip.id), model),
+    invert: (model) => clips.reduce((next, clip) => withClip(next, clip), model)
+  }
+}
+
 export function moveClipCommand(clipId: string, before: ClipPlacement, after: ClipPlacement): Command {
   return {
     apply: (model) => patchClip(model, clipId, after),

@@ -1,7 +1,10 @@
 import { demux } from './demux'
 
-const MAX_QUEUE = 24
-const MAX_DECODE_BACKLOG = 8
+const MAX_QUEUE = 48
+const MAX_DECODE_BACKLOG = 12
+/** Frames kept behind the playhead so short rewinds replay from the buffer
+ * instead of re-decoding from a keyframe. */
+const KEEP_BEHIND = 16
 /** If the requested time is more than this ahead of the buffer, seek instead of
  * pumping forward (the buffer can't realistically catch up by decoding). */
 const FORWARD_SEEK_THRESHOLD_US = 4_000_000
@@ -124,11 +127,17 @@ export class ClipVideoSource {
       if (frame && frame.timestamp <= timeUs) best = i
       else break
     }
-    if (best > 0) {
-      for (let i = 0; i < best; i += 1) this.queue[i]?.close()
-      this.queue.splice(0, best)
+    if (best < 0) return this.queue[0] ?? null
+
+    // Retain a small window of already-shown frames (KEEP_BEHIND) so short
+    // rewinds serve from the buffer rather than re-decoding from a keyframe.
+    const evictBefore = Math.max(0, best - KEEP_BEHIND)
+    if (evictBefore > 0) {
+      for (let i = 0; i < evictBefore; i += 1) this.queue[i]?.close()
+      this.queue.splice(0, evictBefore)
+      best -= evictBefore
     }
-    return this.queue[0] ?? null
+    return this.queue[best] ?? null
   }
 
   dispose(): void {

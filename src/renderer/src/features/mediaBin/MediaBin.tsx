@@ -10,6 +10,7 @@ import { mediaService } from '../../services/mediaService'
 import { Button } from '../../components/Button/Button'
 import { ErrorNotice } from '../../components/ErrorNotice'
 import { ContextMenu } from '../../components/ContextMenu/ContextMenu'
+import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog'
 import { formatDuration } from '../../utils/format'
 import { MediaCard } from './MediaCard'
 import styles from './MediaBin.module.css'
@@ -37,6 +38,15 @@ export function MediaBin() {
   useWaveformBackfill()
   const [dragOver, setDragOver] = useState(false)
   const [menu, setMenu] = useState<MediaMenuState | null>(null)
+  const [confirm, setConfirm] = useState<MediaItem | null>(null)
+
+  // Deleting a bin item also removes every timeline clip that uses it (and thus
+  // clears the preview); deleting a clip from the timeline never touches the bin.
+  function performRemove(item: MediaItem): void {
+    useTimelineStore.getState().removeClipsByMedia(item.id)
+    removeItem(item.id)
+    setConfirm(null)
+  }
 
   function handleDrop(event: DragEvent<HTMLElement>) {
     event.preventDefault()
@@ -103,7 +113,7 @@ export function MediaBin() {
                 item={item}
                 selected={item.id === selectedId}
                 onSelect={() => select(item.id)}
-                onRemove={() => removeItem(item.id)}
+                onRemove={() => setConfirm(item)}
                 onContextMenu={(event) => {
                   event.preventDefault()
                   setMenu({ item, x: event.clientX, y: event.clientY })
@@ -121,8 +131,19 @@ export function MediaBin() {
           onClose={() => setMenu(null)}
           items={[
             { label: t('media.addToTimeline'), onSelect: () => addToTimeline(menu.item) },
-            { label: t('media.remove'), onSelect: () => removeItem(menu.item.id) }
+            { label: t('media.remove'), onSelect: () => setConfirm(menu.item) }
           ]}
+        />
+      ) : null}
+
+      {confirm ? (
+        <ConfirmDialog
+          title={t('media.removeConfirmTitle')}
+          message={t('media.removeConfirmBody', { name: confirm.name })}
+          confirmLabel={t('media.removeConfirmYes')}
+          cancelLabel={t('media.cancel')}
+          onConfirm={() => performRemove(confirm)}
+          onCancel={() => setConfirm(null)}
         />
       ) : null}
     </section>

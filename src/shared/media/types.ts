@@ -69,4 +69,7 @@ export interface MediaItem {
   thumbnailPath?: string
   /** Audio: downsampled waveform peaks. */
   waveform?: WaveformData
+  /** Video: true when preview decode needs a transcoded proxy (non-mp4/oversized/
+   * unsupported codec). Export still uses the original source. */
+  needsProxy?: boolean
 }

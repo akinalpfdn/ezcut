@@ -7,6 +7,7 @@ import { importMediaFile } from '../services/media/mediaImportService'
 import { generateWaveform } from '../services/ffmpeg/waveformService'
 import { saveRecording } from '../services/media/recordingService'
 import { generateDenoiseProxy } from '../services/ffmpeg/denoiseService'
+import { generateProxy } from '../services/ffmpeg/proxyService'
 import { loadSettings, saveSettings } from '../services/settings/settingsService'
 import { runExport, cancelExport } from '../services/export/exportService'
 import { selectExportPath } from '../services/dialog/exportDialog'
@@ -42,6 +43,9 @@ export function registerIpcHandlers(): void {
     IpcChannels.generateDenoiseProxy,
     async (mediaPath, strength) => ({ proxyPath: await generateDenoiseProxy(mediaPath, strength) })
   )
+  handle<[string], { proxyPath: string }>(IpcChannels.generateProxy, async (mediaPath) => ({
+    proxyPath: await generateProxy(mediaPath)
+  }))
   handle(IpcChannels.loadSettings, () => loadSettings())
   handle<[AppSettings], void>(IpcChannels.saveSettings, (settings) => saveSettings(settings))
 

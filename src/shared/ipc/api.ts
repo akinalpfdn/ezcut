@@ -38,6 +38,10 @@ export interface ElectronAPI {
    * given strength; resolves to the proxy's absolute path. */
   generateDenoiseProxy(mediaPath: string, strength: number): Promise<Result<{ proxyPath: string }>>
 
+  /** Generates (or returns a cached) WebCodecs-friendly preview proxy (video-only)
+   * for a heavy/unsupported source; resolves to the proxy's absolute path. */
+  generateProxy(mediaPath: string): Promise<Result<{ proxyPath: string }>>
+
   /** Resolves the absolute path of a dropped File (Electron `webUtils`).
    * Synchronous; not a Result — it cannot fail meaningfully. */
   getPathForFile(file: File): string

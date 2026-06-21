@@ -12,6 +12,7 @@ const electronAPI: ElectronAPI = {
   saveRecording: (data, extension) => ipcRenderer.invoke(IpcChannels.saveRecording, data, extension),
   generateDenoiseProxy: (mediaPath, strength) =>
     ipcRenderer.invoke(IpcChannels.generateDenoiseProxy, mediaPath, strength),
+  generateProxy: (mediaPath) => ipcRenderer.invoke(IpcChannels.generateProxy, mediaPath),
   getPathForFile: (file) => webUtils.getPathForFile(file),
   loadSettings: () => ipcRenderer.invoke(IpcChannels.loadSettings),
   saveSettings: (settings) => ipcRenderer.invoke(IpcChannels.saveSettings, settings),

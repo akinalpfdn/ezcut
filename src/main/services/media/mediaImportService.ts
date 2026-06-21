@@ -3,6 +3,7 @@ import { basename } from 'node:path'
 import { probeMediaFile } from '../ffmpeg/probeService'
 import { generateThumbnail } from '../ffmpeg/thumbnailService'
 import { generateWaveform } from '../ffmpeg/waveformService'
+import { needsProxy } from '../ffmpeg/proxyService'
 import { getThumbnailCacheDir, thumbnailPathForId } from './mediaCache'
 import { allowMediaFile } from './mediaProtocol'
 import type { MediaItem, WaveformData } from '@shared'
@@ -28,6 +29,7 @@ export async function importMediaFile(filePath: string): Promise<MediaItem> {
   if (probe.width) item.width = probe.width
   if (probe.height) item.height = probe.height
   if (probe.fps) item.fps = probe.fps
+  if (needsProxy(probe)) item.needsProxy = true
 
   allowMediaFile(filePath)
 

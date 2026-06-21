@@ -15,6 +15,7 @@ import {
   mergeClipsCommand,
   moveClipCommand,
   removeClipCommand,
+  removeClipsCommand,
   setClipPropertyCommand,
   splitClipCommand,
   trimClipCommand,
@@ -71,6 +72,7 @@ interface TimelineState {
   splitClipAt: (clipId: string, timelineTime: number) => void
   mergeWithNext: (clipId: string) => boolean
   deleteClip: (clipId: string) => void
+  removeClipsByMedia: (mediaId: string) => void
   closeGaps: () => void
   addAudioTrack: () => void
   setClipSpeed: (clipId: string, speed: number) => void
@@ -239,6 +241,14 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
     if (!clip) return
     get().execute(removeClipCommand(clip))
     if (get().selectedClipId === clipId) set({ selectedClipId: null })
+  },
+
+  removeClipsByMedia: (mediaId) => {
+    const clips = Object.values(get().model.clips).filter((clip) => clip.mediaId === mediaId)
+    if (clips.length === 0) return
+    get().execute(removeClipsCommand(clips))
+    const selected = get().selectedClipId
+    if (selected && clips.some((clip) => clip.id === selected)) set({ selectedClipId: null })
   },
 
   closeGaps: () => {

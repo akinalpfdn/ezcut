@@ -3,6 +3,7 @@
 import { THUMBNAIL_CONFIG } from './thumbnail'
 import { WAVEFORM_CONFIG } from './waveform'
 import { DENOISE_CONFIG } from './denoise'
+import { PROXY_CONFIG } from './proxy'
 
 export const FFMPEG_ARGS = {
   version: ['-version'],
@@ -33,6 +34,30 @@ export const FFMPEG_ARGS = {
     '-f',
     's16le',
     '-'
+  ],
+  /** Transcode a small short-GOP H.264 (video-only) preview proxy. */
+  proxy: (input: string, output: string): string[] => [
+    '-y',
+    '-i',
+    input,
+    '-an',
+    '-c:v',
+    'libx264',
+    '-preset',
+    PROXY_CONFIG.preset,
+    '-crf',
+    String(PROXY_CONFIG.crf),
+    '-g',
+    String(PROXY_CONFIG.gop),
+    '-sc_threshold',
+    '0',
+    '-vf',
+    `scale='min(${PROXY_CONFIG.proxyWidth},iw)':-2`,
+    '-pix_fmt',
+    'yuv420p',
+    '-movflags',
+    '+faststart',
+    output
   ],
   /** Render a denoised audio-only proxy of the source. */
   denoiseProxy: (input: string, audioFilter: string, output: string): string[] => [
