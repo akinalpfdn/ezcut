@@ -9,25 +9,40 @@
 .stage {
   position: relative;
   flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   min-height: 0;
-  padding: var(--space-5);
+  overflow: hidden;
+  background-color: #000000;
 }
 
-/* Two stacked slots (double-buffer). The engine sets opacity: 1 on the active
- * slot; the other preloads the next clip at opacity 0. Default hidden so an
- * empty timeline shows nothing. */
+/* canvas + video are replaced elements: they need explicit 100% sizing (not just
+ * inset) or they render at their intrinsic resolution and overflow the stage. */
+.canvas,
 .video {
   position: absolute;
-  inset: var(--space-5);
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
   object-fit: contain;
-  background-color: #000000;
-  opacity: 0;
+}
+
+/* The WebCodecs canvas is the visible video surface. */
+.canvas {
+  z-index: 1;
+}
+
+/* Element slots are audio-only now; hidden regardless of the engine's opacity. */
+.video {
+  visibility: hidden;
 }
 
 .empty {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   color: var(--color-text-faint);
   font-size: var(--text-md);
 }
