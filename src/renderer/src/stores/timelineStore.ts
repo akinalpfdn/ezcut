@@ -3,6 +3,7 @@ import {
   clipTimelineDuration,
   clipTimelineEnd,
   getTrackClips,
+  resolveNonOverlappingStart,
   type Clip,
   type DenoiseSettings,
   type TimelineModel
@@ -54,6 +55,7 @@ interface TimelineState {
   execute: (command: Command) => void
   undo: () => void
   redo: () => void
+  loadModel: (model: TimelineModel) => void
 
   addClipFromMedia: (
     mediaId: string,
@@ -126,12 +128,23 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
       }
     }),
 
+  loadModel: (model) =>
+    set({
+      model,
+      undoStack: [],
+      redoStack: [],
+      selectedClipId: null,
+      playheadTime: 0,
+      isPlaying: false
+    }),
+
   addClipFromMedia: (mediaId, trackId, startOnTimeline, sourceDuration) => {
+    const start = resolveNonOverlappingStart(get().model, trackId, Math.max(0, startOnTimeline), sourceDuration)
     const clip: Clip = {
       id: uuid(),
       mediaId,
       trackId,
-      startOnTimeline: Math.max(0, startOnTimeline),
+      startOnTimeline: start,
       sourceIn: 0,
       sourceOut: sourceDuration,
       speed: 1,
@@ -145,9 +158,17 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
   moveClip: (clipId, placement) => {
     const clip = get().model.clips[clipId]
     if (!clip) return
+    const resolvedStart = resolveNonOverlappingStart(
+      get().model,
+      placement.trackId,
+      placement.startOnTimeline,
+      clipTimelineDuration(clip),
+      clipId
+    )
     const before: ClipPlacement = { trackId: clip.trackId, startOnTimeline: clip.startOnTimeline }
-    if (before.trackId === placement.trackId && before.startOnTimeline === placement.startOnTimeline) return
-    get().execute(moveClipCommand(clipId, before, placement))
+    const after: ClipPlacement = { trackId: placement.trackId, startOnTimeline: resolvedStart }
+    if (before.trackId === after.trackId && before.startOnTimeline === after.startOnTimeline) return
+    get().execute(moveClipCommand(clipId, before, after))
   },
 
   trimClip: (clipId, trim) => {

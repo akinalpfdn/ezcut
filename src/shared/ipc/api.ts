@@ -1,6 +1,8 @@
 import type { Result } from '../core/result'
 import type { MediaItem, MediaProbeResult, MediaToolingInfo } from '../media/types'
 import type { AppSettings } from '../settings/types'
+import type { ExportContainer, ExportProgress, ExportRequest } from '../export/types'
+import type { ProjectFile } from '../project/types'
 
 /**
  * The typed surface the preload bridge exposes on `window.electronAPI`.
@@ -40,4 +42,28 @@ export interface ElectronAPI {
 
   /** Persists settings to userData. */
   saveSettings(settings: AppSettings): Promise<Result<void>>
+
+  /** Opens a save dialog for the export output; resolves to a path or null. */
+  selectExportPath(container: ExportContainer): Promise<Result<string | null>>
+
+  /** Runs the export to completion (or cancellation). Progress arrives via onExportProgress. */
+  startExport(request: ExportRequest): Promise<Result<void>>
+
+  /** Cancels an in-progress export. */
+  cancelExport(): Promise<Result<void>>
+
+  /** Subscribes to export progress events; returns an unsubscribe function. */
+  onExportProgress(callback: (progress: ExportProgress) => void): () => void
+
+  /** Saves a project via a save dialog; resolves true if saved, false if cancelled. */
+  saveProject(project: ProjectFile): Promise<Result<boolean>>
+
+  /** Opens a project via an open dialog; resolves to the project, or null if cancelled. */
+  loadProject(): Promise<Result<ProjectFile | null>>
+
+  /** Writes an autosave snapshot to userData (no dialog). */
+  autosaveProject(project: ProjectFile): Promise<Result<void>>
+
+  /** Loads the autosave snapshot, or null if none. */
+  loadAutosave(): Promise<Result<ProjectFile | null>>
 }

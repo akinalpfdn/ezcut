@@ -73,6 +73,30 @@
     "pressKey": "Press a key…",
     "conflict": "{{binding}} is already bound to '{{action}}'."
   },
+  "project": {
+    "save": "Save",
+    "open": "Open"
+  },
+  "export": {
+    "title": "Export",
+    "close": "Close",
+    "container": "Format",
+    "resolution": "Resolution",
+    "source": "Source",
+    "custom": "Custom",
+    "size": "Size",
+    "fps": "Frame rate",
+    "quality": "Quality",
+    "start": "Export",
+    "cancel": "Cancel",
+    "done": "Done",
+    "empty": "The timeline is empty."
+  },
+  "quality": {
+    "high": "High",
+    "medium": "Medium",
+    "low": "Low"
+  },
   "common": {
     "detail": "Technical detail",
     "retry": "Retry"

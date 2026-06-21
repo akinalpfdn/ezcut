@@ -9,7 +9,15 @@ export const IpcChannels = {
   saveRecording: 'media:saveRecording',
   generateDenoiseProxy: 'denoise:generateProxy',
   loadSettings: 'settings:load',
-  saveSettings: 'settings:save'
+  saveSettings: 'settings:save',
+  selectExportPath: 'export:selectPath',
+  startExport: 'export:start',
+  cancelExport: 'export:cancel',
+  exportProgress: 'export:progress',
+  saveProject: 'project:save',
+  loadProject: 'project:load',
+  autosaveProject: 'project:autosave',
+  loadAutosave: 'project:loadAutosave'
 } as const
 
 export type IpcChannel = (typeof IpcChannels)[keyof typeof IpcChannels]

@@ -5,6 +5,7 @@ interface MediaState {
   items: MediaItem[]
   selectedId: string | null
   addItems: (items: MediaItem[]) => void
+  setItems: (items: MediaItem[]) => void
   removeItem: (id: string) => void
   select: (id: string | null) => void
 }
@@ -13,6 +14,7 @@ export const useMediaStore = create<MediaState>((set) => ({
   items: [],
   selectedId: null,
   addItems: (newItems) => set((state) => ({ items: [...state.items, ...newItems] })),
+  setItems: (items) => set({ items, selectedId: null }),
   removeItem: (id) =>
     set((state) => ({
       items: state.items.filter((item) => item.id !== id),

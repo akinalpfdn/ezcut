@@ -12,6 +12,9 @@ import { useTranslation } from 'react-i18next'
 import {
   clipTimelineDuration,
   getTracksSorted,
+  nextClipStart,
+  previousClipEnd,
+  resolveNonOverlappingStart,
   timelineDuration,
   type Clip
 } from '@shared'
@@ -57,9 +60,30 @@ export function Timeline() {
   const keymap = useKeymapStore((state) => state.keymap)
 
   const tracksRef = useRef<HTMLDivElement>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
   const dragRef = useRef<DragState | null>(null)
   const [, forceRender] = useReducer((tick: number) => tick + 1, 0)
   const [menu, setMenu] = useState<MenuState | null>(null)
+
+  // Ctrl+wheel zooms, Alt+wheel pans horizontally. A native non-passive listener
+  // is required so preventDefault can override the browser's ctrl+wheel page zoom.
+  useEffect(() => {
+    const element = scrollRef.current
+    if (!element) return
+    const onWheel = (event: WheelEvent): void => {
+      const store = useTimelineStore.getState()
+      if (event.ctrlKey) {
+        event.preventDefault()
+        const factor = event.deltaY < 0 ? TIMELINE_CONFIG.zoomFactor : 1 / TIMELINE_CONFIG.zoomFactor
+        store.setPxPerSec(store.pxPerSec * factor)
+      } else if (event.altKey) {
+        event.preventDefault()
+        element.scrollLeft += event.deltaY
+      }
+    }
+    element.addEventListener('wheel', onWheel, { passive: false })
+    return () => element.removeEventListener('wheel', onWheel)
+  }, [])
 
   const sortedTracks = getTracksSorted(model)
   const trackIndex = (trackId: string): number => sortedTracks.findIndex((track) => track.id === trackId)
@@ -96,11 +120,14 @@ export function Timeline() {
         const origin = tracks.find((track) => track.id === drag.original.trackId)
         if (target && origin && target.kind === origin.kind) trackId = target.id
       }
+      start = resolveNonOverlappingStart(state.model, trackId, start, duration, drag.clipId)
       drag.patch = { ...drag.patch, startOnTimeline: start, trackId }
     } else if (drag.kind === 'trim-l') {
       const minSource = minClipDuration * speed
       let start = Math.max(0, drag.original.startOnTimeline + deltaSeconds)
       start = Math.max(0, snapValue(start, points, threshold))
+      // Don't trim past the previous clip on this track.
+      start = Math.max(start, previousClipEnd(state.model, drag.original.trackId, drag.original.startOnTimeline, drag.clipId))
       let sourceIn = drag.original.sourceIn + (start - drag.original.startOnTimeline) * speed
       sourceIn = Math.min(Math.max(sourceIn, 0), drag.original.sourceOut - minSource)
       start = drag.original.startOnTimeline + (sourceIn - drag.original.sourceIn) / speed
@@ -108,7 +135,10 @@ export function Timeline() {
     } else {
       const minSource = minClipDuration * speed
       const duration = clipTimelineDuration(drag.original)
-      const end = snapValue(drag.original.startOnTimeline + duration + deltaSeconds, points, threshold)
+      const snappedEnd = snapValue(drag.original.startOnTimeline + duration + deltaSeconds, points, threshold)
+      // Don't trim past the next clip on this track.
+      const limit = nextClipStart(state.model, drag.original.trackId, drag.original.startOnTimeline, drag.clipId)
+      const end = Math.min(snappedEnd, limit)
       let sourceOut = drag.original.sourceIn + (end - drag.original.startOnTimeline) * speed
       sourceOut = Math.min(Math.max(sourceOut, drag.original.sourceIn + minSource), drag.sourceDuration)
       drag.patch = { ...drag.patch, sourceOut }
@@ -229,7 +259,7 @@ export function Timeline() {
           ))}
         </div>
 
-        <div className={styles.scroll}>
+        <div ref={scrollRef} className={styles.scroll}>
           <div className={styles.content} style={{ width }}>
             <TimeRuler pxPerSec={pxPerSec} width={width} onSeek={(time) => useTimelineStore.getState().setPlayhead(time)} />
             <div

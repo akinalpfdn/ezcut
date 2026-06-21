@@ -73,6 +73,30 @@
     "pressKey": "Bir tuşa bas…",
     "conflict": "{{binding}} zaten '{{action}}' işlemine atanmış."
   },
+  "project": {
+    "save": "Kaydet",
+    "open": "Aç"
+  },
+  "export": {
+    "title": "Dışa aktar",
+    "close": "Kapat",
+    "container": "Biçim",
+    "resolution": "Çözünürlük",
+    "source": "Kaynak",
+    "custom": "Özel",
+    "size": "Boyut",
+    "fps": "Kare hızı",
+    "quality": "Kalite",
+    "start": "Dışa aktar",
+    "cancel": "İptal",
+    "done": "Tamamlandı",
+    "empty": "Zaman çizelgesi boş."
+  },
+  "quality": {
+    "high": "Yüksek",
+    "medium": "Orta",
+    "low": "Düşük"
+  },
   "common": {
     "detail": "Teknik ayrıntı",
     "retry": "Tekrar dene"

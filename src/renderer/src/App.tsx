@@ -1,24 +1,34 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { LanguageSwitcher } from './components/LanguageSwitcher'
+import { Button } from './components/Button/Button'
 import { MediaBin } from './features/mediaBin/MediaBin'
 import { Preview } from './features/preview/Preview'
 import { Timeline } from './features/timeline/Timeline'
 import { SettingsPanel } from './features/settings/SettingsPanel'
+import { ExportDialog } from './features/export/ExportDialog'
 import { useKeyboardShortcuts } from './features/shortcuts/useKeyboardShortcuts'
+import { useAutosave } from './features/project/useAutosave'
+import { applyProject, openProject, saveCurrentProject } from './features/project/projectActions'
 import { useKeymapStore } from './stores/keymapStore'
 import { settingsService } from './services/settingsService'
+import { projectService } from './services/projectService'
 import styles from './App.module.css'
 
 export function App() {
   const { t } = useTranslation()
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [exportOpen, setExportOpen] = useState(false)
   useKeyboardShortcuts()
+  useAutosave()
 
-  // Load persisted settings (keymap) once on startup.
+  // Load persisted settings and restore the last session on startup.
   useEffect(() => {
     void settingsService.load().then((result) => {
       if (result.ok && result.value?.keymap) useKeymapStore.getState().loadKeymap(result.value.keymap)
+    })
+    void projectService.loadAutosave().then((result) => {
+      if (result.ok && result.value) applyProject(result.value)
     })
   }, [])
 
@@ -41,6 +51,13 @@ export function App() {
           <span className={styles.tagline}>{t('app.tagline')}</span>
         </div>
         <div className={styles.headerActions}>
+          <Button variant="ghost" onClick={() => void saveCurrentProject()}>
+            {t('project.save')}
+          </Button>
+          <Button variant="ghost" onClick={() => void openProject()}>
+            {t('project.open')}
+          </Button>
+          <Button onClick={() => setExportOpen(true)}>{t('export.title')}</Button>
           <LanguageSwitcher />
           <button
             type="button"
@@ -63,6 +80,7 @@ export function App() {
       </main>
 
       {settingsOpen ? <SettingsPanel onClose={() => setSettingsOpen(false)} /> : null}
+      {exportOpen ? <ExportDialog onClose={() => setExportOpen(false)} /> : null}
     </div>
   )
 }

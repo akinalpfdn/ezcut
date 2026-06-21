@@ -7,6 +7,15 @@ import { importMediaFile } from '../services/media/mediaImportService'
 import { saveRecording } from '../services/media/recordingService'
 import { generateDenoiseProxy } from '../services/ffmpeg/denoiseService'
 import { loadSettings, saveSettings } from '../services/settings/settingsService'
+import { runExport, cancelExport } from '../services/export/exportService'
+import { selectExportPath } from '../services/dialog/exportDialog'
+import {
+  autosaveProject,
+  loadAutosave,
+  loadProject,
+  saveProject
+} from '../services/project/projectService'
+import type { ExportContainer, ExportRequest, ProjectFile } from '@shared'
 
 export function registerIpcHandlers(): void {
   handle(IpcChannels.getMediaToolingInfo, () => getMediaToolingInfo())
@@ -30,4 +39,15 @@ export function registerIpcHandlers(): void {
   )
   handle(IpcChannels.loadSettings, () => loadSettings())
   handle<[AppSettings], void>(IpcChannels.saveSettings, (settings) => saveSettings(settings))
+
+  handle<[ExportContainer], string | null>(IpcChannels.selectExportPath, (container) =>
+    selectExportPath(container)
+  )
+  handle<[ExportRequest], void>(IpcChannels.startExport, (request) => runExport(request))
+  handle(IpcChannels.cancelExport, () => cancelExport())
+
+  handle<[ProjectFile], boolean>(IpcChannels.saveProject, (project) => saveProject(project))
+  handle(IpcChannels.loadProject, () => loadProject())
+  handle<[ProjectFile], void>(IpcChannels.autosaveProject, (project) => autosaveProject(project))
+  handle(IpcChannels.loadAutosave, () => loadAutosave())
 }
