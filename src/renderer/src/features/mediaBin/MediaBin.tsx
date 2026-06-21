@@ -4,6 +4,7 @@ import type { MediaItem } from '@shared'
 import { useMediaStore } from '../../stores/mediaStore'
 import { useTimelineStore } from '../../stores/timelineStore'
 import { useMediaImport } from '../../hooks/useMediaImport'
+import { useWaveformBackfill } from './useWaveformBackfill'
 import { useRecorder } from '../recording/useRecorder'
 import { mediaService } from '../../services/mediaService'
 import { Button } from '../../components/Button/Button'
@@ -33,6 +34,7 @@ export function MediaBin() {
   const removeItem = useMediaStore((state) => state.removeItem)
   const { importing, errors, importViaDialog, importPaths } = useMediaImport()
   const recorder = useRecorder()
+  useWaveformBackfill()
   const [dragOver, setDragOver] = useState(false)
   const [menu, setMenu] = useState<MediaMenuState | null>(null)
 

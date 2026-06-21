@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { useKeymapStore } from '../../stores/keymapStore'
 import { useTimelineStore } from '../../stores/timelineStore'
 import { actionForCombo, comboFromEvent } from './keyCombo'
-import { deleteSelected, splitSelected, stepFrames } from '../timeline/editorActions'
+import { closeGaps, deleteSelected, splitSelected, stepFrames } from '../timeline/editorActions'
 
 function isTypingTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false
@@ -36,6 +36,12 @@ export function useKeyboardShortcuts(): void {
           break
         case 'delete':
           deleteSelected()
+          break
+        case 'closeGaps':
+          closeGaps()
+          break
+        case 'pinPlayhead':
+          store.togglePinPlayhead()
           break
         case 'frameBack':
           stepFrames(-1)

@@ -1,11 +1,12 @@
 import { create } from 'zustand'
-import type { MediaItem } from '@shared'
+import type { MediaItem, WaveformData } from '@shared'
 
 interface MediaState {
   items: MediaItem[]
   selectedId: string | null
   addItems: (items: MediaItem[]) => void
   setItems: (items: MediaItem[]) => void
+  setWaveform: (id: string, waveform: WaveformData) => void
   removeItem: (id: string) => void
   select: (id: string | null) => void
 }
@@ -15,6 +16,10 @@ export const useMediaStore = create<MediaState>((set) => ({
   selectedId: null,
   addItems: (newItems) => set((state) => ({ items: [...state.items, ...newItems] })),
   setItems: (items) => set({ items, selectedId: null }),
+  setWaveform: (id, waveform) =>
+    set((state) => ({
+      items: state.items.map((item) => (item.id === id ? { ...item, waveform } : item))
+    })),
   removeItem: (id) =>
     set((state) => ({
       items: state.items.filter((item) => item.id !== id),

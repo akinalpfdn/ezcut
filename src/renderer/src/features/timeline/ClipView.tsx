@@ -1,11 +1,13 @@
-import type { MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from 'react'
-import { clipTimelineDuration, type Clip, type TrackKind } from '@shared'
+import { useMemo, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from 'react'
+import { clipTimelineDuration, type Clip, type MediaItem, type TrackKind } from '@shared'
+import { Waveform } from '../mediaBin/Waveform'
 import styles from './ClipView.module.css'
 
 interface ClipViewProps {
   clip: Clip
   label: string
   kind: TrackKind
+  media: MediaItem | undefined
   selected: boolean
   pxPerSec: number
   top: number
@@ -15,10 +17,21 @@ interface ClipViewProps {
   onContextMenu: (event: ReactMouseEvent) => void
 }
 
+/** Peaks for the clip's [sourceIn, sourceOut] slice of the source waveform. */
+function slicePeaks(media: MediaItem | undefined, clip: Clip): number[] | null {
+  const peaks = media?.waveform?.peaks
+  if (!peaks || !media || media.durationSeconds <= 0) return null
+  const start = Math.floor((clip.sourceIn / media.durationSeconds) * peaks.length)
+  const end = Math.ceil((clip.sourceOut / media.durationSeconds) * peaks.length)
+  const slice = peaks.slice(Math.max(0, start), Math.min(peaks.length, end))
+  return slice.length > 0 ? slice : null
+}
+
 export function ClipView({
   clip,
   label,
   kind,
+  media,
   selected,
   pxPerSec,
   top,
@@ -29,6 +42,11 @@ export function ClipView({
 }: ClipViewProps) {
   const left = clip.startOnTimeline * pxPerSec
   const width = Math.max(2, clipTimelineDuration(clip) * pxPerSec)
+  const peaks = useMemo(
+    () => slicePeaks(media, clip),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [media, clip.sourceIn, clip.sourceOut]
+  )
 
   const className = [styles.clip, kind === 'video' ? styles.video : styles.audio, selected ? styles.selected : '']
     .filter(Boolean)
@@ -41,6 +59,7 @@ export function ClipView({
       onPointerDown={onMovePointerDown}
       onContextMenu={onContextMenu}
     >
+      {peaks ? <Waveform peaks={peaks} className={styles.waveform} /> : null}
       <div
         className={`${styles.handle} ${styles.handleLeft}`}
         onPointerDown={(event) => {

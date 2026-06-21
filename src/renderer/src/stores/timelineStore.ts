@@ -11,6 +11,7 @@ import {
 import {
   addClipCommand,
   addTrackCommand,
+  closeGapsCommand,
   mergeClipsCommand,
   moveClipCommand,
   removeClipCommand,
@@ -18,6 +19,7 @@ import {
   splitClipCommand,
   trimClipCommand,
   type ClipPlacement,
+  type ClipShift,
   type ClipTrim,
   type Command
 } from '../features/timeline/commands'
@@ -51,6 +53,7 @@ interface TimelineState {
   pxPerSec: number
   isPlaying: boolean
   masterVolume: number
+  pinPlayhead: boolean
 
   execute: (command: Command) => void
   undo: () => void
@@ -68,6 +71,7 @@ interface TimelineState {
   splitClipAt: (clipId: string, timelineTime: number) => void
   mergeWithNext: (clipId: string) => boolean
   deleteClip: (clipId: string) => void
+  closeGaps: () => void
   addAudioTrack: () => void
   setClipSpeed: (clipId: string, speed: number) => void
   setClipVolume: (clipId: string, volume: number) => void
@@ -83,6 +87,7 @@ interface TimelineState {
   pause: () => void
   togglePlay: () => void
   setMasterVolume: (volume: number) => void
+  togglePinPlayhead: () => void
 }
 
 export const useTimelineStore = create<TimelineState>((set, get) => ({
@@ -94,6 +99,7 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
   pxPerSec: TIMELINE_CONFIG.defaultPxPerSec,
   isPlaying: false,
   masterVolume: DEFAULT_MASTER_VOLUME,
+  pinPlayhead: false,
 
   execute: (command) =>
     set((state) => ({
@@ -235,6 +241,21 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
     if (get().selectedClipId === clipId) set({ selectedClipId: null })
   },
 
+  closeGaps: () => {
+    const { model } = get()
+    const shifts: ClipShift[] = []
+    for (const track of model.tracks) {
+      let cursor = 0
+      for (const clip of getTrackClips(model, track.id)) {
+        if (clip.startOnTimeline !== cursor) {
+          shifts.push({ clipId: clip.id, from: clip.startOnTimeline, to: cursor })
+        }
+        cursor += clipTimelineDuration(clip)
+      }
+    }
+    if (shifts.length > 0) get().execute(closeGapsCommand(shifts))
+  },
+
   addAudioTrack: () => {
     const { model } = get()
     const audioCount = model.tracks.filter((track) => track.kind === 'audio').length
@@ -281,5 +302,6 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
   play: () => set({ isPlaying: true }),
   pause: () => set({ isPlaying: false }),
   togglePlay: () => set((state) => ({ isPlaying: !state.isPlaying })),
-  setMasterVolume: (volume) => set({ masterVolume: Math.min(Math.max(volume, 0), 1) })
+  setMasterVolume: (volume) => set({ masterVolume: Math.min(Math.max(volume, 0), 1) }),
+  togglePinPlayhead: () => set((state) => ({ pinPlayhead: !state.pinPlayhead }))
 }))

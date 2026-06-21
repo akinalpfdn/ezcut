@@ -24,18 +24,25 @@ export function Waveform({ peaks, className }: WaveformProps) {
     ctx.scale(dpr, dpr)
 
     const { width, height } = rect
-    const mid = height / 2
+    const half = height / 2
     ctx.clearRect(0, 0, width, height)
     ctx.fillStyle =
       getComputedStyle(canvas).getPropertyValue('--color-primary').trim() || '#2dd4bf'
 
-    const barCount = Math.min(peaks.length, Math.max(1, Math.floor(width / 2)))
-    const step = peaks.length / barCount
-    const barWidth = width / barCount
+    // Dense thin bars (~2px) with max-pooling per bar: reads as a filled waveform
+    // envelope rather than a sparse line chart. Silence draws nothing (no baseline).
+    const barPitch = 2
+    const barCount = Math.max(1, Math.floor(width / barPitch))
     for (let i = 0; i < barCount; i++) {
-      const peak = peaks[Math.floor(i * step)] ?? 0
-      const barHeight = Math.max(1, peak * height)
-      ctx.fillRect(i * barWidth, mid - barHeight / 2, Math.max(1, barWidth - 1), barHeight)
+      const from = Math.floor((i / barCount) * peaks.length)
+      const to = Math.max(from + 1, Math.floor(((i + 1) / barCount) * peaks.length))
+      let peak = 0
+      for (let j = from; j < to && j < peaks.length; j++) {
+        if (peaks[j] > peak) peak = peaks[j]
+      }
+      const amp = peak * half
+      if (amp <= 0) continue
+      ctx.fillRect(i * barPitch, half - amp, 1.4, Math.max(1, amp * 2))
     }
   }, [peaks])
 

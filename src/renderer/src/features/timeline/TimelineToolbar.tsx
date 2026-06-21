@@ -15,6 +15,9 @@ export function TimelineToolbar() {
     (state) => state.items.find((item) => item.id === selectedMediaId)?.name ?? null
   )
 
+  const hasClips = useTimelineStore((state) => Object.keys(state.model.clips).length > 0)
+  const pinPlayhead = useTimelineStore((state) => state.pinPlayhead)
+
   const store = useTimelineStore
   const hasSelection = selectedClipId !== null
 
@@ -63,6 +66,15 @@ export function TimelineToolbar() {
       >
         {t('timeline.delete')}
       </button>
+      <button
+        type="button"
+        className={styles.button}
+        disabled={!hasClips}
+        title={t('timeline.closeGapsHint')}
+        onClick={() => store.getState().closeGaps()}
+      >
+        {t('timeline.closeGaps')}
+      </button>
 
       <span className={styles.divider} />
 
@@ -92,6 +104,16 @@ export function TimelineToolbar() {
       ) : null}
 
       <span className={styles.divider} />
+
+      <button
+        type="button"
+        className={pinPlayhead ? `${styles.button} ${styles.active}` : styles.button}
+        title={t('timeline.pinHint')}
+        aria-pressed={pinPlayhead}
+        onClick={() => store.getState().togglePinPlayhead()}
+      >
+        {t('timeline.pin')}
+      </button>
 
       <button type="button" className={styles.iconButton} onClick={() => store.getState().zoomOut()}>
         −

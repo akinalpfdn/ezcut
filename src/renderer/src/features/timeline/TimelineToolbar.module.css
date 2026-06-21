@@ -27,6 +27,13 @@
   cursor: not-allowed;
 }
 
+.active,
+.active:not(:disabled):hover {
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-bg);
+}
+
 .iconButton {
   width: 28px;
   height: 28px;

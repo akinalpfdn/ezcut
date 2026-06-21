@@ -1,4 +1,4 @@
-import type { MediaItem, MediaProbeResult, MediaToolingInfo, Result } from '@shared'
+import type { MediaItem, MediaProbeResult, MediaToolingInfo, Result, WaveformData } from '@shared'
 
 /**
  * Renderer-side facade over the preload bridge. Components/hooks call this — never
@@ -16,6 +16,9 @@ export const mediaService = {
   },
   importFile(filePath: string): Promise<Result<MediaItem>> {
     return window.electronAPI.importMediaFile(filePath)
+  },
+  generateWaveform(filePath: string, durationSeconds: number): Promise<Result<WaveformData>> {
+    return window.electronAPI.generateWaveform(filePath, durationSeconds)
   },
   saveRecording(data: ArrayBuffer, extension: string): Promise<Result<MediaItem>> {
     return window.electronAPI.saveRecording(data, extension)

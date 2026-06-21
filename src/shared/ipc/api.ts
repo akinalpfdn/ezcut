@@ -1,5 +1,5 @@
 import type { Result } from '../core/result'
-import type { MediaItem, MediaProbeResult, MediaToolingInfo } from '../media/types'
+import type { MediaItem, MediaProbeResult, MediaToolingInfo, WaveformData } from '../media/types'
 import type { AppSettings } from '../settings/types'
 import type { ExportContainer, ExportProgress, ExportRequest } from '../export/types'
 import type { ProjectFile } from '../project/types'
@@ -25,6 +25,11 @@ export interface ElectronAPI {
   /** Probes a file and generates its derived assets (thumbnail or waveform),
    * returning a library-ready MediaItem. */
   importMediaFile(path: string): Promise<Result<MediaItem>>
+
+  /** Generates a waveform for an already-imported media path (backfill for items
+   * that were imported before waveforms were generated, e.g. older projects).
+   * durationSeconds is the container duration so peaks align to clip time. */
+  generateWaveform(path: string, durationSeconds: number): Promise<Result<WaveformData>>
 
   /** Persists a recorded audio blob to disk and imports it as a MediaItem. */
   saveRecording(data: ArrayBuffer, extension: string): Promise<Result<MediaItem>>

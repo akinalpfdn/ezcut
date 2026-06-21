@@ -31,10 +31,13 @@ export async function importMediaFile(filePath: string): Promise<MediaItem> {
 
   allowMediaFile(filePath)
 
+  // Thumbnail for video; a waveform for anything with audio (incl. video clips,
+  // so the timeline can show audio peaks for cut-by-sound editing).
   if (item.kind === 'video') {
     item.thumbnailPath = await tryGenerateThumbnail(filePath, id, probe.durationSeconds)
-  } else {
-    item.waveform = await tryGenerateWaveform(filePath)
+  }
+  if (item.hasAudio) {
+    item.waveform = await tryGenerateWaveform(filePath, probe.durationSeconds)
   }
 
   return item
@@ -57,9 +60,12 @@ async function tryGenerateThumbnail(
   }
 }
 
-async function tryGenerateWaveform(filePath: string): Promise<WaveformData | undefined> {
+async function tryGenerateWaveform(
+  filePath: string,
+  durationSeconds: number
+): Promise<WaveformData | undefined> {
   try {
-    return await generateWaveform(filePath)
+    return await generateWaveform(filePath, durationSeconds)
   } catch (error) {
     console.warn('[import] waveform generation failed', filePath, error)
     return undefined

@@ -4,6 +4,7 @@ import { getMediaToolingInfo } from '../services/ffmpeg/mediaToolingService'
 import { probeMediaFile } from '../services/ffmpeg/probeService'
 import { openMediaFileDialog, openMediaFilesDialog } from '../services/dialog/mediaDialog'
 import { importMediaFile } from '../services/media/mediaImportService'
+import { generateWaveform } from '../services/ffmpeg/waveformService'
 import { saveRecording } from '../services/media/recordingService'
 import { generateDenoiseProxy } from '../services/ffmpeg/denoiseService'
 import { loadSettings, saveSettings } from '../services/settings/settingsService'
@@ -28,6 +29,10 @@ export function registerIpcHandlers(): void {
   handle<[string], Awaited<ReturnType<typeof importMediaFile>>>(
     IpcChannels.importMediaFile,
     (filePath) => importMediaFile(filePath)
+  )
+  handle<[string, number], Awaited<ReturnType<typeof generateWaveform>>>(
+    IpcChannels.generateWaveform,
+    (filePath, durationSeconds) => generateWaveform(filePath, durationSeconds)
   )
   handle<[ArrayBuffer, string], Awaited<ReturnType<typeof saveRecording>>>(
     IpcChannels.saveRecording,

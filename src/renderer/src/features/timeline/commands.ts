@@ -102,3 +102,17 @@ export function setClipPropertyCommand(clipId: string, before: Partial<Clip>, af
     invert: (model) => patchClip(model, clipId, before)
   }
 }
+
+export interface ClipShift {
+  clipId: string
+  from: number
+  to: number
+}
+
+/** Repositions many clips at once (e.g. closing gaps) as one undoable edit. */
+export function closeGapsCommand(shifts: ClipShift[]): Command {
+  return {
+    apply: (model) => shifts.reduce((next, s) => patchClip(next, s.clipId, { startOnTimeline: s.to }), model),
+    invert: (model) => shifts.reduce((next, s) => patchClip(next, s.clipId, { startOnTimeline: s.from }), model)
+  }
+}

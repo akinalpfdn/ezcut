@@ -8,6 +8,9 @@
   overflow: hidden;
   cursor: grab;
   user-select: none;
+  /* Own stacking context so the z-index:-1 waveform sits above the clip's
+   * background (not behind the whole clip) but below the label. */
+  isolation: isolate;
 }
 
 .clip:active {
@@ -27,6 +30,14 @@
 .selected {
   outline: 2px solid var(--color-primary);
   outline-offset: -1px;
+}
+
+.waveform {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  opacity: 0.4;
+  pointer-events: none;
 }
 
 .label {

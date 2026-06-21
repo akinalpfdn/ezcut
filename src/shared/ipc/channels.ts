@@ -6,6 +6,7 @@ export const IpcChannels = {
   openMediaFilesDialog: 'dialog:openMediaFiles',
   probeMediaFile: 'probe:mediaFile',
   importMediaFile: 'media:import',
+  generateWaveform: 'media:waveform',
   saveRecording: 'media:saveRecording',
   generateDenoiseProxy: 'denoise:generateProxy',
   loadSettings: 'settings:load',

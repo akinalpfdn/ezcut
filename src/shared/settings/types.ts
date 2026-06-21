@@ -3,6 +3,8 @@ export const KEYMAP_ACTIONS = [
   'playPause',
   'split',
   'delete',
+  'closeGaps',
+  'pinPlayhead',
   'frameBack',
   'frameForward',
   'undo',

@@ -74,8 +74,17 @@ export function Timeline() {
       const store = useTimelineStore.getState()
       if (event.ctrlKey) {
         event.preventDefault()
+        const oldPx = store.pxPerSec
         const factor = event.deltaY < 0 ? TIMELINE_CONFIG.zoomFactor : 1 / TIMELINE_CONFIG.zoomFactor
-        store.setPxPerSec(store.pxPerSec * factor)
+        // Keep the timeline time under the cursor fixed (zoom toward the mouse).
+        const rect = element.getBoundingClientRect()
+        const pointerOffset = event.clientX - rect.left
+        const timeAtMouse = (element.scrollLeft + pointerOffset) / oldPx
+        store.setPxPerSec(oldPx * factor)
+        requestAnimationFrame(() => {
+          const newPx = useTimelineStore.getState().pxPerSec
+          element.scrollLeft = timeAtMouse * newPx - pointerOffset
+        })
       } else if (event.altKey) {
         event.preventDefault()
         element.scrollLeft += event.deltaY
@@ -83,6 +92,24 @@ export function Timeline() {
     }
     element.addEventListener('wheel', onWheel, { passive: false })
     return () => element.removeEventListener('wheel', onWheel)
+  }, [])
+
+  // Pinned playhead: keep it in view during playback by centering it whenever it
+  // scrolls out of the viewport. Suppressed while paused or during a drag so
+  // manual seeks and edits aren't yanked around.
+  useEffect(() => {
+    return useTimelineStore.subscribe((state, prev) => {
+      if (!state.pinPlayhead || !state.isPlaying || dragRef.current) return
+      if (state.playheadTime === prev.playheadTime) return
+      const element = scrollRef.current
+      if (!element) return
+      const playheadPx = state.playheadTime * state.pxPerSec
+      const left = element.scrollLeft
+      const right = left + element.clientWidth
+      if (playheadPx < left || playheadPx > right) {
+        element.scrollLeft = playheadPx - element.clientWidth / 2
+      }
+    })
   }, [])
 
   const sortedTracks = getTracksSorted(model)
@@ -290,6 +317,7 @@ export function Timeline() {
                     key={clip.id}
                     clip={display}
                     label={mediaById(clip.mediaId)?.name ?? '—'}
+                    media={mediaById(clip.mediaId)}
                     kind={sortedTracks[index]?.kind ?? 'video'}
                     selected={clip.id === selectedClipId}
                     pxPerSec={pxPerSec}

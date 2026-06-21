@@ -24,6 +24,10 @@ export function mergeSelected(): void {
   if (state.selectedClipId) state.mergeWithNext(state.selectedClipId)
 }
 
+export function closeGaps(): void {
+  useTimelineStore.getState().closeGaps()
+}
+
 export function toggleClipDenoise(clipId: string): void {
   const state = useTimelineStore.getState()
   const clip = state.model.clips[clipId]
