@@ -97,6 +97,13 @@
     "medium": "Medium",
     "low": "Low"
   },
+  "webcodecs": {
+    "open": "WebCodecs Lab",
+    "title": "WebCodecs preview (experimental)",
+    "close": "Close",
+    "selectVideo": "Select a video clip in the bin.",
+    "loading": "Decoding…"
+  },
   "common": {
     "detail": "Technical detail",
     "retry": "Retry"

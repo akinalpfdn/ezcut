@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useRef } from 'react'
-import { type Clip, clipTimelineEnd, getTrackClips, timelineDuration, timelineTimeToSource } from '@shared'
+import {
+  type Clip,
+  type MediaItem,
+  clipTimelineEnd,
+  getTrackClips,
+  timelineDuration,
+  timelineTimeToSource
+} from '@shared'
 import { useTimelineStore } from '../../stores/timelineStore'
 import { useMediaStore } from '../../stores/mediaStore'
 import { useDenoiseStore } from '../../stores/denoiseStore'
@@ -15,6 +22,11 @@ interface AudioGraph {
 /** Registration key for a video track's denoised-audio element. */
 export function denoiseElementKey(trackId: string): string {
   return `denoise:${trackId}`
+}
+
+/** Registration key for the second (preload) slot of a video track. */
+export function videoSlotBKey(trackId: string): string {
+  return `${trackId}::b`
 }
 
 /**
@@ -78,6 +90,7 @@ export function useTimelinePlayback(): {
   const driveElement = useCallback(
     (element: HTMLMediaElement, clip: Clip, url: string, time: number, playing: boolean, gain: number) => {
       gainFor(element).gain.value = gain
+      element.dataset.clipId = clip.id
       const expected = Math.max(0, timelineTimeToSource(clip, time))
       const sourceKey = `${clip.id}|${url}`
       if (element.dataset.sourceKey !== sourceKey) {
@@ -102,52 +115,121 @@ export function useTimelinePlayback(): {
     [gainFor]
   )
 
+  // Park a clip in a hidden, muted, paused element so swapping to it at a clip
+  // boundary shows its first frame instantly — no black gap.
+  const preloadElement = useCallback(
+    (element: HTMLMediaElement, clip: Clip, url: string) => {
+      gainFor(element).gain.value = 0
+      element.style.opacity = '0'
+      const sourceKey = `${clip.id}|${url}`
+      if (element.dataset.sourceKey !== sourceKey) {
+        element.dataset.sourceKey = sourceKey
+        element.dataset.clipId = clip.id
+        element.src = url
+        element.playbackRate = clip.speed
+        element.currentTime = Math.max(0, clip.sourceIn)
+      }
+      if (!element.paused) element.pause()
+    },
+    [gainFor]
+  )
+
+  const hideVideoSlot = useCallback(
+    (element: HTMLMediaElement) => {
+      silence(element)
+      element.style.opacity = '0'
+    },
+    [silence]
+  )
+
   const sync = useCallback(
     (time: number, playing: boolean) => {
       const currentModel = useTimelineStore.getState().model
       const mediaItems = useMediaStore.getState().items
       const denoise = useDenoiseStore.getState()
+      const mediaById = (id: string): MediaItem | undefined => mediaItems.find((item) => item.id === id)
+      const proxyUrlFor = (clip: Clip, mediaPath: string): string | null => {
+        if (!clip.denoise.enabled) return null
+        const proxy = denoise.getProxyPath(mediaPath, clip.denoise.strength)
+        if (!proxy) denoise.ensureProxy(mediaPath, clip.denoise.strength)
+        return proxy ? toMediaUrl(proxy) : null
+      }
 
       for (const track of currentModel.tracks) {
-        const element = elementsRef.current.get(track.id)
-        if (!element) continue
-        const denoiseElement = elementsRef.current.get(denoiseElementKey(track.id)) ?? null
-
-        const active = getTrackClips(currentModel, track.id).find(
+        const clips = getTrackClips(currentModel, track.id)
+        const activeIndex = clips.findIndex(
           (clip) => time >= clip.startOnTimeline && time < clipTimelineEnd(clip)
         )
-        const media = active ? mediaItems.find((item) => item.id === active.mediaId) : undefined
+        const active = activeIndex >= 0 ? (clips[activeIndex] ?? null) : null
 
-        if (!active || !media) {
-          silence(element)
-          if (denoiseElement) silence(denoiseElement)
+        if (track.kind === 'audio') {
+          const element = elementsRef.current.get(track.id)
+          if (!element) continue
+          const media = active ? mediaById(active.mediaId) : undefined
+          if (!active || !media) {
+            silence(element)
+            continue
+          }
+          const url = proxyUrlFor(active, media.path) ?? toMediaUrl(media.path)
+          driveElement(element, active, url, time, playing, active.volume)
           continue
         }
 
-        // Resolve the denoised proxy if the clip wants denoise, generating it on
-        // demand. Until it is ready, fall back to the original audio.
-        let proxyUrl: string | null = null
-        if (active.denoise.enabled) {
-          proxyUrl = denoise.getProxyPath(media.path, active.denoise.strength)
-          if (!proxyUrl) denoise.ensureProxy(media.path, active.denoise.strength)
+        // Video track: two slots — one shows the active clip, the other preloads
+        // the next so boundary crossings don't flash black.
+        const slotA = elementsRef.current.get(track.id)
+        const slotB = elementsRef.current.get(videoSlotBKey(track.id))
+        const denoiseElement = elementsRef.current.get(denoiseElementKey(track.id)) ?? null
+        if (!slotA || !slotB) continue
+
+        const next =
+          activeIndex >= 0
+            ? (clips[activeIndex + 1] ?? null)
+            : (clips.find((clip) => clip.startOnTimeline > time) ?? null)
+        const nextMedia = next ? mediaById(next.mediaId) : undefined
+        const media = active ? mediaById(active.mediaId) : undefined
+
+        if (!active || !media) {
+          hideVideoSlot(slotA)
+          hideVideoSlot(slotB)
+          if (denoiseElement) silence(denoiseElement)
+          if (next && nextMedia) {
+            const slot = slotA.dataset.clipId === next.id ? slotA : slotB
+            preloadElement(slot, next, toMediaUrl(nextMedia.path))
+          }
+          continue
+        }
+
+        // Pick the active slot, keeping any already-preloaded `next` intact.
+        let activeSlot = slotA
+        let preloadSlot = slotB
+        if (slotB.dataset.clipId === active.id) {
+          activeSlot = slotB
+          preloadSlot = slotA
+        } else if (slotA.dataset.clipId === active.id) {
+          activeSlot = slotA
+          preloadSlot = slotB
+        } else if (next && slotA.dataset.clipId === next.id) {
+          activeSlot = slotB
+          preloadSlot = slotA
         }
 
         const originalUrl = toMediaUrl(media.path)
-
-        if (track.kind === 'audio') {
-          driveElement(element, active, proxyUrl ? toMediaUrl(proxyUrl) : originalUrl, time, playing, active.volume)
-          if (denoiseElement) silence(denoiseElement)
-        } else if (proxyUrl && denoiseElement) {
-          // Video plays for the picture (muted); its denoised audio plays in parallel.
-          driveElement(element, active, originalUrl, time, playing, 0)
-          driveElement(denoiseElement, active, toMediaUrl(proxyUrl), time, playing, active.volume)
+        const proxyUrl = proxyUrlFor(active, media.path)
+        if (proxyUrl && denoiseElement) {
+          driveElement(activeSlot, active, originalUrl, time, playing, 0)
+          driveElement(denoiseElement, active, proxyUrl, time, playing, active.volume)
         } else {
-          driveElement(element, active, originalUrl, time, playing, active.volume)
+          driveElement(activeSlot, active, originalUrl, time, playing, active.volume)
           if (denoiseElement) silence(denoiseElement)
         }
+        activeSlot.style.opacity = '1'
+
+        if (next && nextMedia) preloadElement(preloadSlot, next, toMediaUrl(nextMedia.path))
+        else hideVideoSlot(preloadSlot)
       }
     },
-    [silence, driveElement]
+    [silence, driveElement, preloadElement, hideVideoSlot]
   )
 
   useEffect(() => {

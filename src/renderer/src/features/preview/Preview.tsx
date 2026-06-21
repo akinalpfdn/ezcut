@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { useTimelineStore } from '../../stores/timelineStore'
-import { denoiseElementKey, useTimelinePlayback } from './useTimelinePlayback'
+import { denoiseElementKey, useTimelinePlayback, videoSlotBKey } from './useTimelinePlayback'
 import { Transport } from './Transport'
 import { ClipInspector } from './ClipInspector'
 import styles from './Preview.module.css'
@@ -18,21 +18,28 @@ export function Preview() {
     <div className={styles.preview}>
       <div className={styles.stage}>
         {videoTrack ? (
-          <video
-            key={videoTrack.id}
-            ref={(element) => registerElement(videoTrack.id, element)}
-            className={hasClips ? styles.video : styles.videoHidden}
-            playsInline
-            crossOrigin="anonymous"
-          />
-        ) : null}
-        {videoTrack ? (
-          <audio
-            key={denoiseElementKey(videoTrack.id)}
-            ref={(element) => registerElement(denoiseElementKey(videoTrack.id), element)}
-            crossOrigin="anonymous"
-            hidden
-          />
+          <>
+            <video
+              key={videoTrack.id}
+              ref={(element) => registerElement(videoTrack.id, element)}
+              className={styles.video}
+              playsInline
+              crossOrigin="anonymous"
+            />
+            <video
+              key={videoSlotBKey(videoTrack.id)}
+              ref={(element) => registerElement(videoSlotBKey(videoTrack.id), element)}
+              className={styles.video}
+              playsInline
+              crossOrigin="anonymous"
+            />
+            <audio
+              key={denoiseElementKey(videoTrack.id)}
+              ref={(element) => registerElement(denoiseElementKey(videoTrack.id), element)}
+              crossOrigin="anonymous"
+              hidden
+            />
+          </>
         ) : null}
         {audioTracks.map((track) => (
           <audio

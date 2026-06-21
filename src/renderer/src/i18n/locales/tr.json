@@ -97,6 +97,13 @@
     "medium": "Orta",
     "low": "Düşük"
   },
+  "webcodecs": {
+    "open": "WebCodecs Lab",
+    "title": "WebCodecs önizleme (deneysel)",
+    "close": "Kapat",
+    "selectVideo": "Bin'den bir video klip seç.",
+    "loading": "Çözülüyor…"
+  },
   "common": {
     "detail": "Teknik ayrıntı",
     "retry": "Tekrar dene"
