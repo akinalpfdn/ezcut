@@ -59,13 +59,27 @@ export class ClipVideoSource {
     this.feedIndex = 0
     this.decoder = new VideoDecoder({
       output: (frame) => {
-        this.queue.push(frame)
-        this.queue.sort((a, b) => a.timestamp - b.timestamp)
+        this.insertFrame(frame)
         this.pump()
       },
       error: (error) => console.error('[webcodecs] decode error', error)
     })
     if (this.config) this.decoder.configure(this.config)
+  }
+
+  /** Inserts a decoded frame in timestamp order (decoders mostly emit in order,
+   * but B-frames can reorder) — a binary-search insert instead of re-sorting the
+   * whole queue on every decoded frame. */
+  private insertFrame(frame: VideoFrame): void {
+    const queue = this.queue
+    let lo = 0
+    let hi = queue.length
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1
+      if ((queue[mid] as VideoFrame).timestamp < frame.timestamp) lo = mid + 1
+      else hi = mid
+    }
+    queue.splice(lo, 0, frame)
   }
 
   private pump(): void {

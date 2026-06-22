@@ -52,8 +52,28 @@ export function useCanvasCompositor(canvasRef: RefObject<HTMLCanvasElement | nul
       return null
     }
 
+    // Only recompute when something relevant changed: playback advances the
+    // playhead (a timeline-store change) every frame, edits change the model/
+    // items, and a proxy becoming ready changes the proxy store. While truly idle
+    // (paused, no edits) the render loop does no per-frame work at all.
+    let dirty = true
+    const markDirty = (): void => {
+      dirty = true
+    }
+    const unsubscribers = [
+      useTimelineStore.subscribe(markDirty),
+      useMediaStore.subscribe(markDirty),
+      useProxyStore.subscribe(markDirty)
+    ]
+
     let rafId: number | null = null
+    let lastSig = ''
     const render = (): void => {
+      if (!dirty) {
+        rafId = requestAnimationFrame(render)
+        return
+      }
+      dirty = false
       const { model, playheadTime } = useTimelineStore.getState()
       const items = useMediaStore.getState().items
       const videoTrack = getTracksSorted(model).find((track) => track.kind === 'video')
@@ -92,13 +112,21 @@ export function useCanvasCompositor(canvasRef: RefObject<HTMLCanvasElement | nul
         }
       }
 
-      worker.postMessage({ type: 'render', hasActiveClip, active, next, fallbackUrl })
+      // Only post when the resolved render state actually changed — during
+      // playback sourceUs advances every frame (so it posts, as needed), but
+      // while paused/idle this skips the per-frame structured-clone to the worker.
+      const sig = `${hasActiveClip}|${active?.clipId ?? ''}|${active?.fileUrl ?? ''}|${active?.sourceUs ?? ''}|${next?.clipId ?? ''}|${next?.fileUrl ?? ''}|${next?.sourceUs ?? ''}|${fallbackUrl ?? ''}`
+      if (sig !== lastSig) {
+        lastSig = sig
+        worker.postMessage({ type: 'render', hasActiveClip, active, next, fallbackUrl })
+      }
       rafId = requestAnimationFrame(render)
     }
 
     rafId = requestAnimationFrame(render)
     return () => {
       if (rafId !== null) cancelAnimationFrame(rafId)
+      for (const unsubscribe of unsubscribers) unsubscribe()
     }
   }, [canvasRef])
 }

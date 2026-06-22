@@ -1,4 +1,4 @@
-import { useMemo, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from 'react'
+import { memo, useMemo, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from 'react'
 import { clipTimelineDuration, type Clip, type MediaItem, type TrackKind } from '@shared'
 import { Waveform } from '../mediaBin/Waveform'
 import styles from './ClipView.module.css'
@@ -27,7 +27,7 @@ function slicePeaks(media: MediaItem | undefined, clip: Clip): number[] | null {
   return slice.length > 0 ? slice : null
 }
 
-export function ClipView({
+function ClipViewImpl({
   clip,
   label,
   kind,
@@ -78,3 +78,22 @@ export function ClipView({
     </div>
   )
 }
+
+/**
+ * Memoized so a pointermove on one clip (which re-renders the whole Timeline)
+ * doesn't reconcile every other ClipView. Compares only the data props — the
+ * handler props are new closures each render but behave identically for an
+ * unchanged clip, so they're intentionally ignored.
+ */
+export const ClipView = memo(
+  ClipViewImpl,
+  (prev, next) =>
+    prev.clip === next.clip &&
+    prev.label === next.label &&
+    prev.media === next.media &&
+    prev.kind === next.kind &&
+    prev.selected === next.selected &&
+    prev.pxPerSec === next.pxPerSec &&
+    prev.top === next.top &&
+    prev.height === next.height
+)

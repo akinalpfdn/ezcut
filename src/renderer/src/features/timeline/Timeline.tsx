@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useMemo,
   useReducer,
   useRef,
   useState,
@@ -16,7 +17,8 @@ import {
   previousClipEnd,
   resolveNonOverlappingStart,
   timelineDuration,
-  type Clip
+  type Clip,
+  type MediaItem
 } from '@shared'
 import { useTimelineStore } from '../../stores/timelineStore'
 import { useMediaStore } from '../../stores/mediaStore'
@@ -62,8 +64,19 @@ export function Timeline() {
   const tracksRef = useRef<HTMLDivElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const dragRef = useRef<DragState | null>(null)
+  const moveRafRef = useRef<number | null>(null)
   const [, forceRender] = useReducer((tick: number) => tick + 1, 0)
   const [menu, setMenu] = useState<MenuState | null>(null)
+
+  // Coalesce drag re-renders to one per animation frame — pointermove can fire
+  // far more often than the display refreshes.
+  const scheduleDragRender = useCallback(() => {
+    if (moveRafRef.current !== null) return
+    moveRafRef.current = requestAnimationFrame(() => {
+      moveRafRef.current = null
+      forceRender()
+    })
+  }, [])
 
   // Ctrl+wheel zooms, Alt+wheel pans horizontally. A native non-passive listener
   // is required so preventDefault can override the browser's ctrl+wheel page zoom.
@@ -114,7 +127,11 @@ export function Timeline() {
 
   const sortedTracks = getTracksSorted(model)
   const trackIndex = (trackId: string): number => sortedTracks.findIndex((track) => track.id === trackId)
-  const mediaById = (mediaId: string) => mediaItems.find((item) => item.id === mediaId)
+  const mediaByIdMap = useMemo(
+    () => new Map(mediaItems.map((item) => [item.id, item])),
+    [mediaItems]
+  )
+  const mediaById = (mediaId: string): MediaItem | undefined => mediaByIdMap.get(mediaId)
 
   const contentDuration = Math.max(timelineDuration(model), 20) + 10
   const width = contentDuration * pxPerSec
@@ -170,14 +187,18 @@ export function Timeline() {
       sourceOut = Math.min(Math.max(sourceOut, drag.original.sourceIn + minSource), drag.sourceDuration)
       drag.patch = { ...drag.patch, sourceOut }
     }
-    forceRender()
-  }, [])
+    scheduleDragRender()
+  }, [scheduleDragRender])
 
   const onPointerUp = useCallback(() => {
     const drag = dragRef.current
     if (!drag) return
     window.removeEventListener('pointermove', onPointerMove)
     window.removeEventListener('pointerup', onPointerUp)
+    if (moveRafRef.current !== null) {
+      cancelAnimationFrame(moveRafRef.current)
+      moveRafRef.current = null
+    }
     const store = useTimelineStore.getState()
     if (drag.kind === 'move') {
       store.moveClip(drag.clipId, { trackId: drag.patch.trackId, startOnTimeline: drag.patch.startOnTimeline })
@@ -196,6 +217,7 @@ export function Timeline() {
     return () => {
       window.removeEventListener('pointermove', onPointerMove)
       window.removeEventListener('pointerup', onPointerUp)
+      if (moveRafRef.current !== null) cancelAnimationFrame(moveRafRef.current)
     }
   }, [onPointerMove, onPointerUp])
 
