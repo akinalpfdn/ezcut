@@ -4,6 +4,7 @@ import { useTimelineStore } from '../../../stores/timelineStore'
 import { useMediaStore } from '../../../stores/mediaStore'
 import { useDenoiseStore } from '../../../stores/denoiseStore'
 import { toMediaUrl } from '../../../utils/mediaUrl'
+import { AUDIO_BUFFER_CACHE_BYTES } from '../../../config/playback'
 
 interface Anchor {
   ctxTime: number
@@ -28,6 +29,7 @@ export function useTimelineAudio(): void {
   const ctxRef = useRef<AudioContext | null>(null)
   const masterRef = useRef<GainNode | null>(null)
   const buffersRef = useRef(new Map<string, AudioBuffer>())
+  const bufferBytesRef = useRef(0)
   const loadingRef = useRef(new Set<string>())
   const scheduledRef = useRef(new Map<string, ScheduledClip>())
   const anchorRef = useRef<Anchor | null>(null)
@@ -59,8 +61,56 @@ export function useTimelineAudio(): void {
     return toMediaUrl(mediaPath)
   }
 
+  // Decoded AudioBuffers hold a clip's whole PCM in RAM, so the cache is a
+  // byte-bounded LRU: reads bump to most-recently-used; inserts evict the oldest
+  // once over budget (the playing clips are MRU, so they're evicted last).
+  const bufferBytes = (buffer: AudioBuffer): number => buffer.length * buffer.numberOfChannels * 4
+
+  const getBuffer = (url: string): AudioBuffer | undefined => {
+    const buffer = buffersRef.current.get(url)
+    if (!buffer) return undefined
+    buffersRef.current.delete(url)
+    buffersRef.current.set(url, buffer)
+    return buffer
+  }
+
+  const putBuffer = (url: string, buffer: AudioBuffer): void => {
+    buffersRef.current.set(url, buffer)
+    bufferBytesRef.current += bufferBytes(buffer)
+    while (bufferBytesRef.current > AUDIO_BUFFER_CACHE_BYTES && buffersRef.current.size > 1) {
+      const oldest = buffersRef.current.keys().next().value as string
+      const evicted = buffersRef.current.get(oldest)
+      if (evicted) bufferBytesRef.current -= bufferBytes(evicted)
+      buffersRef.current.delete(oldest)
+    }
+  }
+
+  // Drops cached buffers no longer referenced by any clip (e.g. a clip/media was
+  // deleted), reclaiming RAM immediately instead of waiting for budget pressure.
+  // A url can be shared (same media in >1 clip; denoise toggles the url), so a
+  // url is live if ANY current clip would use it. Side-effect-free (no ensureProxy).
+  const pruneOrphanBuffers = (): void => {
+    const items = useMediaStore.getState().items
+    const live = new Set<string>()
+    for (const clip of Object.values(useTimelineStore.getState().model.clips)) {
+      const media = items.find((item) => item.id === clip.mediaId)
+      if (!media || !media.hasAudio) continue
+      live.add(toMediaUrl(media.path))
+      if (clip.denoise.enabled) {
+        const proxy = useDenoiseStore.getState().getProxyPath(media.path, clip.denoise.strength)
+        if (proxy) live.add(toMediaUrl(proxy))
+      }
+    }
+    for (const url of [...buffersRef.current.keys()]) {
+      if (live.has(url)) continue
+      const evicted = buffersRef.current.get(url)
+      if (evicted) bufferBytesRef.current -= bufferBytes(evicted)
+      buffersRef.current.delete(url)
+    }
+  }
+
   const loadBuffer = async (url: string): Promise<AudioBuffer | null> => {
-    const cached = buffersRef.current.get(url)
+    const cached = getBuffer(url)
     if (cached) return cached
     if (loadingRef.current.has(url)) return null
     loadingRef.current.add(url)
@@ -69,7 +119,7 @@ export function useTimelineAudio(): void {
       const response = await fetch(url)
       const data = await response.arrayBuffer()
       const buffer = await ctx.decodeAudioData(data)
-      buffersRef.current.set(url, buffer)
+      putBuffer(url, buffer)
       return buffer
     } catch (error) {
       console.error('[audio] decode failed', url, error)
@@ -130,7 +180,7 @@ export function useTimelineAudio(): void {
       const media = items.find((item) => item.id === clip.mediaId)
       if (!media || !media.hasAudio) continue
       const url = urlForClip(clip, media.path)
-      const buffer = buffersRef.current.get(url)
+      const buffer = getBuffer(url)
       if (buffer) {
         playClip(clip, buffer, anchor)
       } else {
@@ -218,5 +268,6 @@ export function useTimelineAudio(): void {
         scheduledRef.current.delete(clipId)
       }
     }
+    pruneOrphanBuffers()
   }, [model])
 }
