@@ -8,6 +8,7 @@ import { useMediaImport } from '../../hooks/useMediaImport'
 import { useWaveformBackfill } from './useWaveformBackfill'
 import { useProxyManager } from './useProxyManager'
 import { useProxyStore } from '../../stores/proxyStore'
+import { useDenoiseStore } from '../../stores/denoiseStore'
 import { previewNeedsProxy } from '../../utils/proxyPolicy'
 import { useRecorder } from '../recording/useRecorder'
 import { mediaService } from '../../services/mediaService'
@@ -51,6 +52,11 @@ export function MediaBin() {
   function performRemove(item: MediaItem): void {
     useTimelineStore.getState().removeClipsByMedia(item.id)
     removeItem(item.id)
+    void mediaService.cancelMediaJobs(item.path)
+    // Forget any proxy/denoise entries so the cancelled jobs don't leave a stuck
+    // 'error' that blocks regeneration if the same path is re-imported.
+    useProxyStore.getState().clear(item.path)
+    useDenoiseStore.getState().clearForMedia(item.path)
     setConfirm(null)
   }
 

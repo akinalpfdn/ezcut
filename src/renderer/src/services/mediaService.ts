@@ -32,6 +32,9 @@ export const mediaService = {
   onProxyProgress(callback: (progress: ProxyProgress) => void): () => void {
     return window.electronAPI.onProxyProgress(callback)
   },
+  cancelMediaJobs(mediaPath: string): Promise<Result<void>> {
+    return window.electronAPI.cancelMediaJobs(mediaPath)
+  },
   getPathForFile(file: File): string {
     return window.electronAPI.getPathForFile(file)
   }

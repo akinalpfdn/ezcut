@@ -14,6 +14,7 @@ const electronAPI: ElectronAPI = {
     ipcRenderer.invoke(IpcChannels.generateDenoiseProxy, mediaPath, strength),
   generateProxy: (mediaPath, durationSeconds) =>
     ipcRenderer.invoke(IpcChannels.generateProxy, mediaPath, durationSeconds),
+  cancelMediaJobs: (mediaPath) => ipcRenderer.invoke(IpcChannels.cancelMediaJobs, mediaPath),
   onProxyProgress: (callback) => {
     const listener = (_event: IpcRendererEvent, progress: unknown): void =>
       callback(progress as Parameters<typeof callback>[0])

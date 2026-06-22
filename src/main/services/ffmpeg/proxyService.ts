@@ -1,6 +1,7 @@
 import { BrowserWindow } from 'electron'
 import { resolveFfmpegPath } from './binaryPaths'
 import { runFfmpegWithProgress } from './process'
+import { runFfmpegJob } from './jobQueue'
 import { cachedArtifact } from './artifactCache'
 import { FFMPEG_ARGS } from '../../config/ffmpegArgs'
 import { PROXY_CONFIG } from '../../config/proxy'
@@ -32,10 +33,13 @@ export async function generateProxy(mediaPath: string, durationSeconds: number):
     [PROXY_CONFIG.proxyWidth, PROXY_CONFIG.gop, PROXY_CONFIG.crf, mediaPath],
     PROXY_CONFIG.extension,
     (outputPath) =>
-      runFfmpegWithProgress(resolveFfmpegPath(), FFMPEG_ARGS.proxy(mediaPath, outputPath), {
-        durationSeconds,
-        onProgress: (ratio) => sendProgress(mediaPath, ratio)
-      })
+      runFfmpegJob(mediaPath, (onSpawn) =>
+        runFfmpegWithProgress(resolveFfmpegPath(), FFMPEG_ARGS.proxy(mediaPath, outputPath), {
+          durationSeconds,
+          onProgress: (ratio) => sendProgress(mediaPath, ratio),
+          onSpawn
+        })
+      )
   )
   sendProgress(mediaPath, 1)
   return proxyPath

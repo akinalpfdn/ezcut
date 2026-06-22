@@ -1,5 +1,6 @@
 import { resolveFfmpegPath } from './binaryPaths'
 import { spawnToBuffer } from './process'
+import { runFfmpegJob } from './jobQueue'
 import { FFMPEG_ARGS } from '../../config/ffmpegArgs'
 import { WAVEFORM_CONFIG } from '../../config/waveform'
 import type { WaveformData } from '@shared'
@@ -17,7 +18,9 @@ export async function generateWaveform(
   sourcePath: string,
   durationSeconds: number
 ): Promise<WaveformData> {
-  const pcm = await spawnToBuffer(resolveFfmpegPath(), FFMPEG_ARGS.pcm(sourcePath))
+  const pcm = await runFfmpegJob(sourcePath, (onSpawn) =>
+    spawnToBuffer(resolveFfmpegPath(), FFMPEG_ARGS.pcm(sourcePath), onSpawn)
+  )
   return downsample(pcm, bucketCountFor(durationSeconds), durationSeconds)
 }
 

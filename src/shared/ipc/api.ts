@@ -46,6 +46,10 @@ export interface ElectronAPI {
   /** Subscribes to preview-proxy transcode progress; returns an unsubscribe function. */
   onProxyProgress(callback: (progress: ProxyProgress) => void): () => void
 
+  /** Cancels in-flight/queued ffmpeg jobs (proxy/waveform/thumbnail/denoise) for a
+   * media path — e.g. when it's removed from the bin mid-generation. */
+  cancelMediaJobs(mediaPath: string): Promise<Result<void>>
+
   /** Resolves the absolute path of a dropped File (Electron `webUtils`).
    * Synchronous; not a Result — it cannot fail meaningfully. */
   getPathForFile(file: File): string

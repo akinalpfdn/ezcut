@@ -11,6 +11,7 @@ export const IpcChannels = {
   generateDenoiseProxy: 'denoise:generateProxy',
   generateProxy: 'media:generateProxy',
   proxyProgress: 'media:proxyProgress',
+  cancelMediaJobs: 'media:cancelJobs',
   loadSettings: 'settings:load',
   saveSettings: 'settings:save',
   selectExportPath: 'export:selectPath',

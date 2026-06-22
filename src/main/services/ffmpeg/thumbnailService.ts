@@ -1,5 +1,6 @@
 import { resolveFfmpegPath } from './binaryPaths'
 import { runCommand } from './process'
+import { runFfmpegJob } from './jobQueue'
 import { FFMPEG_ARGS } from '../../config/ffmpegArgs'
 import { THUMBNAIL_CONFIG } from '../../config/thumbnail'
 
@@ -16,5 +17,7 @@ export async function generateThumbnail(
   outputPath: string
 ): Promise<void> {
   const seek = computeSeekSeconds(durationSeconds)
-  await runCommand(resolveFfmpegPath(), FFMPEG_ARGS.thumbnail(sourcePath, seek, outputPath))
+  await runFfmpegJob(sourcePath, (onSpawn) =>
+    runCommand(resolveFfmpegPath(), FFMPEG_ARGS.thumbnail(sourcePath, seek, outputPath), onSpawn)
+  )
 }

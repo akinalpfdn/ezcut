@@ -67,9 +67,13 @@ function processError(binaryPath: string, spawnFailed: boolean, detail: string, 
  * (binary missing/not executable — the classic packaged-asar bug) from a
  * non-zero exit, surfacing each as a distinct localizable AppError.
  */
-export function runCommand(binaryPath: string, args: readonly string[]): Promise<CommandOutput> {
+export function runCommand(
+  binaryPath: string,
+  args: readonly string[],
+  onSpawn?: (child: ChildProcess) => void
+): Promise<CommandOutput> {
   return new Promise((resolve, reject) => {
-    execFile(
+    const child = execFile(
       binaryPath,
       args as string[],
       { maxBuffer: PROCESS_MAX_BUFFER_BYTES, windowsHide: true },
@@ -82,6 +86,7 @@ export function runCommand(binaryPath: string, args: readonly string[]): Promise
         resolve({ stdout, stderr })
       }
     )
+    onSpawn?.(child)
   })
 }
 
@@ -90,9 +95,14 @@ export function runCommand(binaryPath: string, args: readonly string[]): Promise
  * Streams via spawn rather than buffering through execFile so long inputs do not
  * hit a fixed maxBuffer ceiling.
  */
-export function spawnToBuffer(binaryPath: string, args: readonly string[]): Promise<Buffer> {
+export function spawnToBuffer(
+  binaryPath: string,
+  args: readonly string[],
+  onSpawn?: (child: ChildProcess) => void
+): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const child = spawn(binaryPath, args as string[], { windowsHide: true })
+    onSpawn?.(child)
     const stdoutChunks: Buffer[] = []
     const stderrChunks: Buffer[] = []
 

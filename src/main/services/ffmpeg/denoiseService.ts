@@ -3,6 +3,7 @@ import { join } from 'node:path'
 import { app } from 'electron'
 import { resolveFfmpegPath } from './binaryPaths'
 import { runCommand } from './process'
+import { runFfmpegJob } from './jobQueue'
 import { cachedArtifact } from './artifactCache'
 import { FFMPEG_ARGS } from '../../config/ffmpegArgs'
 import { DENOISE_CONFIG } from '../../config/denoise'
@@ -54,17 +55,26 @@ async function selectBackend(): Promise<DenoiseBackend> {
   return afftdnBackend
 }
 
-/** Returns a cached denoised proxy path, generating it if needed. */
-export async function generateDenoiseProxy(mediaPath: string, strength: number): Promise<string> {
+/** Returns a cached denoised proxy path, generating it if needed. `jobTag` groups
+ * the transcode for cancellation (defaults to the media path so deleting it
+ * cancels in-flight generation; export passes its own tag). */
+export async function generateDenoiseProxy(
+  mediaPath: string,
+  strength: number,
+  jobTag: string = mediaPath
+): Promise<string> {
   return cachedArtifact(
     'denoise',
     [DENOISE_CONFIG.defaultBackend, mediaPath, strength.toFixed(2)],
     DENOISE_CONFIG.proxyExtension,
     async (outputPath) => {
       const backend = await selectBackend()
-      await runCommand(
-        resolveFfmpegPath(),
-        FFMPEG_ARGS.denoiseProxy(mediaPath, backend.audioFilter(strength), outputPath)
+      await runFfmpegJob(jobTag, (onSpawn) =>
+        runCommand(
+          resolveFfmpegPath(),
+          FFMPEG_ARGS.denoiseProxy(mediaPath, backend.audioFilter(strength), outputPath),
+          onSpawn
+        )
       )
     }
   )
