@@ -26,6 +26,9 @@ interface RenderMessage {
 
 type IncomingMessage = InitMessage | RenderMessage
 
+/** Cap on retained fallback thumbnails (one per media); evicted LRU + closed. */
+const MAX_THUMBNAILS = 24
+
 let canvas: OffscreenCanvas | null = null
 let ctx: OffscreenCanvasRenderingContext2D | null = null
 const sources = new Map<string, ClipVideoSource>()
@@ -55,7 +58,11 @@ function ensureSource(clipId: string, fileUrl: string): ClipVideoSource | null {
 
 function ensureThumbnail(url: string): ImageBitmap | null {
   const cached = thumbnails.get(url)
-  if (cached) return cached
+  if (cached) {
+    thumbnails.delete(url)
+    thumbnails.set(url, cached) // bump to most-recently-used
+    return cached
+  }
   if (thumbnailLoading.has(url)) return null
   thumbnailLoading.add(url)
   void fetch(url)
@@ -64,6 +71,11 @@ function ensureThumbnail(url: string): ImageBitmap | null {
     .then((bitmap) => {
       thumbnails.set(url, bitmap)
       thumbnailLoading.delete(url)
+      while (thumbnails.size > MAX_THUMBNAILS) {
+        const oldest = thumbnails.keys().next().value as string
+        thumbnails.get(oldest)?.close()
+        thumbnails.delete(oldest)
+      }
     })
     .catch(() => thumbnailLoading.delete(url))
   return null

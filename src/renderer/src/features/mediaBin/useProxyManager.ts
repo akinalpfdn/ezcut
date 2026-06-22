@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useMediaStore } from '../../stores/mediaStore'
 import { useProxyStore } from '../../stores/proxyStore'
+import { mediaService } from '../../services/mediaService'
 import { previewNeedsProxy } from '../../utils/proxyPolicy'
 
 /**
@@ -12,7 +13,7 @@ export function useProxyManager(): void {
   const items = useMediaStore((state) => state.items)
 
   useEffect(() => {
-    return window.electronAPI.onProxyProgress(({ mediaPath, ratio }) => {
+    return mediaService.onProxyProgress(({ mediaPath, ratio }) => {
       useProxyStore.getState().setProgress(mediaPath, ratio)
     })
   }, [])

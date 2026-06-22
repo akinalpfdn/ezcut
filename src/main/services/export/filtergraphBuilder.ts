@@ -71,11 +71,12 @@ export async function buildFiltergraph(
       const end = start + clipTimelineDuration(clip)
       const index = counter++
 
+      let videoInput: number | null = null
       if (track.kind === 'video' && item.hasVideo) {
-        const vIdx = addInput(item.path)
+        videoInput = addInput(item.path)
         const label = `v${index}`
         parts.push(
-          `[${vIdx}:v]trim=start=${clip.sourceIn}:end=${clip.sourceOut},` +
+          `[${videoInput}:v]trim=start=${clip.sourceIn}:end=${clip.sourceOut},` +
             `setpts=(PTS-STARTPTS)/${speed}+${start}/TB,` +
             `scale=${width}:${height}:force_original_aspect_ratio=decrease,` +
             `pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1,fps=${fps},format=yuv420p[${label}]`
@@ -87,8 +88,8 @@ export async function buildFiltergraph(
         let audioInput: number
         if (clip.denoise.enabled) {
           audioInput = addInput(await resolveProxy(item.path, clip.denoise.strength))
-        } else if (track.kind === 'video' && item.hasVideo) {
-          audioInput = inputs.length - 1 // reuse the original video input just added
+        } else if (videoInput !== null) {
+          audioInput = videoInput // reuse the original video input added above
         } else {
           audioInput = addInput(item.path)
         }

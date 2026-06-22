@@ -1,4 +1,4 @@
-import type { MediaItem, MediaProbeResult, MediaToolingInfo, Result, WaveformData } from '@shared'
+import type { MediaItem, MediaProbeResult, MediaToolingInfo, ProxyProgress, Result, WaveformData } from '@shared'
 
 /**
  * Renderer-side facade over the preload bridge. Components/hooks call this — never
@@ -28,6 +28,9 @@ export const mediaService = {
   },
   generateProxy(mediaPath: string, durationSeconds: number): Promise<Result<{ proxyPath: string }>> {
     return window.electronAPI.generateProxy(mediaPath, durationSeconds)
+  },
+  onProxyProgress(callback: (progress: ProxyProgress) => void): () => void {
+    return window.electronAPI.onProxyProgress(callback)
   },
   getPathForFile(file: File): string {
     return window.electronAPI.getPathForFile(file)

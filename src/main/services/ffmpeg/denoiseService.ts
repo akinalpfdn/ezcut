@@ -1,12 +1,11 @@
-import { createHash } from 'node:crypto'
-import { access, mkdir } from 'node:fs/promises'
+import { access } from 'node:fs/promises'
 import { join } from 'node:path'
 import { app } from 'electron'
 import { resolveFfmpegPath } from './binaryPaths'
 import { runCommand } from './process'
+import { cachedArtifact } from './artifactCache'
 import { FFMPEG_ARGS } from '../../config/ffmpegArgs'
 import { DENOISE_CONFIG } from '../../config/denoise'
-import { allowMediaFile } from '../media/mediaProtocol'
 
 interface DenoiseBackend {
   audioFilter(strength: number): string
@@ -55,27 +54,18 @@ async function selectBackend(): Promise<DenoiseBackend> {
   return afftdnBackend
 }
 
-async function proxyDir(): Promise<string> {
-  const dir = join(app.getPath('userData'), 'cache', 'denoise')
-  await mkdir(dir, { recursive: true })
-  return dir
-}
-
-function proxyKey(mediaPath: string, strength: number): string {
-  return createHash('md5')
-    .update(`${DENOISE_CONFIG.defaultBackend}|${mediaPath}|${strength.toFixed(2)}`)
-    .digest('hex')
-}
-
 /** Returns a cached denoised proxy path, generating it if needed. */
 export async function generateDenoiseProxy(mediaPath: string, strength: number): Promise<string> {
-  const dir = await proxyDir()
-  const proxyPath = join(dir, `${proxyKey(mediaPath, strength)}.${DENOISE_CONFIG.proxyExtension}`)
-
-  if (!(await fileExists(proxyPath))) {
-    const backend = await selectBackend()
-    await runCommand(resolveFfmpegPath(), FFMPEG_ARGS.denoiseProxy(mediaPath, backend.audioFilter(strength), proxyPath))
-  }
-  allowMediaFile(proxyPath)
-  return proxyPath
+  return cachedArtifact(
+    'denoise',
+    [DENOISE_CONFIG.defaultBackend, mediaPath, strength.toFixed(2)],
+    DENOISE_CONFIG.proxyExtension,
+    async (outputPath) => {
+      const backend = await selectBackend()
+      await runCommand(
+        resolveFfmpegPath(),
+        FFMPEG_ARGS.denoiseProxy(mediaPath, backend.audioFilter(strength), outputPath)
+      )
+    }
+  )
 }

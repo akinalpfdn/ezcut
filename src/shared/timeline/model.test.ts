@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  canMerge,
   clipTimelineDuration,
   clipTimelineEnd,
   getTrackClips,
@@ -7,6 +8,7 @@ import {
   nextClipStart,
   previousClipEnd,
   resolveNonOverlappingStart,
+  splitPoint,
   timelineDuration,
   timelineTimeToSource
 } from './model'
@@ -152,6 +154,56 @@ describe('previousClipEnd', () => {
       makeClip({ id: 'b', startOnTimeline: 10, sourceOut: 5 })
     ])
     expect(previousClipEnd(model, 't-video', 12)).toBe(15)
+  })
+})
+
+describe('splitPoint', () => {
+  it('should return the source cut + local offset for a valid split', () => {
+    const clip = makeClip({ startOnTimeline: 0, sourceIn: 0, sourceOut: 10, speed: 1 })
+    expect(splitPoint(clip, 4, 0.1)).toEqual({ sourceSplit: 4, localSeconds: 4 })
+  })
+
+  it('should scale the source cut by speed', () => {
+    const clip = makeClip({ startOnTimeline: 0, sourceIn: 0, sourceOut: 10, speed: 2 })
+    // duration = 5; split at timeline 2 -> source 0 + 2*2 = 4
+    expect(splitPoint(clip, 2, 0.1)).toEqual({ sourceSplit: 4, localSeconds: 2 })
+  })
+
+  it('should return null when the cut is too close to the start', () => {
+    expect(splitPoint(makeClip({ sourceOut: 10 }), 0.05, 0.1)).toBeNull()
+  })
+
+  it('should return null when the cut is too close to the end', () => {
+    expect(splitPoint(makeClip({ sourceOut: 10 }), 9.95, 0.1)).toBeNull()
+  })
+})
+
+describe('canMerge', () => {
+  const first = makeClip({ id: 'a', sourceIn: 0, sourceOut: 5, startOnTimeline: 0 })
+
+  it('should merge contiguous clips of the same media and speed', () => {
+    const next = makeClip({ id: 'b', sourceIn: 5, sourceOut: 10, startOnTimeline: 5 })
+    expect(canMerge(first, next, 0.05)).toBe(true)
+  })
+
+  it('should not merge different media', () => {
+    const next = makeClip({ id: 'b', mediaId: 'other', sourceIn: 5, sourceOut: 10, startOnTimeline: 5 })
+    expect(canMerge(first, next, 0.05)).toBe(false)
+  })
+
+  it('should not merge different speeds', () => {
+    const next = makeClip({ id: 'b', speed: 2, sourceIn: 5, sourceOut: 10, startOnTimeline: 5 })
+    expect(canMerge(first, next, 0.05)).toBe(false)
+  })
+
+  it('should not merge when not contiguous on the timeline', () => {
+    const next = makeClip({ id: 'b', sourceIn: 5, sourceOut: 10, startOnTimeline: 6 })
+    expect(canMerge(first, next, 0.05)).toBe(false)
+  })
+
+  it('should not merge when not contiguous in the source', () => {
+    const next = makeClip({ id: 'b', sourceIn: 6, sourceOut: 10, startOnTimeline: 5 })
+    expect(canMerge(first, next, 0.05)).toBe(false)
   })
 })
 

@@ -1,8 +1,7 @@
-import type { MediaItem } from '@shared'
+import { PROXY_MAX_SOURCE_WIDTH, type MediaItem } from '@shared'
 
-/** Width above which preview decodes from a 720p proxy. Kept in sync with the
- * main process PROXY_CONFIG.maxSourceWidth. */
-export const PREVIEW_PROXY_MAX_WIDTH = 1280
+/** Re-exported single source of truth (shared with the main process). */
+export const PREVIEW_PROXY_MAX_WIDTH = PROXY_MAX_SOURCE_WIDTH
 
 /**
  * Whether a clip's preview should decode from a proxy rather than the original.

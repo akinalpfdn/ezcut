@@ -1,9 +1,10 @@
 import { create } from 'zustand'
 import {
+  canMerge,
   clipTimelineDuration,
-  clipTimelineEnd,
   getTrackClips,
   resolveNonOverlappingStart,
+  splitPoint,
   type Clip,
   type DenoiseSettings,
   type TimelineModel
@@ -185,18 +186,14 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
   splitClipAt: (clipId, timelineTime) => {
     const clip = get().model.clips[clipId]
     if (!clip) return
-    const local = timelineTime - clip.startOnTimeline
-    const duration = clipTimelineDuration(clip)
-    if (local <= TIMELINE_CONFIG.minClipDuration || local >= duration - TIMELINE_CONFIG.minClipDuration) {
-      return
-    }
-    const sourceSplit = clip.sourceIn + local * clip.speed
-    const left: Clip = { ...clip, id: uuid(), sourceOut: sourceSplit }
+    const split = splitPoint(clip, timelineTime, TIMELINE_CONFIG.minClipDuration)
+    if (!split) return
+    const left: Clip = { ...clip, id: uuid(), sourceOut: split.sourceSplit }
     const right: Clip = {
       ...clip,
       id: uuid(),
-      sourceIn: sourceSplit,
-      startOnTimeline: clip.startOnTimeline + local
+      sourceIn: split.sourceSplit,
+      startOnTimeline: clip.startOnTimeline + split.localSeconds
     }
     get().execute(splitClipCommand(clip, left, right))
     set({ selectedClipId: left.id })
@@ -209,11 +206,7 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
     const next = getTrackClips(model, clip.trackId).find(
       (candidate) => candidate.startOnTimeline > clip.startOnTimeline
     )
-    if (!next || next.mediaId !== clip.mediaId || next.speed !== clip.speed) return false
-
-    const contiguousOnTimeline = Math.abs(next.startOnTimeline - clipTimelineEnd(clip)) <= MERGE_TOLERANCE_SECONDS
-    const contiguousInSource = Math.abs(next.sourceIn - clip.sourceOut) <= MERGE_TOLERANCE_SECONDS
-    if (!contiguousOnTimeline || !contiguousInSource) return false
+    if (!next || !canMerge(clip, next, MERGE_TOLERANCE_SECONDS)) return false
 
     const merged: Clip = { ...clip, id: uuid(), sourceOut: next.sourceOut }
     get().execute(mergeClipsCommand(clip, next, merged))

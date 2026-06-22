@@ -77,6 +77,32 @@ export function previousClipEnd(
   return end
 }
 
+/**
+ * Where to split a clip at a timeline time: the source-time cut point plus the
+ * local offset into the clip. Returns null if the cut is within minClipDuration
+ * of either edge (too small a piece). Pure — the caller assigns clip ids.
+ */
+export function splitPoint(
+  clip: Clip,
+  timelineTime: number,
+  minClipDuration: number
+): { sourceSplit: number; localSeconds: number } | null {
+  const localSeconds = timelineTime - clip.startOnTimeline
+  const duration = clipTimelineDuration(clip)
+  if (localSeconds <= minClipDuration || localSeconds >= duration - minClipDuration) return null
+  const speed = clip.speed > 0 ? clip.speed : 1
+  return { sourceSplit: clip.sourceIn + localSeconds * speed, localSeconds }
+}
+
+/** Whether `next` can merge into `first`: same media + speed, and contiguous on
+ * both the timeline and the source (within `tolerance`). */
+export function canMerge(first: Clip, next: Clip, tolerance: number): boolean {
+  if (next.mediaId !== first.mediaId || next.speed !== first.speed) return false
+  const contiguousOnTimeline = Math.abs(next.startOnTimeline - clipTimelineEnd(first)) <= tolerance
+  const contiguousInSource = Math.abs(next.sourceIn - first.sourceOut) <= tolerance
+  return contiguousOnTimeline && contiguousInSource
+}
+
 /** Start of the nearest clip to the right of `referenceStart` on the track (or Infinity). */
 export function nextClipStart(
   model: TimelineModel,
