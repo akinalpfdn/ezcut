@@ -270,4 +270,23 @@ export function useTimelineAudio(): void {
     }
     pruneOrphanBuffers()
   }, [model])
+
+  // Tear down on unmount: stop sources, close the AudioContext, and release all
+  // decoded buffers — otherwise the context (browsers cap concurrent contexts)
+  // and the whole PCM cache leak for the rest of the session.
+  useEffect(() => {
+    return () => {
+      stopAll()
+      if (rafRef.current !== null) {
+        cancelAnimationFrame(rafRef.current)
+        rafRef.current = null
+      }
+      void ctxRef.current?.close()
+      ctxRef.current = null
+      masterRef.current = null
+      buffersRef.current.clear()
+      bufferBytesRef.current = 0
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 }
