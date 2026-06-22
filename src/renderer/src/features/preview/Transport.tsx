@@ -1,15 +1,16 @@
 import { useTranslation } from 'react-i18next'
 import { timelineDuration } from '@shared'
 import { useTimelineStore } from '../../stores/timelineStore'
+import { useTransportStore } from '../../stores/transportStore'
 import { stepFrames } from '../timeline/editorActions'
 import { formatTimecode } from '../../utils/timecode'
 import styles from './Transport.module.css'
 
 export function Transport() {
   const { t } = useTranslation()
-  const isPlaying = useTimelineStore((state) => state.isPlaying)
-  const playheadTime = useTimelineStore((state) => state.playheadTime)
-  const masterVolume = useTimelineStore((state) => state.masterVolume)
+  const isPlaying = useTransportStore((state) => state.isPlaying)
+  const playheadTime = useTransportStore((state) => state.playheadTime)
+  const masterVolume = useTransportStore((state) => state.masterVolume)
   const duration = useTimelineStore((state) => timelineDuration(state.model))
 
   const max = duration || 0
@@ -31,7 +32,7 @@ export function Transport() {
           className={`${styles.button} ${styles.play}`}
           aria-label={isPlaying ? t('transport.pause') : t('transport.play')}
           title={isPlaying ? t('transport.pause') : t('transport.play')}
-          onClick={() => useTimelineStore.getState().togglePlay()}
+          onClick={() => useTransportStore.getState().togglePlay()}
         >
           {isPlaying ? '⏸' : '▶'}
         </button>
@@ -59,7 +60,7 @@ export function Transport() {
         max={max}
         step={0.01}
         value={Math.min(playheadTime, max)}
-        onChange={(event) => useTimelineStore.getState().setPlayhead(Number(event.target.value))}
+        onChange={(event) => useTransportStore.getState().setPlayhead(Number(event.target.value))}
         aria-label={t('transport.seek')}
       />
 
@@ -72,7 +73,7 @@ export function Transport() {
           max={1}
           step={0.01}
           value={masterVolume}
-          onChange={(event) => useTimelineStore.getState().setMasterVolume(Number(event.target.value))}
+          onChange={(event) => useTransportStore.getState().setMasterVolume(Number(event.target.value))}
           aria-label={t('transport.volume')}
         />
       </label>

@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useKeymapStore } from '../../stores/keymapStore'
 import { useTimelineStore } from '../../stores/timelineStore'
+import { useTransportStore } from '../../stores/transportStore'
 import { actionForCombo, comboFromEvent } from './keyCombo'
 import { closeGaps, deleteSelected, splitSelected, stepFrames } from '../timeline/editorActions'
 
@@ -29,7 +30,7 @@ export function useKeyboardShortcuts(): void {
       const store = useTimelineStore.getState()
       switch (action) {
         case 'playPause':
-          store.togglePlay()
+          useTransportStore.getState().togglePlay()
           break
         case 'split':
           splitSelected()

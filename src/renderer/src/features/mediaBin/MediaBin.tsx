@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import type { MediaItem } from '@shared'
 import { useMediaStore } from '../../stores/mediaStore'
 import { useTimelineStore } from '../../stores/timelineStore'
+import { useTransportStore } from '../../stores/transportStore'
 import { useMediaImport } from '../../hooks/useMediaImport'
 import { useWaveformBackfill } from './useWaveformBackfill'
 import { useProxyManager } from './useProxyManager'
@@ -27,7 +28,8 @@ interface MediaMenuState {
 function addToTimeline(item: MediaItem): void {
   const timeline = useTimelineStore.getState()
   const track = timeline.model.tracks.find((candidate) => candidate.kind === item.kind)
-  if (track) timeline.addClipFromMedia(item.id, track.id, timeline.playheadTime, item.durationSeconds)
+  const playheadTime = useTransportStore.getState().playheadTime
+  if (track) timeline.addClipFromMedia(item.id, track.id, playheadTime, item.durationSeconds)
 }
 
 export function MediaBin() {

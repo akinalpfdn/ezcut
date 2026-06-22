@@ -1,5 +1,6 @@
 import { PROJECT_FILE_VERSION, type MediaItem, type ProjectFile } from '@shared'
 import { useTimelineStore } from '../../stores/timelineStore'
+import { useTransportStore } from '../../stores/transportStore'
 import { useMediaStore } from '../../stores/mediaStore'
 import { projectService } from '../../services/projectService'
 
@@ -27,6 +28,7 @@ export function currentProject(): ProjectFile {
 export function applyProject(project: ProjectFile): void {
   useMediaStore.getState().setItems(stripWaveforms(project.media))
   useTimelineStore.getState().loadModel(project.model)
+  useTransportStore.getState().reset()
 }
 
 export async function saveCurrentProject(): Promise<void> {

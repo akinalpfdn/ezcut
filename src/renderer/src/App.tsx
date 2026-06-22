@@ -7,7 +7,6 @@ import { Preview } from './features/preview/Preview'
 import { Timeline } from './features/timeline/Timeline'
 import { SettingsPanel } from './features/settings/SettingsPanel'
 import { ExportDialog } from './features/export/ExportDialog'
-import { WebCodecsLab } from './features/preview/webcodecs/WebCodecsLab'
 import { useKeyboardShortcuts } from './features/shortcuts/useKeyboardShortcuts'
 import { useAutosave } from './features/project/useAutosave'
 import { applyProject, openProject, saveCurrentProject } from './features/project/projectActions'
@@ -21,7 +20,6 @@ export function App() {
   const { t } = useTranslation()
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
-  const [labOpen, setLabOpen] = useState(false)
   useKeyboardShortcuts()
   useAutosave()
 
@@ -64,15 +62,6 @@ export function App() {
             {t('project.open')}
           </Button>
           <Button onClick={() => setExportOpen(true)}>{t('export.title')}</Button>
-          <button
-            type="button"
-            className={styles.settingsButton}
-            aria-label={t('webcodecs.open')}
-            title={t('webcodecs.open')}
-            onClick={() => setLabOpen(true)}
-          >
-            🧪
-          </button>
           <LanguageSwitcher />
           <button
             type="button"
@@ -96,7 +85,6 @@ export function App() {
 
       {settingsOpen ? <SettingsPanel onClose={() => setSettingsOpen(false)} /> : null}
       {exportOpen ? <ExportDialog onClose={() => setExportOpen(false)} /> : null}
-      {labOpen ? <WebCodecsLab onClose={() => setLabOpen(false)} /> : null}
     </div>
   )
 }

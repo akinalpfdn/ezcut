@@ -25,7 +25,6 @@ import {
   type Command
 } from '../features/timeline/commands'
 import { MERGE_TOLERANCE_SECONDS, TIMELINE_CONFIG } from '../config/timeline'
-import { DEFAULT_MASTER_VOLUME } from '../config/playback'
 
 function uuid(): string {
   return crypto.randomUUID()
@@ -50,10 +49,7 @@ interface TimelineState {
   undoStack: Command[]
   redoStack: Command[]
   selectedClipId: string | null
-  playheadTime: number
   pxPerSec: number
-  isPlaying: boolean
-  masterVolume: number
   pinPlayhead: boolean
 
   execute: (command: Command) => void
@@ -80,15 +76,9 @@ interface TimelineState {
   setClipDenoise: (clipId: string, denoise: Partial<DenoiseSettings>) => void
 
   selectClip: (clipId: string | null) => void
-  setPlayhead: (time: number) => void
   setPxPerSec: (pxPerSec: number) => void
   zoomIn: () => void
   zoomOut: () => void
-
-  play: () => void
-  pause: () => void
-  togglePlay: () => void
-  setMasterVolume: (volume: number) => void
   togglePinPlayhead: () => void
 }
 
@@ -97,10 +87,7 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
   undoStack: [],
   redoStack: [],
   selectedClipId: null,
-  playheadTime: 0,
   pxPerSec: TIMELINE_CONFIG.defaultPxPerSec,
-  isPlaying: false,
-  masterVolume: DEFAULT_MASTER_VOLUME,
   pinPlayhead: false,
 
   execute: (command) =>
@@ -141,9 +128,7 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
       model,
       undoStack: [],
       redoStack: [],
-      selectedClipId: null,
-      playheadTime: 0,
-      isPlaying: false
+      selectedClipId: null
     }),
 
   addClipFromMedia: (mediaId, trackId, startOnTimeline, sourceDuration) => {
@@ -301,17 +286,11 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
   },
 
   selectClip: (clipId) => set({ selectedClipId: clipId }),
-  setPlayhead: (time) => set({ playheadTime: Math.max(0, time) }),
   setPxPerSec: (pxPerSec) =>
     set({
       pxPerSec: Math.min(Math.max(pxPerSec, TIMELINE_CONFIG.minPxPerSec), TIMELINE_CONFIG.maxPxPerSec)
     }),
   zoomIn: () => get().setPxPerSec(get().pxPerSec * TIMELINE_CONFIG.zoomFactor),
   zoomOut: () => get().setPxPerSec(get().pxPerSec / TIMELINE_CONFIG.zoomFactor),
-
-  play: () => set({ isPlaying: true }),
-  pause: () => set({ isPlaying: false }),
-  togglePlay: () => set((state) => ({ isPlaying: !state.isPlaying })),
-  setMasterVolume: (volume) => set({ masterVolume: Math.min(Math.max(volume, 0), 1) }),
   togglePinPlayhead: () => set((state) => ({ pinPlayhead: !state.pinPlayhead }))
 }))

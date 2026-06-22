@@ -21,6 +21,7 @@ import {
   type MediaItem
 } from '@shared'
 import { useTimelineStore } from '../../stores/timelineStore'
+import { useTransportStore } from '../../stores/transportStore'
 import { useMediaStore } from '../../stores/mediaStore'
 import { useKeymapStore } from '../../stores/keymapStore'
 import { TIMELINE_CONFIG } from '../../config/timeline'
@@ -58,6 +59,8 @@ export function Timeline() {
   const model = useTimelineStore((state) => state.model)
   const pxPerSec = useTimelineStore((state) => state.pxPerSec)
   const selectedClipId = useTimelineStore((state) => state.selectedClipId)
+  const isPlaying = useTransportStore((state) => state.isPlaying)
+  const pinPlayhead = useTimelineStore((state) => state.pinPlayhead)
   const mediaItems = useMediaStore((state) => state.items)
   const keymap = useKeymapStore((state) => state.keymap)
 
@@ -108,22 +111,28 @@ export function Timeline() {
   }, [])
 
   // Pinned playhead: keep it in view during playback by centering it whenever it
-  // scrolls out of the viewport. Suppressed while paused or during a drag so
-  // manual seeks and edits aren't yanked around.
+  // scrolls out of the viewport. A dedicated rAF that runs ONLY while pinned and
+  // playing (instead of a subscription firing on every store change), so the one
+  // layout read/write per frame is frame-aligned and confined to that case.
+  // Suppressed during a drag so manual edits aren't yanked around.
   useEffect(() => {
-    return useTimelineStore.subscribe((state, prev) => {
-      if (!state.pinPlayhead || !state.isPlaying || dragRef.current) return
-      if (state.playheadTime === prev.playheadTime) return
-      const element = scrollRef.current
-      if (!element) return
-      const playheadPx = state.playheadTime * state.pxPerSec
-      const left = element.scrollLeft
-      const right = left + element.clientWidth
-      if (playheadPx < left || playheadPx > right) {
-        element.scrollLeft = playheadPx - element.clientWidth / 2
+    if (!pinPlayhead || !isPlaying) return
+    const element = scrollRef.current
+    if (!element) return
+    let rafId = requestAnimationFrame(function follow() {
+      if (!dragRef.current) {
+        const playheadTime = useTransportStore.getState().playheadTime
+        const ps = useTimelineStore.getState().pxPerSec
+        const playheadPx = playheadTime * ps
+        const left = element.scrollLeft
+        if (playheadPx < left || playheadPx > left + element.clientWidth) {
+          element.scrollLeft = playheadPx - element.clientWidth / 2
+        }
       }
+      rafId = requestAnimationFrame(follow)
     })
-  }, [])
+    return () => cancelAnimationFrame(rafId)
+  }, [pinPlayhead, isPlaying])
 
   const sortedTracks = getTracksSorted(model)
   const trackIndex = (trackId: string): number => sortedTracks.findIndex((track) => track.id === trackId)
@@ -142,7 +151,7 @@ export function Timeline() {
     if (!drag) return
     const state = useTimelineStore.getState()
     const ps = state.pxPerSec
-    const points = collectSnapPoints(state.model, drag.clipId, state.playheadTime)
+    const points = collectSnapPoints(state.model, drag.clipId, useTransportStore.getState().playheadTime)
     const threshold = snapThresholdPx / ps
     const speed = drag.original.speed > 0 ? drag.original.speed : 1
     const deltaSeconds = (event.clientX - drag.pointerStartX) / ps
@@ -254,7 +263,7 @@ export function Timeline() {
     if (!target) return
 
     const time = Math.max(0, (event.clientX - rect.left) / pxPerSec)
-    const playhead = useTimelineStore.getState().playheadTime
+    const playhead = useTransportStore.getState().playheadTime
     const snapped = Math.max(0, snapValue(time, collectSnapPoints(model, null, playhead), snapThresholdPx / pxPerSec))
     useTimelineStore.getState().addClipFromMedia(mediaId, target.id, snapped, media.durationSeconds)
   }
@@ -310,7 +319,7 @@ export function Timeline() {
 
         <div ref={scrollRef} className={styles.scroll}>
           <div className={styles.content} style={{ width }}>
-            <TimeRuler pxPerSec={pxPerSec} width={width} onSeek={(time) => useTimelineStore.getState().setPlayhead(time)} />
+            <TimeRuler pxPerSec={pxPerSec} width={width} onSeek={(time) => useTransportStore.getState().setPlayhead(time)} />
             <div
               ref={tracksRef}
               className={styles.tracks}

@@ -1,5 +1,6 @@
 import { clipTimelineEnd, getTrackClips } from '@shared'
 import { useTimelineStore } from '../../stores/timelineStore'
+import { useTransportStore } from '../../stores/transportStore'
 import { useMediaStore } from '../../stores/mediaStore'
 import { useDenoiseStore } from '../../stores/denoiseStore'
 import { FALLBACK_FPS } from '../../config/playback'
@@ -11,7 +12,7 @@ import { FALLBACK_FPS } from '../../config/playback'
 
 export function splitSelected(): void {
   const state = useTimelineStore.getState()
-  if (state.selectedClipId) state.splitClipAt(state.selectedClipId, state.playheadTime)
+  if (state.selectedClipId) state.splitClipAt(state.selectedClipId, useTransportStore.getState().playheadTime)
 }
 
 export function deleteSelected(): void {
@@ -42,16 +43,17 @@ export function toggleClipDenoise(clipId: string): void {
 
 export function stepFrames(frames: number): void {
   const state = useTimelineStore.getState()
+  const transport = useTransportStore.getState()
+  const playheadTime = transport.playheadTime
   const videoTrack = state.model.tracks.find((track) => track.kind === 'video')
   let fps = FALLBACK_FPS
   if (videoTrack) {
     const clip = getTrackClips(state.model, videoTrack.id).find(
-      (candidate) =>
-        state.playheadTime >= candidate.startOnTimeline && state.playheadTime < clipTimelineEnd(candidate)
+      (candidate) => playheadTime >= candidate.startOnTimeline && playheadTime < clipTimelineEnd(candidate)
     )
     const media = clip ? useMediaStore.getState().items.find((item) => item.id === clip.mediaId) : undefined
     if (media?.fps) fps = media.fps
   }
-  state.pause()
-  state.setPlayhead(Math.max(0, state.playheadTime + frames / fps))
+  transport.pause()
+  transport.setPlayhead(Math.max(0, playheadTime + frames / fps))
 }

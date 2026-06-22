@@ -7,6 +7,7 @@ import {
   type MediaItem
 } from '@shared'
 import { useTimelineStore } from '../../../stores/timelineStore'
+import { useTransportStore } from '../../../stores/transportStore'
 import { useMediaStore } from '../../../stores/mediaStore'
 import { useProxyStore } from '../../../stores/proxyStore'
 import { toMediaUrl } from '../../../utils/mediaUrl'
@@ -62,6 +63,7 @@ export function useCanvasCompositor(canvasRef: RefObject<HTMLCanvasElement | nul
     }
     const unsubscribers = [
       useTimelineStore.subscribe(markDirty),
+      useTransportStore.subscribe(markDirty),
       useMediaStore.subscribe(markDirty),
       useProxyStore.subscribe(markDirty)
     ]
@@ -74,7 +76,8 @@ export function useCanvasCompositor(canvasRef: RefObject<HTMLCanvasElement | nul
         return
       }
       dirty = false
-      const { model, playheadTime } = useTimelineStore.getState()
+      const model = useTimelineStore.getState().model
+      const playheadTime = useTransportStore.getState().playheadTime
       const items = useMediaStore.getState().items
       const videoTrack = getTracksSorted(model).find((track) => track.kind === 'video')
 

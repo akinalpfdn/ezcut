@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { type Clip, timelineDuration } from '@shared'
 import { useTimelineStore } from '../../../stores/timelineStore'
+import { useTransportStore } from '../../../stores/transportStore'
 import { useMediaStore } from '../../../stores/mediaStore'
 import { useDenoiseStore } from '../../../stores/denoiseStore'
 import { toMediaUrl } from '../../../utils/mediaUrl'
@@ -36,15 +37,15 @@ export function useTimelineAudio(): void {
   const lastSetRef = useRef(0)
   const rafRef = useRef<number | null>(null)
 
-  const isPlaying = useTimelineStore((state) => state.isPlaying)
-  const masterVolume = useTimelineStore((state) => state.masterVolume)
+  const isPlaying = useTransportStore((state) => state.isPlaying)
+  const masterVolume = useTransportStore((state) => state.masterVolume)
   const model = useTimelineStore((state) => state.model)
 
   const ensureContext = (): { ctx: AudioContext; master: GainNode } => {
     if (!ctxRef.current || !masterRef.current) {
       const ctx = new AudioContext()
       const master = ctx.createGain()
-      master.gain.value = useTimelineStore.getState().masterVolume
+      master.gain.value = useTransportStore.getState().masterVolume
       master.connect(ctx.destination)
       ctxRef.current = ctx
       masterRef.current = master
@@ -204,35 +205,35 @@ export function useTimelineAudio(): void {
     if (!isPlaying) return
     const { ctx } = ensureContext()
     void ctx.resume()
-    reanchor(useTimelineStore.getState().playheadTime)
+    reanchor(useTransportStore.getState().playheadTime)
 
     const tick = (): void => {
       const anchor = anchorRef.current
       if (!anchor) return
-      const store = useTimelineStore.getState()
+      const transport = useTransportStore.getState()
 
       // Honor an external seek (scrub while playing).
-      if (Math.abs(store.playheadTime - lastSetRef.current) > SEEK_REANCHOR_THRESHOLD) {
-        reanchor(store.playheadTime)
+      if (Math.abs(transport.playheadTime - lastSetRef.current) > SEEK_REANCHOR_THRESHOLD) {
+        reanchor(transport.playheadTime)
       }
 
       const current = anchorRef.current
       if (!current) return
-      const duration = timelineDuration(store.model)
+      const duration = timelineDuration(useTimelineStore.getState().model)
       const playhead = current.playhead + (ctx.currentTime - current.ctxTime)
       if (duration <= 0) {
         // Timeline emptied mid-play (e.g. its media was deleted) — stop.
-        store.pause()
+        transport.pause()
         return
       }
       if (playhead >= duration) {
         lastSetRef.current = duration
-        store.setPlayhead(duration)
-        store.pause()
+        transport.setPlayhead(duration)
+        transport.pause()
         return
       }
       lastSetRef.current = playhead
-      store.setPlayhead(playhead)
+      transport.setPlayhead(playhead)
       rafRef.current = requestAnimationFrame(tick)
     }
 
