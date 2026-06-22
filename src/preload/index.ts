@@ -12,7 +12,14 @@ const electronAPI: ElectronAPI = {
   saveRecording: (data, extension) => ipcRenderer.invoke(IpcChannels.saveRecording, data, extension),
   generateDenoiseProxy: (mediaPath, strength) =>
     ipcRenderer.invoke(IpcChannels.generateDenoiseProxy, mediaPath, strength),
-  generateProxy: (mediaPath) => ipcRenderer.invoke(IpcChannels.generateProxy, mediaPath),
+  generateProxy: (mediaPath, durationSeconds) =>
+    ipcRenderer.invoke(IpcChannels.generateProxy, mediaPath, durationSeconds),
+  onProxyProgress: (callback) => {
+    const listener = (_event: IpcRendererEvent, progress: unknown): void =>
+      callback(progress as Parameters<typeof callback>[0])
+    ipcRenderer.on(IpcChannels.proxyProgress, listener)
+    return () => ipcRenderer.removeListener(IpcChannels.proxyProgress, listener)
+  },
   getPathForFile: (file) => webUtils.getPathForFile(file),
   loadSettings: () => ipcRenderer.invoke(IpcChannels.loadSettings),
   saveSettings: (settings) => ipcRenderer.invoke(IpcChannels.saveSettings, settings),

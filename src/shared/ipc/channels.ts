@@ -10,6 +10,7 @@ export const IpcChannels = {
   saveRecording: 'media:saveRecording',
   generateDenoiseProxy: 'denoise:generateProxy',
   generateProxy: 'media:generateProxy',
+  proxyProgress: 'media:proxyProgress',
   loadSettings: 'settings:load',
   saveSettings: 'settings:save',
   selectExportPath: 'export:selectPath',

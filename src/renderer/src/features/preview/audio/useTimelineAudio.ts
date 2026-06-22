@@ -170,7 +170,12 @@ export function useTimelineAudio(): void {
       if (!current) return
       const duration = timelineDuration(store.model)
       const playhead = current.playhead + (ctx.currentTime - current.ctxTime)
-      if (duration > 0 && playhead >= duration) {
+      if (duration <= 0) {
+        // Timeline emptied mid-play (e.g. its media was deleted) — stop.
+        store.pause()
+        return
+      }
+      if (playhead >= duration) {
         lastSetRef.current = duration
         store.setPlayhead(duration)
         store.pause()
@@ -195,11 +200,23 @@ export function useTimelineAudio(): void {
     if (masterRef.current) masterRef.current.gain.value = masterVolume
   }, [masterVolume])
 
-  // Live per-clip volume (other structural edits apply on next play).
+  // Live per-clip volume; stop audio for clips that were removed mid-play (e.g.
+  // their source media was deleted from the bin).
   useEffect(() => {
-    for (const [clipId, { gain }] of scheduledRef.current) {
+    for (const [clipId, entry] of scheduledRef.current) {
       const clip = model.clips[clipId]
-      if (clip) gain.gain.value = clip.volume
+      if (clip) {
+        entry.gain.gain.value = clip.volume
+      } else {
+        try {
+          entry.source.onended = null
+          entry.source.stop()
+          entry.source.disconnect()
+        } catch {
+          // already stopped
+        }
+        scheduledRef.current.delete(clipId)
+      }
     }
   }, [model])
 }

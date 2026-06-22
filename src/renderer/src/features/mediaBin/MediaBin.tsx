@@ -5,6 +5,9 @@ import { useMediaStore } from '../../stores/mediaStore'
 import { useTimelineStore } from '../../stores/timelineStore'
 import { useMediaImport } from '../../hooks/useMediaImport'
 import { useWaveformBackfill } from './useWaveformBackfill'
+import { useProxyManager } from './useProxyManager'
+import { useProxyStore } from '../../stores/proxyStore'
+import { previewNeedsProxy } from '../../utils/proxyPolicy'
 import { useRecorder } from '../recording/useRecorder'
 import { mediaService } from '../../services/mediaService'
 import { Button } from '../../components/Button/Button'
@@ -36,6 +39,7 @@ export function MediaBin() {
   const { importing, errors, importViaDialog, importPaths } = useMediaImport()
   const recorder = useRecorder()
   useWaveformBackfill()
+  useProxyManager()
   const [dragOver, setDragOver] = useState(false)
   const [menu, setMenu] = useState<MediaMenuState | null>(null)
   const [confirm, setConfirm] = useState<MediaItem | null>(null)
@@ -130,7 +134,9 @@ export function MediaBin() {
           y={menu.y}
           onClose={() => setMenu(null)}
           items={[
-            { label: t('media.addToTimeline'), onSelect: () => addToTimeline(menu.item) },
+            ...(!previewNeedsProxy(menu.item) || useProxyStore.getState().getProxyPath(menu.item.path)
+              ? [{ label: t('media.addToTimeline'), onSelect: () => addToTimeline(menu.item) }]
+              : []),
             { label: t('media.remove'), onSelect: () => setConfirm(menu.item) }
           ]}
         />

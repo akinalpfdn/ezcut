@@ -20,6 +20,7 @@
     "removeConfirmBody": "\"{{name}}\" ve onu kullanan tüm zaman çizelgesi klipleri silinecek. Devam edilsin mi?",
     "removeConfirmYes": "Sil",
     "cancel": "İptal",
+    "preparing": "Önizleme hazırlanıyor…",
     "record": "Sesi kaydet",
     "stopRecording": "Kaydı durdur",
     "saving": "Kaydediliyor…",

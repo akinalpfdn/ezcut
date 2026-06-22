@@ -63,6 +63,51 @@
   color: var(--color-text);
 }
 
+.preparing {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.6);
+}
+
+.ringWrap {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ring {
+  width: 48px;
+  height: 48px;
+  transform: rotate(-90deg);
+}
+
+.ringTrack {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.18);
+  stroke-width: 3;
+}
+
+.ringFill {
+  fill: none;
+  stroke: var(--color-primary);
+  stroke-width: 3;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.2s linear;
+}
+
+.ringText {
+  position: absolute;
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+}
+
 .meta {
   display: flex;
   align-items: center;

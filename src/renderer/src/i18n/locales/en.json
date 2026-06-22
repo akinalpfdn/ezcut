@@ -20,6 +20,7 @@
     "removeConfirmBody": "\"{{name}}\" and every timeline clip using it will be removed. Continue?",
     "removeConfirmYes": "Delete",
     "cancel": "Cancel",
+    "preparing": "Preparing preview…",
     "record": "Record audio",
     "stopRecording": "Stop recording",
     "saving": "Saving…",

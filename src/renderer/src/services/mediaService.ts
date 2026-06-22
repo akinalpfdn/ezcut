@@ -26,8 +26,8 @@ export const mediaService = {
   generateDenoiseProxy(mediaPath: string, strength: number): Promise<Result<{ proxyPath: string }>> {
     return window.electronAPI.generateDenoiseProxy(mediaPath, strength)
   },
-  generateProxy(mediaPath: string): Promise<Result<{ proxyPath: string }>> {
-    return window.electronAPI.generateProxy(mediaPath)
+  generateProxy(mediaPath: string, durationSeconds: number): Promise<Result<{ proxyPath: string }>> {
+    return window.electronAPI.generateProxy(mediaPath, durationSeconds)
   },
   getPathForFile(file: File): string {
     return window.electronAPI.getPathForFile(file)

@@ -50,6 +50,12 @@ export interface WaveformData {
   bucketCount: number
 }
 
+/** Progress of a preview-proxy transcode, emitted from main while it runs. */
+export interface ProxyProgress {
+  mediaPath: string
+  ratio: number
+}
+
 /** A library item: a probed source file plus its derived display assets.
  * The single source of truth for imported media; the timeline references these
  * by id (Phase 3+). */

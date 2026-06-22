@@ -55,10 +55,45 @@ function toChunkInit(sample: Sample): { type: EncodedVideoChunkType; timestamp: 
   }
 }
 
+// Demuxed results (encoded chunks + configs) are cached by url so revisiting a
+// clip never re-fetches or re-parses the file — only the cheap decode/seek runs.
+// Compressed chunks are small relative to decoded frames; bound the cache by
+// total bytes and evict least-recently-used.
+const MAX_CACHE_BYTES = 300 * 1024 * 1024
+const demuxCache = new Map<string, DemuxResult>()
+let demuxCacheBytes = 0
+
+function resultBytes(result: DemuxResult): number {
+  let bytes = 0
+  for (const chunk of result.video?.chunks ?? []) bytes += chunk.byteLength
+  for (const chunk of result.audio?.chunks ?? []) bytes += chunk.byteLength
+  return bytes
+}
+
+/** demux(), memoized by url with a byte-bounded LRU. */
+export async function demuxCached(fileUrl: string): Promise<DemuxResult> {
+  const hit = demuxCache.get(fileUrl)
+  if (hit) {
+    demuxCache.delete(fileUrl)
+    demuxCache.set(fileUrl, hit) // move to most-recently-used
+    return hit
+  }
+  const result = await demux(fileUrl)
+  demuxCache.set(fileUrl, result)
+  demuxCacheBytes += resultBytes(result)
+  while (demuxCacheBytes > MAX_CACHE_BYTES && demuxCache.size > 1) {
+    const oldestKey = demuxCache.keys().next().value as string
+    const oldest = demuxCache.get(oldestKey)
+    if (oldest) demuxCacheBytes -= resultBytes(oldest)
+    demuxCache.delete(oldestKey)
+  }
+  return result
+}
+
 /**
  * Demuxes an mp4/mov file (fetched via the ezmedia protocol) into WebCodecs
- * decoder configs + encoded chunks. Phase 8 loads the whole file; streaming /
- * prefetch comes in Phase 9/11.
+ * decoder configs + encoded chunks. Loads the whole file; callers should prefer
+ * demuxCached() so revisits don't re-fetch/re-parse.
  */
 export async function demux(fileUrl: string): Promise<DemuxResult> {
   const response = await fetch(fileUrl)

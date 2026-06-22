@@ -43,9 +43,10 @@ export function registerIpcHandlers(): void {
     IpcChannels.generateDenoiseProxy,
     async (mediaPath, strength) => ({ proxyPath: await generateDenoiseProxy(mediaPath, strength) })
   )
-  handle<[string], { proxyPath: string }>(IpcChannels.generateProxy, async (mediaPath) => ({
-    proxyPath: await generateProxy(mediaPath)
-  }))
+  handle<[string, number], { proxyPath: string }>(
+    IpcChannels.generateProxy,
+    async (mediaPath, durationSeconds) => ({ proxyPath: await generateProxy(mediaPath, durationSeconds) })
+  )
   handle(IpcChannels.loadSettings, () => loadSettings())
   handle<[AppSettings], void>(IpcChannels.saveSettings, (settings) => saveSettings(settings))
 

@@ -11,6 +11,7 @@ import { WebCodecsLab } from './features/preview/webcodecs/WebCodecsLab'
 import { useKeyboardShortcuts } from './features/shortcuts/useKeyboardShortcuts'
 import { useAutosave } from './features/project/useAutosave'
 import { applyProject, openProject, saveCurrentProject } from './features/project/projectActions'
+import { autosaveGate } from './features/project/autosaveGate'
 import { useKeymapStore } from './stores/keymapStore'
 import { settingsService } from './services/settingsService'
 import { projectService } from './services/projectService'
@@ -31,6 +32,9 @@ export function App() {
     })
     void projectService.loadAutosave().then((result) => {
       if (result.ok && result.value) applyProject(result.value)
+      // Enable autosave only after the restore ran, so deletions (incl. emptying
+      // the project) are now persisted instead of being reverted on refresh.
+      autosaveGate.open()
     })
   }, [])
 

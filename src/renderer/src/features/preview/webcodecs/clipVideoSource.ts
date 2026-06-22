@@ -1,10 +1,13 @@
-import { demux } from './demux'
+import { demuxCached } from './demux'
 
-const MAX_QUEUE = 48
-const MAX_DECODE_BACKLOG = 12
+// Total decoded frames kept open at once. Must stay modest: holding too many
+// open VideoFrames exhausts the decoder's internal pool and it stalls (slow
+// output, no error). 24 is the proven-smooth ceiling.
+const MAX_QUEUE = 24
+const MAX_DECODE_BACKLOG = 8
 /** Frames kept behind the playhead so short rewinds replay from the buffer
- * instead of re-decoding from a keyframe. */
-const KEEP_BEHIND = 16
+ * instead of re-decoding from a keyframe (small, within MAX_QUEUE). */
+const KEEP_BEHIND = 4
 /** If the requested time is more than this ahead of the buffer, seek instead of
  * pumping forward (the buffer can't realistically catch up by decoding). */
 const FORWARD_SEEK_THRESHOLD_US = 4_000_000
@@ -30,7 +33,7 @@ export class ClipVideoSource {
   }
 
   async load(fileUrl: string): Promise<void> {
-    const result = await demux(fileUrl)
+    const result = await demuxCached(fileUrl)
     if (!result.video) throw new Error('No decodable video track')
     this.chunks = result.video.chunks
     this.config = result.video.config

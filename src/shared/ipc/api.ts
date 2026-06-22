@@ -1,5 +1,5 @@
 import type { Result } from '../core/result'
-import type { MediaItem, MediaProbeResult, MediaToolingInfo, WaveformData } from '../media/types'
+import type { MediaItem, MediaProbeResult, MediaToolingInfo, ProxyProgress, WaveformData } from '../media/types'
 import type { AppSettings } from '../settings/types'
 import type { ExportContainer, ExportProgress, ExportRequest } from '../export/types'
 import type { ProjectFile } from '../project/types'
@@ -39,8 +39,12 @@ export interface ElectronAPI {
   generateDenoiseProxy(mediaPath: string, strength: number): Promise<Result<{ proxyPath: string }>>
 
   /** Generates (or returns a cached) WebCodecs-friendly preview proxy (video-only)
-   * for a heavy/unsupported source; resolves to the proxy's absolute path. */
-  generateProxy(mediaPath: string): Promise<Result<{ proxyPath: string }>>
+   * for a heavy/unsupported source; resolves to the proxy's absolute path.
+   * Emits progress via onProxyProgress while transcoding. */
+  generateProxy(mediaPath: string, durationSeconds: number): Promise<Result<{ proxyPath: string }>>
+
+  /** Subscribes to preview-proxy transcode progress; returns an unsubscribe function. */
+  onProxyProgress(callback: (progress: ProxyProgress) => void): () => void
 
   /** Resolves the absolute path of a dropped File (Electron `webUtils`).
    * Synchronous; not a Result — it cannot fail meaningfully. */
