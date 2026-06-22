@@ -2,6 +2,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { app } from 'electron'
 import type { AppSettings } from '@shared'
+import { parseAppSettings } from '../../validation/schemas'
 
 function settingsPath(): string {
   return join(app.getPath('userData'), 'settings.json')
@@ -10,7 +11,12 @@ function settingsPath(): string {
 export async function loadSettings(): Promise<AppSettings | null> {
   try {
     const raw = await readFile(settingsPath(), 'utf-8')
-    return JSON.parse(raw) as AppSettings
+    const settings = parseAppSettings(JSON.parse(raw))
+    if (!settings) {
+      console.warn('[settings] ignoring malformed settings file')
+      return null
+    }
+    return settings
   } catch (error) {
     // ENOENT on first run is expected; anything else is worth a note.
     if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {

@@ -126,6 +126,11 @@ function handleRender(message: RenderMessage): void {
       }
     } else if (message.fallbackUrl) {
       drawThumbnail(message.fallbackUrl)
+    } else {
+      // Active clip whose media/url can't be resolved (a dangling reference in a
+      // loaded project, or a proxy still generating with no thumbnail) — clear
+      // rather than leave a stale frame from the previous clip on screen.
+      clear()
     }
 
     if (message.next) {

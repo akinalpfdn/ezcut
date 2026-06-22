@@ -3,6 +3,7 @@ import { dirname, join } from 'node:path'
 import { app, BrowserWindow, dialog } from 'electron'
 import { PROJECT_FILE_EXTENSION, type ProjectFile } from '@shared'
 import { allowMediaFile } from '../media/mediaProtocol'
+import { parseProjectFile } from '../../validation/schemas'
 
 function autosavePath(): string {
   return join(app.getPath('userData'), `autosave.${PROJECT_FILE_EXTENSION}`)
@@ -33,7 +34,8 @@ export async function loadProject(): Promise<ProjectFile | null> {
   const result = parent ? await dialog.showOpenDialog(parent, options) : await dialog.showOpenDialog(options)
   const filePath = result.filePaths[0]
   if (result.canceled || !filePath) return null
-  const project = JSON.parse(await readFile(filePath, 'utf-8')) as ProjectFile
+  const project = parseProjectFile(JSON.parse(await readFile(filePath, 'utf-8')))
+  if (!project) throw new Error('The selected file is not a valid ezcut project.')
   reallowProjectMedia(project)
   return project
 }
@@ -46,7 +48,8 @@ export async function autosaveProject(project: ProjectFile): Promise<void> {
 
 export async function loadAutosave(): Promise<ProjectFile | null> {
   try {
-    const project = JSON.parse(await readFile(autosavePath(), 'utf-8')) as ProjectFile
+    const project = parseProjectFile(JSON.parse(await readFile(autosavePath(), 'utf-8')))
+    if (!project) return null
     reallowProjectMedia(project)
     return project
   } catch {
