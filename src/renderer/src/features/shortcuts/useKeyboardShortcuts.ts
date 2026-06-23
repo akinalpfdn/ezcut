@@ -3,7 +3,18 @@ import { useKeymapStore } from '../../stores/keymapStore'
 import { useTimelineStore } from '../../stores/timelineStore'
 import { useTransportStore } from '../../stores/transportStore'
 import { actionForCombo, comboFromEvent } from './keyCombo'
-import { closeGaps, deleteSelected, splitSelected, stepFrames } from '../timeline/editorActions'
+import {
+  closeGaps,
+  copySelected,
+  cutSelected,
+  deleteSelected,
+  duplicateSelected,
+  pasteClip,
+  rippleDeleteSelected,
+  splitSelected,
+  stepFrames,
+  toggleMarkerAtPlayhead
+} from '../timeline/editorActions'
 
 function isTypingTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false
@@ -55,6 +66,24 @@ export function useKeyboardShortcuts(): void {
           break
         case 'redo':
           store.redo()
+          break
+        case 'copy':
+          copySelected()
+          break
+        case 'cut':
+          cutSelected()
+          break
+        case 'paste':
+          pasteClip()
+          break
+        case 'duplicate':
+          duplicateSelected()
+          break
+        case 'rippleDelete':
+          rippleDeleteSelected()
+          break
+        case 'marker':
+          toggleMarkerAtPlayhead()
           break
       }
     }

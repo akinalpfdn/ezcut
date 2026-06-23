@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { useTimelineStore } from '../../stores/timelineStore'
 import { useMediaStore } from '../../stores/mediaStore'
-import { splitSelected } from './editorActions'
+import { duplicateSelected, rippleDeleteSelected, splitSelected, toggleMarkerAtPlayhead } from './editorActions'
 import styles from './TimelineToolbar.module.css'
 
 export function TimelineToolbar() {
@@ -57,6 +57,14 @@ export function TimelineToolbar() {
         type="button"
         className={styles.button}
         disabled={!hasSelection}
+        onClick={() => duplicateSelected()}
+      >
+        {t('timeline.duplicate')}
+      </button>
+      <button
+        type="button"
+        className={styles.button}
+        disabled={!hasSelection}
         onClick={() => {
           const state = store.getState()
           if (state.selectedClipId) state.deleteClip(state.selectedClipId)
@@ -67,11 +75,28 @@ export function TimelineToolbar() {
       <button
         type="button"
         className={styles.button}
+        disabled={!hasSelection}
+        title={t('timeline.rippleDeleteHint')}
+        onClick={() => rippleDeleteSelected()}
+      >
+        {t('timeline.rippleDelete')}
+      </button>
+      <button
+        type="button"
+        className={styles.button}
         disabled={!hasClips}
         title={t('timeline.closeGapsHint')}
         onClick={() => store.getState().closeGaps()}
       >
         {t('timeline.closeGaps')}
+      </button>
+      <button
+        type="button"
+        className={styles.button}
+        title={t('timeline.markerHint')}
+        onClick={() => toggleMarkerAtPlayhead()}
+      >
+        {t('timeline.marker')}
       </button>
 
       <span className={styles.divider} />

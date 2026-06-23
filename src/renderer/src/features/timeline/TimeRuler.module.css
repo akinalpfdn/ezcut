@@ -24,3 +24,15 @@
   white-space: nowrap;
   pointer-events: none;
 }
+
+.marker {
+  position: absolute;
+  bottom: 0;
+  width: 0;
+  height: 0;
+  transform: translateX(-5px);
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-bottom: 6px solid var(--color-marker);
+  pointer-events: none;
+}

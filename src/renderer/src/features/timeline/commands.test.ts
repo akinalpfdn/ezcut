@@ -8,7 +8,9 @@ import {
   moveClipCommand,
   removeClipCommand,
   removeClipsCommand,
+  sequenceCommand,
   setClipPropertyCommand,
+  setMarkersCommand,
   splitClipCommand,
   trimClipCommand
 } from './commands'
@@ -31,7 +33,8 @@ function makeClip(overrides: Partial<Clip> = {}): Clip {
 function makeModel(clips: Clip[], tracks?: Track[]): TimelineModel {
   return {
     tracks: tracks ?? [{ id: 't-video', kind: 'video', index: 0, label: 'V1' }],
-    clips: Object.fromEntries(clips.map((clip) => [clip.id, clip]))
+    clips: Object.fromEntries(clips.map((clip) => [clip.id, clip])),
+    markers: []
   }
 }
 
@@ -165,6 +168,33 @@ describe('closeGapsCommand', () => {
     const applied = command.apply(base)
     expect(applied.clips.a.startOnTimeline).toBe(0)
     expect(applied.clips.b.startOnTimeline).toBe(5)
+    expect(command.invert(applied)).toEqual(base)
+  })
+})
+
+describe('sequenceCommand', () => {
+  it('should apply commands in order and invert them in reverse (ripple delete)', () => {
+    const target = makeClip({ id: 'x', startOnTimeline: 0, sourceOut: 5 })
+    const later = makeClip({ id: 'y', startOnTimeline: 5, sourceOut: 5 })
+    const base = makeModel([target, later])
+    // Ripple delete: remove 'x', then pull 'y' left into the freed 5s.
+    const command = sequenceCommand([
+      removeClipCommand(target),
+      closeGapsCommand([{ clipId: 'y', from: 5, to: 0 }])
+    ])
+    const applied = command.apply(base)
+    expect(applied.clips.x).toBeUndefined()
+    expect(applied.clips.y.startOnTimeline).toBe(0)
+    expect(command.invert(applied)).toEqual(base)
+  })
+})
+
+describe('setMarkersCommand', () => {
+  it('should set markers and restore the previous list on invert', () => {
+    const base = makeModel([])
+    const command = setMarkersCommand([], [2, 5])
+    const applied = command.apply(base)
+    expect(applied.markers).toEqual([2, 5])
     expect(command.invert(applied)).toEqual(base)
   })
 })

@@ -8,7 +8,13 @@ export const KEYMAP_ACTIONS = [
   'frameBack',
   'frameForward',
   'undo',
-  'redo'
+  'redo',
+  'copy',
+  'cut',
+  'paste',
+  'duplicate',
+  'rippleDelete',
+  'marker'
 ] as const
 
 export type KeymapAction = (typeof KEYMAP_ACTIONS)[number]

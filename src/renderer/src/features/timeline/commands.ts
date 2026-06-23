@@ -124,3 +124,19 @@ export function closeGapsCommand(shifts: ClipShift[]): Command {
     invert: (model) => shifts.reduce((next, s) => patchClip(next, s.clipId, { startOnTimeline: s.from }), model)
   }
 }
+
+/** Replaces the timeline's markers (add/remove) as one undoable edit. */
+export function setMarkersCommand(before: number[], after: number[]): Command {
+  return {
+    apply: (model) => ({ ...model, markers: after }),
+    invert: (model) => ({ ...model, markers: before })
+  }
+}
+
+/** Runs several commands as one undoable step (apply forward, invert in reverse). */
+export function sequenceCommand(commands: Command[]): Command {
+  return {
+    apply: (model) => commands.reduce((next, command) => command.apply(next), model),
+    invert: (model) => [...commands].reverse().reduce((next, command) => command.invert(next), model)
+  }
+}

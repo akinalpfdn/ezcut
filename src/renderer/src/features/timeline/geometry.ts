@@ -1,12 +1,13 @@
 import { clipTimelineEnd, type TimelineModel } from '@shared'
 
-/** Snap targets in seconds: timeline start, playhead, and every other clip's edges. */
+/** Snap targets in seconds: timeline start, playhead, markers, and every other
+ * clip's edges. */
 export function collectSnapPoints(
   model: TimelineModel,
   excludeClipId: string | null,
   playheadTime: number
 ): number[] {
-  const points = [0, playheadTime]
+  const points = [0, playheadTime, ...model.markers]
   for (const clip of Object.values(model.clips)) {
     if (clip.id === excludeClipId) continue
     points.push(clip.startOnTimeline, clipTimelineEnd(clip))

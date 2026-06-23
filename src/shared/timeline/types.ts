@@ -39,4 +39,6 @@ export interface TimelineModel {
   tracks: Track[]
   /** Clips keyed by id. */
   clips: Record<string, Clip>
+  /** Timeline annotations in seconds (sorted); navigation + snap targets. */
+  markers: number[]
 }

@@ -1,4 +1,5 @@
 import { useRef, type PointerEvent as ReactPointerEvent } from 'react'
+import { useTimelineStore } from '../../stores/timelineStore'
 import styles from './TimeRuler.module.css'
 
 const TICK_INTERVALS = [0.5, 1, 2, 5, 10, 15, 30, 60, 120, 300, 600]
@@ -23,6 +24,7 @@ interface TimeRulerProps {
 
 export function TimeRuler({ pxPerSec, width, onSeek }: TimeRulerProps) {
   const ref = useRef<HTMLDivElement>(null)
+  const markers = useTimelineStore((state) => state.model.markers)
   const interval = chooseInterval(pxPerSec)
   const totalSeconds = width / pxPerSec
   const count = Math.floor(totalSeconds / interval) + 1
@@ -51,6 +53,9 @@ export function TimeRuler({ pxPerSec, width, onSeek }: TimeRulerProps) {
         <div key={time} className={styles.tick} style={{ left: time * pxPerSec }}>
           <span className={styles.tickLabel}>{formatTick(time)}</span>
         </div>
+      ))}
+      {markers.map((time) => (
+        <div key={`m-${time}`} className={styles.marker} style={{ left: time * pxPerSec }} />
       ))}
     </div>
   )

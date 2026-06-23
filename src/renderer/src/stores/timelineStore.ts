@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import {
   canMerge,
   clipTimelineDuration,
+  clipTimelineEnd,
   getTrackClips,
   resolveNonOverlappingStart,
   splitPoint,
@@ -17,7 +18,9 @@ import {
   moveClipCommand,
   removeClipCommand,
   removeClipsCommand,
+  sequenceCommand,
   setClipPropertyCommand,
+  setMarkersCommand,
   splitClipCommand,
   trimClipCommand,
   type ClipPlacement,
@@ -37,7 +40,8 @@ function createInitialModel(): TimelineModel {
       { id: uuid(), kind: 'video', index: 0, label: 'V1' },
       { id: uuid(), kind: 'audio', index: 1, label: 'A1' }
     ],
-    clips: {}
+    clips: {},
+    markers: []
   }
 }
 
@@ -64,6 +68,11 @@ interface TimelineState {
     startOnTimeline: number,
     sourceDuration: number
   ) => void
+  /** Inserts a fully-specified clip (paste/duplicate), resolving overlap. Returns its id. */
+  addClip: (clip: Omit<Clip, 'id'>) => string
+  duplicateClip: (clipId: string) => void
+  rippleDeleteClip: (clipId: string) => void
+  toggleMarker: (time: number, thresholdSeconds: number) => void
   moveClip: (clipId: string, placement: ClipPlacement) => void
   trimClip: (clipId: string, trim: ClipTrim) => void
   splitClipAt: (clipId: string, timelineTime: number) => void
@@ -147,6 +156,58 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
     }
     get().execute(addClipCommand(clip))
     set({ selectedClipId: clip.id })
+  },
+
+  addClip: (clip) => {
+    const id = uuid()
+    const duration = clipTimelineDuration({ ...clip, id })
+    const start = resolveNonOverlappingStart(
+      get().model,
+      clip.trackId,
+      Math.max(0, clip.startOnTimeline),
+      duration
+    )
+    const full: Clip = { ...clip, id, startOnTimeline: start }
+    get().execute(addClipCommand(full))
+    set({ selectedClipId: id })
+    return id
+  },
+
+  duplicateClip: (clipId) => {
+    const clip = get().model.clips[clipId]
+    if (!clip) return
+    const { id: _id, ...rest } = clip
+    get().addClip({ ...rest, startOnTimeline: clipTimelineEnd(clip) })
+  },
+
+  rippleDeleteClip: (clipId) => {
+    const model = get().model
+    const clip = model.clips[clipId]
+    if (!clip) return
+    const duration = clipTimelineDuration(clip)
+    const shifts: ClipShift[] = getTrackClips(model, clip.trackId)
+      .filter((candidate) => candidate.id !== clipId && candidate.startOnTimeline > clip.startOnTimeline)
+      .map((candidate) => ({
+        clipId: candidate.id,
+        from: candidate.startOnTimeline,
+        to: Math.max(0, candidate.startOnTimeline - duration)
+      }))
+    const command =
+      shifts.length > 0
+        ? sequenceCommand([removeClipCommand(clip), closeGapsCommand(shifts)])
+        : removeClipCommand(clip)
+    get().execute(command)
+    if (get().selectedClipId === clipId) set({ selectedClipId: null })
+  },
+
+  toggleMarker: (time, thresholdSeconds) => {
+    const markers = get().model.markers
+    const near = markers.find((marker) => Math.abs(marker - time) <= thresholdSeconds)
+    const next =
+      near !== undefined
+        ? markers.filter((marker) => marker !== near)
+        : [...markers, time].sort((a, b) => a - b)
+    get().execute(setMarkersCommand(markers, next))
   },
 
   moveClip: (clipId, placement) => {

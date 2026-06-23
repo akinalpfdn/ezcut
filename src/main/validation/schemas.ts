@@ -56,7 +56,9 @@ const projectFileSchema = z.object({
   version: z.number(),
   model: z.object({
     tracks: z.array(trackSchema),
-    clips: z.record(z.string(), clipSchema)
+    clips: z.record(z.string(), clipSchema),
+    // Older projects predate markers; default keeps them loadable.
+    markers: z.array(z.number()).default([])
   }),
   media: z.array(mediaItemSchema)
 })
