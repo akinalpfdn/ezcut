@@ -51,6 +51,11 @@
   background-color: var(--color-bg);
 }
 
+.fileDragOver {
+  outline: 2px dashed var(--color-primary);
+  outline-offset: -2px;
+}
+
 .lane {
   position: absolute;
   left: 0;

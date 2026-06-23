@@ -24,6 +24,8 @@ import { useTimelineStore } from '../../stores/timelineStore'
 import { useTransportStore } from '../../stores/transportStore'
 import { useMediaStore } from '../../stores/mediaStore'
 import { useKeymapStore } from '../../stores/keymapStore'
+import { useMediaImportStore } from '../../stores/mediaImportStore'
+import { mediaService } from '../../services/mediaService'
 import { TIMELINE_CONFIG } from '../../config/timeline'
 import { collectSnapPoints, snapValue } from './geometry'
 import { MEDIA_DRAG_TYPE } from './dragTypes'
@@ -70,6 +72,7 @@ export function Timeline() {
   const moveRafRef = useRef<number | null>(null)
   const [, forceRender] = useReducer((tick: number) => tick + 1, 0)
   const [menu, setMenu] = useState<MenuState | null>(null)
+  const [fileDragOver, setFileDragOver] = useState(false)
 
   // Coalesce drag re-renders to one per animation frame — pointermove can fire
   // far more often than the display refreshes.
@@ -250,19 +253,47 @@ export function Timeline() {
     window.addEventListener('pointerup', onPointerUp)
   }
 
+  // Imports OS-dropped files through the shared pipeline, then places each on a
+  // track of its kind at the (snapped) drop time. Runs after the async import, so
+  // the drop position is captured before awaiting.
+  const placeImportedFiles = useCallback(async (paths: string[], time: number): Promise<void> => {
+    const items = await useMediaImportStore.getState().importPaths(paths)
+    if (items.length === 0) return
+    const store = useTimelineStore.getState()
+    const playhead = useTransportStore.getState().playheadTime
+    const snapped = Math.max(
+      0,
+      snapValue(time, collectSnapPoints(store.model, null, playhead), snapThresholdPx / store.pxPerSec)
+    )
+    for (const item of items) {
+      const track = store.model.tracks.find((candidate) => candidate.kind === item.kind)
+      if (track) useTimelineStore.getState().addClipFromMedia(item.id, track.id, snapped, item.durationSeconds)
+    }
+  }, [])
+
   function handleDrop(event: DragEvent<HTMLDivElement>): void {
     event.preventDefault()
+    setFileDragOver(false)
+    const rect = tracksRef.current?.getBoundingClientRect()
+    if (!rect) return
+    const time = Math.max(0, (event.clientX - rect.left) / pxPerSec)
+
+    // OS file drop: import then place. Invalid files surface in the bin's errors.
+    const files = Array.from(event.dataTransfer.files)
+    if (files.length > 0) {
+      const paths = files.map((file) => mediaService.getPathForFile(file)).filter((path) => path.length > 0)
+      void placeImportedFiles(paths, time)
+      return
+    }
+
+    // Internal drag from the media bin.
     const mediaId = event.dataTransfer.getData(MEDIA_DRAG_TYPE)
     const media = mediaById(mediaId)
-    const rect = tracksRef.current?.getBoundingClientRect()
-    if (!media || !rect) return
-
+    if (!media) return
     const index = Math.min(Math.max(Math.floor((event.clientY - rect.top) / trackHeight), 0), sortedTracks.length - 1)
     const dropped = sortedTracks[index]
     const target = dropped && dropped.kind === media.kind ? dropped : sortedTracks.find((track) => track.kind === media.kind)
     if (!target) return
-
-    const time = Math.max(0, (event.clientX - rect.left) / pxPerSec)
     const playhead = useTransportStore.getState().playheadTime
     const snapped = Math.max(0, snapValue(time, collectSnapPoints(model, null, playhead), snapThresholdPx / pxPerSec))
     useTimelineStore.getState().addClipFromMedia(mediaId, target.id, snapped, media.durationSeconds)
@@ -322,9 +353,15 @@ export function Timeline() {
             <TimeRuler pxPerSec={pxPerSec} width={width} onSeek={(time) => useTransportStore.getState().setPlayhead(time)} />
             <div
               ref={tracksRef}
-              className={styles.tracks}
+              className={fileDragOver ? `${styles.tracks} ${styles.fileDragOver}` : styles.tracks}
               style={{ height: tracksHeight }}
-              onDragOver={(event) => event.preventDefault()}
+              onDragOver={(event) => {
+                event.preventDefault()
+                if (event.dataTransfer.types.includes('Files')) setFileDragOver(true)
+              }}
+              onDragLeave={(event) => {
+                if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setFileDragOver(false)
+              }}
               onDrop={handleDrop}
               onContextMenu={openTrackMenu}
               onPointerDown={(event) => {

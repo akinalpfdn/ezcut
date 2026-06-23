@@ -4,7 +4,7 @@ import type { MediaItem } from '@shared'
 import { useMediaStore } from '../../stores/mediaStore'
 import { useTimelineStore } from '../../stores/timelineStore'
 import { useTransportStore } from '../../stores/transportStore'
-import { useMediaImport } from '../../hooks/useMediaImport'
+import { useMediaImportStore } from '../../stores/mediaImportStore'
 import { useWaveformBackfill } from './useWaveformBackfill'
 import { useProxyManager } from './useProxyManager'
 import { useProxyStore } from '../../stores/proxyStore'
@@ -40,7 +40,10 @@ export function MediaBin() {
   const selectedId = useMediaStore((state) => state.selectedId)
   const select = useMediaStore((state) => state.select)
   const removeItem = useMediaStore((state) => state.removeItem)
-  const { importing, errors, importViaDialog, importPaths } = useMediaImport()
+  const importing = useMediaImportStore((state) => state.importing)
+  const errors = useMediaImportStore((state) => state.errors)
+  const importViaDialog = useMediaImportStore((state) => state.importViaDialog)
+  const importPaths = useMediaImportStore((state) => state.importPaths)
   const recorder = useRecorder()
   useWaveformBackfill()
   useProxyManager()
