@@ -1,7 +1,48 @@
-import { memo, useMemo, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from 'react'
+import {
+  memo,
+  useEffect,
+  useMemo,
+  type MouseEvent as ReactMouseEvent,
+  type PointerEvent as ReactPointerEvent
+} from 'react'
 import { clipTimelineDuration, type Clip, type MediaItem, type TrackKind } from '@shared'
 import { Waveform } from '../mediaBin/Waveform'
+import { useFilmstripStore } from '../../stores/filmstripStore'
+import { toMediaUrl } from '../../utils/mediaUrl'
 import styles from './ClipView.module.css'
+
+/**
+ * Filmstrip for a video clip: one cached sprite covers the whole source, so we
+ * scale it so the clip's [sourceIn, sourceOut] slice fills the clip width and
+ * offset it to the slice start. Subscribes to the store independently so a clip
+ * only repaints when its strip becomes ready, not the whole timeline.
+ */
+function ClipFilmstrip({ media, clip, width }: { media: MediaItem; clip: Clip; width: number }) {
+  const path = useFilmstripStore((state) => {
+    const entry = state.strips[media.path]
+    return entry?.status === 'ready' ? (entry.path ?? null) : null
+  })
+
+  useEffect(() => {
+    useFilmstripStore.getState().ensure(media.path, media.durationSeconds)
+  }, [media.path, media.durationSeconds])
+
+  if (!path || media.durationSeconds <= 0) return null
+  const slice = Math.max(0.0001, clip.sourceOut - clip.sourceIn)
+  const stripWidth = (media.durationSeconds / slice) * width
+  const offset = -(clip.sourceIn / media.durationSeconds) * stripWidth
+
+  return (
+    <div
+      className={styles.filmstrip}
+      style={{
+        backgroundImage: `url(${toMediaUrl(path)})`,
+        backgroundSize: `${stripWidth}px 100%`,
+        backgroundPositionX: `${offset}px`
+      }}
+    />
+  )
+}
 
 interface ClipViewProps {
   clip: Clip
@@ -59,6 +100,7 @@ function ClipViewImpl({
       onPointerDown={onMovePointerDown}
       onContextMenu={onContextMenu}
     >
+      {kind === 'video' && media ? <ClipFilmstrip media={media} clip={clip} width={width} /> : null}
       {peaks ? <Waveform peaks={peaks} className={styles.waveform} /> : null}
       <div
         className={`${styles.handle} ${styles.handleLeft}`}

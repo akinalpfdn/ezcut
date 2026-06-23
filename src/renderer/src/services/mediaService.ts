@@ -29,6 +29,9 @@ export const mediaService = {
   generateProxy(mediaPath: string, durationSeconds: number): Promise<Result<{ proxyPath: string }>> {
     return window.electronAPI.generateProxy(mediaPath, durationSeconds)
   },
+  generateFilmstrip(mediaPath: string, durationSeconds: number): Promise<Result<{ filmstripPath: string }>> {
+    return window.electronAPI.generateFilmstrip(mediaPath, durationSeconds)
+  },
   onProxyProgress(callback: (progress: ProxyProgress) => void): () => void {
     return window.electronAPI.onProxyProgress(callback)
   },

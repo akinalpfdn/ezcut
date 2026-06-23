@@ -4,6 +4,7 @@ import { THUMBNAIL_CONFIG } from './thumbnail'
 import { WAVEFORM_CONFIG } from './waveform'
 import { DENOISE_CONFIG } from './denoise'
 import { PROXY_CONFIG } from './proxy'
+import { FILMSTRIP_CONFIG } from './filmstrip'
 
 export const FFMPEG_ARGS = {
   version: ['-version'],
@@ -57,6 +58,21 @@ export const FFMPEG_ARGS = {
     'yuv420p',
     '-movflags',
     '+faststart',
+    output
+  ],
+  /** Tile evenly-spaced frames across the whole source into one horizontal strip. */
+  filmstrip: (input: string, durationSeconds: number, output: string): string[] => [
+    '-y',
+    '-v',
+    'error',
+    '-i',
+    input,
+    '-frames:v',
+    '1',
+    '-vf',
+    `fps=${FILMSTRIP_CONFIG.frames}/${durationSeconds},scale=${FILMSTRIP_CONFIG.frameWidth}:${FILMSTRIP_CONFIG.height},tile=${FILMSTRIP_CONFIG.frames}x1`,
+    '-q:v',
+    String(FILMSTRIP_CONFIG.quality),
     output
   ],
   /** Render a denoised audio-only proxy of the source. */

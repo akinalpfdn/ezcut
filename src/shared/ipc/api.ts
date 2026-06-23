@@ -43,6 +43,10 @@ export interface ElectronAPI {
    * Emits progress via onProxyProgress while transcoding. */
   generateProxy(mediaPath: string, durationSeconds: number): Promise<Result<{ proxyPath: string }>>
 
+  /** Generates (or returns a cached) horizontal filmstrip sprite for a video
+   * source; resolves to the strip's absolute path. */
+  generateFilmstrip(mediaPath: string, durationSeconds: number): Promise<Result<{ filmstripPath: string }>>
+
   /** Subscribes to preview-proxy transcode progress; returns an unsubscribe function. */
   onProxyProgress(callback: (progress: ProxyProgress) => void): () => void
 

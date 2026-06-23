@@ -32,6 +32,14 @@
   outline-offset: -1px;
 }
 
+.filmstrip {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-repeat: no-repeat;
+  pointer-events: none;
+}
+
 .waveform {
   position: absolute;
   inset: 0;

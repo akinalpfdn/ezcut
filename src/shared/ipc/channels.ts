@@ -10,6 +10,7 @@ export const IpcChannels = {
   saveRecording: 'media:saveRecording',
   generateDenoiseProxy: 'denoise:generateProxy',
   generateProxy: 'media:generateProxy',
+  generateFilmstrip: 'media:filmstrip',
   proxyProgress: 'media:proxyProgress',
   cancelMediaJobs: 'media:cancelJobs',
   loadSettings: 'settings:load',

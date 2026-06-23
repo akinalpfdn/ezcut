@@ -8,6 +8,7 @@ import { generateWaveform } from '../services/ffmpeg/waveformService'
 import { saveRecording } from '../services/media/recordingService'
 import { generateDenoiseProxy } from '../services/ffmpeg/denoiseService'
 import { generateProxy } from '../services/ffmpeg/proxyService'
+import { generateFilmstrip } from '../services/ffmpeg/filmstripService'
 import { cancelFfmpegJobs } from '../services/ffmpeg/jobQueue'
 import { loadSettings, saveSettings } from '../services/settings/settingsService'
 import { runExport, cancelExport } from '../services/export/exportService'
@@ -47,6 +48,12 @@ export function registerIpcHandlers(): void {
   handle<[string, number], { proxyPath: string }>(
     IpcChannels.generateProxy,
     async (mediaPath, durationSeconds) => ({ proxyPath: await generateProxy(mediaPath, durationSeconds) })
+  )
+  handle<[string, number], { filmstripPath: string }>(
+    IpcChannels.generateFilmstrip,
+    async (mediaPath, durationSeconds) => ({
+      filmstripPath: await generateFilmstrip(mediaPath, durationSeconds)
+    })
   )
   handle<[string], void>(IpcChannels.cancelMediaJobs, (mediaPath) => cancelFfmpegJobs(mediaPath))
   handle(IpcChannels.loadSettings, () => loadSettings())

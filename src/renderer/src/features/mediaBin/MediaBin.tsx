@@ -9,6 +9,7 @@ import { useWaveformBackfill } from './useWaveformBackfill'
 import { useProxyManager } from './useProxyManager'
 import { useProxyStore } from '../../stores/proxyStore'
 import { useDenoiseStore } from '../../stores/denoiseStore'
+import { useFilmstripStore } from '../../stores/filmstripStore'
 import { previewNeedsProxy } from '../../utils/proxyPolicy'
 import { useRecorder } from '../recording/useRecorder'
 import { mediaService } from '../../services/mediaService'
@@ -57,6 +58,7 @@ export function MediaBin() {
     // 'error' that blocks regeneration if the same path is re-imported.
     useProxyStore.getState().clear(item.path)
     useDenoiseStore.getState().clearForMedia(item.path)
+    useFilmstripStore.getState().clear(item.path)
     setConfirm(null)
   }
 
