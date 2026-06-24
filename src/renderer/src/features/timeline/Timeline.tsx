@@ -13,10 +13,12 @@ import { useTranslation } from 'react-i18next'
 import {
   clipTimelineDuration,
   getTracksSorted,
+  IMAGE_MAX_DURATION,
   nextClipStart,
   previousClipEnd,
   resolveNonOverlappingStart,
   timelineDuration,
+  trackKindForMedia,
   type Clip,
   type MediaItem
 } from '@shared'
@@ -236,11 +238,14 @@ export function Timeline() {
   const beginDrag = (kind: DragState['kind'], clip: Clip, event: ReactPointerEvent): void => {
     event.preventDefault()
     useTimelineStore.getState().selectClip(clip.id)
+    const media = mediaById(clip.mediaId)
+    // Images have no fixed source length, so they can be stretched up to a cap.
+    const sourceDuration = media?.kind === 'image' ? IMAGE_MAX_DURATION : (media?.durationSeconds ?? clip.sourceOut)
     dragRef.current = {
       kind,
       clipId: clip.id,
       original: clip,
-      sourceDuration: mediaById(clip.mediaId)?.durationSeconds ?? clip.sourceOut,
+      sourceDuration,
       pointerStartX: event.clientX,
       patch: {
         startOnTimeline: clip.startOnTimeline,
@@ -266,7 +271,7 @@ export function Timeline() {
       snapValue(time, collectSnapPoints(store.model, null, playhead), snapThresholdPx / store.pxPerSec)
     )
     for (const item of items) {
-      const track = store.model.tracks.find((candidate) => candidate.kind === item.kind)
+      const track = store.model.tracks.find((candidate) => candidate.kind === trackKindForMedia(item.kind))
       if (track) useTimelineStore.getState().addClipFromMedia(item.id, track.id, snapped, item.durationSeconds)
     }
   }, [])
@@ -292,7 +297,8 @@ export function Timeline() {
     if (!media) return
     const index = Math.min(Math.max(Math.floor((event.clientY - rect.top) / trackHeight), 0), sortedTracks.length - 1)
     const dropped = sortedTracks[index]
-    const target = dropped && dropped.kind === media.kind ? dropped : sortedTracks.find((track) => track.kind === media.kind)
+    const wantKind = trackKindForMedia(media.kind)
+    const target = dropped && dropped.kind === wantKind ? dropped : sortedTracks.find((track) => track.kind === wantKind)
     if (!target) return
     const playhead = useTransportStore.getState().playheadTime
     const snapped = Math.max(0, snapValue(time, collectSnapPoints(model, null, playhead), snapThresholdPx / pxPerSec))

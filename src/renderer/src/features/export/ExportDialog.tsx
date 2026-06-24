@@ -23,7 +23,10 @@ export function ExportDialog({ onClose }: ExportDialogProps) {
   const { t } = useTranslation()
   const hasClips = useTimelineStore((state) => Object.keys(state.model.clips).length > 0)
   const sourceVideo = useMediaStore(
-    (state) => state.items.find((item) => item.kind === 'video' && item.width && item.height) ?? null
+    (state) =>
+      state.items.find(
+        (item) => (item.kind === 'video' || item.kind === 'image') && item.width && item.height
+      ) ?? null
   )
   const source = {
     width: sourceVideo?.width ?? DEFAULT_EXPORT.width,

@@ -1,4 +1,10 @@
-import type { Clip, TimelineModel, Track } from './types'
+import type { Clip, TimelineModel, Track, TrackKind } from './types'
+import type { MediaKind } from '../media/types'
+
+/** Which track kind a media item belongs on: images share the video track. */
+export function trackKindForMedia(kind: MediaKind): TrackKind {
+  return kind === 'audio' ? 'audio' : 'video'
+}
 
 /** Length the clip occupies on the timeline, accounting for speed. */
 export function clipTimelineDuration(clip: Clip): number {

@@ -3,6 +3,7 @@ import { useTimelineStore } from '../../stores/timelineStore'
 import { useMediaStore } from '../../stores/mediaStore'
 import { useDenoiseStore } from '../../stores/denoiseStore'
 import { MAX_CLIP_VOLUME, PLAYBACK_SPEEDS } from '../../config/playback'
+import { NumberField } from '../../components/NumberField'
 import styles from './ClipInspector.module.css'
 
 export function ClipInspector() {
@@ -61,25 +62,23 @@ export function ClipInspector() {
 
       <label className={styles.field}>
         <span className={styles.label}>{t('inspector.fadeIn')}</span>
-        <input
+        <NumberField
           className={styles.number}
-          type="number"
           min={0}
           step={0.1}
           value={clip.fadeIn}
-          onChange={(event) => useTimelineStore.getState().setClipFade(clip.id, { fadeIn: Number(event.target.value) })}
+          onCommit={(value) => useTimelineStore.getState().setClipFade(clip.id, { fadeIn: value })}
         />
       </label>
 
       <label className={styles.field}>
         <span className={styles.label}>{t('inspector.fadeOut')}</span>
-        <input
+        <NumberField
           className={styles.number}
-          type="number"
           min={0}
           step={0.1}
           value={clip.fadeOut}
-          onChange={(event) => useTimelineStore.getState().setClipFade(clip.id, { fadeOut: Number(event.target.value) })}
+          onCommit={(value) => useTimelineStore.getState().setClipFade(clip.id, { fadeOut: value })}
         />
       </label>
 
@@ -112,14 +111,11 @@ export function ClipInspector() {
         ? (['eqLow', 'eqMid', 'eqHigh'] as const).map((band) => (
             <label key={band} className={styles.field}>
               <span className={styles.label}>{t(`inspector.${band}`)}</span>
-              <input
+              <NumberField
                 className={styles.number}
-                type="number"
                 step={1}
                 value={clip.audioFx[band]}
-                onChange={(event) =>
-                  useTimelineStore.getState().setClipAudioFx(clip.id, { [band]: Number(event.target.value) })
-                }
+                onCommit={(value) => useTimelineStore.getState().setClipAudioFx(clip.id, { [band]: value })}
               />
             </label>
           ))

@@ -7,6 +7,7 @@ import {
   getTracksSorted,
   isClipAudible,
   nextClipStart,
+  trackKindForMedia,
   previousClipEnd,
   resolveNonOverlappingStart,
   splitPoint,
@@ -260,5 +261,16 @@ describe('isClipAudible', () => {
     const model = makeModel([clip])
     model.tracks[0].solo = true // t-video soloed
     expect(isClipAudible(model, clip)).toBe(true)
+  })
+})
+
+describe('trackKindForMedia', () => {
+  it('should place audio on an audio track', () => {
+    expect(trackKindForMedia('audio')).toBe('audio')
+  })
+
+  it('should place video and images on a video track', () => {
+    expect(trackKindForMedia('video')).toBe('video')
+    expect(trackKindForMedia('image')).toBe('video')
   })
 })

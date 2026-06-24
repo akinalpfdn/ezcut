@@ -1,6 +1,6 @@
 import { useState, type DragEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { MediaItem } from '@shared'
+import { trackKindForMedia, type MediaItem } from '@shared'
 import { useMediaStore } from '../../stores/mediaStore'
 import { useTimelineStore } from '../../stores/timelineStore'
 import { useTransportStore } from '../../stores/transportStore'
@@ -29,7 +29,8 @@ interface MediaMenuState {
 
 function addToTimeline(item: MediaItem): void {
   const timeline = useTimelineStore.getState()
-  const track = timeline.model.tracks.find((candidate) => candidate.kind === item.kind)
+  const kind = trackKindForMedia(item.kind)
+  const track = timeline.model.tracks.find((candidate) => candidate.kind === kind)
   const playheadTime = useTransportStore.getState().playheadTime
   if (track) timeline.addClipFromMedia(item.id, track.id, playheadTime, item.durationSeconds)
 }

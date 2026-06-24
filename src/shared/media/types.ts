@@ -41,7 +41,7 @@ export interface MediaToolingInfo {
   ffprobePath: string
 }
 
-export type MediaKind = 'video' | 'audio'
+export type MediaKind = 'video' | 'audio' | 'image'
 
 /** Downsampled audio envelope for waveform rendering: one normalized 0..1 peak
  * magnitude per bucket. */

@@ -10,8 +10,14 @@ import {
 } from '@shared'
 import { AUDIO_FX_CONFIG } from '../../config/audioFx'
 
+export interface ExportInput {
+  path: string
+  /** Extra ffmpeg flags placed before `-i` (e.g. `-loop 1 -t <dur>` for images). */
+  args?: string[]
+}
+
 export interface FiltergraphResult {
-  inputs: string[]
+  inputs: ExportInput[]
   filterComplex: string
   videoLabel: string
   audioLabel: string | null
@@ -87,8 +93,8 @@ export async function buildFiltergraph(
   const mediaById = new Map(media.map((item) => [item.id, item]))
   const { width, height, fps } = options
 
-  const inputs: string[] = []
-  const addInput = (path: string): number => inputs.push(path) - 1
+  const inputs: ExportInput[] = []
+  const addInput = (path: string, args?: string[]): number => inputs.push({ path, args }) - 1
 
   const parts: string[] = [`color=c=black:s=${width}x${height}:r=${fps}:d=${durationSeconds.toFixed(3)}[base]`]
   const videoSegments: { label: string; start: number; end: number }[] = []
@@ -105,15 +111,23 @@ export async function buildFiltergraph(
       const index = counter++
 
       let videoInput: number | null = null
-      if (track.kind === 'video' && item.hasVideo) {
-        videoInput = addInput(item.path)
+      const isImage = item.kind === 'image'
+      if (track.kind === 'video' && (item.hasVideo || isImage)) {
         const label = `v${index}`
-        parts.push(
-          `[${videoInput}:v]trim=start=${clip.sourceIn}:end=${clip.sourceOut},` +
-            `setpts=(PTS-STARTPTS)/${speed}+${start}/TB,` +
-            `scale=${width}:${height}:force_original_aspect_ratio=decrease,` +
-            `pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1,fps=${fps},format=yuv420p[${label}]`
-        )
+        const fit =
+          `scale=${width}:${height}:force_original_aspect_ratio=decrease,` +
+          `pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1,fps=${fps},format=yuv420p`
+        if (isImage) {
+          // Loop the still for the clip's span; no trim/speed (it has no source time).
+          videoInput = addInput(item.path, ['-loop', '1', '-t', clipTimelineDuration(clip).toFixed(3)])
+          parts.push(`[${videoInput}:v]setpts=PTS-STARTPTS+${start}/TB,${fit}[${label}]`)
+        } else {
+          videoInput = addInput(item.path)
+          parts.push(
+            `[${videoInput}:v]trim=start=${clip.sourceIn}:end=${clip.sourceOut},` +
+              `setpts=(PTS-STARTPTS)/${speed}+${start}/TB,${fit}[${label}]`
+          )
+        }
         videoSegments.push({ label, start, end })
       }
 

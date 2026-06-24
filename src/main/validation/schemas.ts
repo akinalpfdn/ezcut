@@ -56,7 +56,7 @@ const mediaItemSchema = z.object({
   id: z.string(),
   path: z.string(),
   name: z.string(),
-  kind: z.enum(['video', 'audio']),
+  kind: z.enum(['video', 'audio', 'image']),
   durationSeconds: z.number(),
   sizeBytes: z.number(),
   hasVideo: z.boolean(),

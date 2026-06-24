@@ -1,6 +1,7 @@
 export * from './core/result'
 export * from './media/types'
 export * from './media/proxy'
+export * from './media/image'
 export * from './timeline/types'
 export * from './timeline/model'
 export * from './settings/types'

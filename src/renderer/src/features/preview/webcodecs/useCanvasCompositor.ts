@@ -98,7 +98,11 @@ export function useCanvasCompositor(canvasRef: RefObject<HTMLCanvasElement | nul
         if (activeClip) {
           hasActiveClip = true
           const media = items.find((item) => item.id === activeClip.mediaId)
-          if (media) {
+          if (media && media.kind === 'image') {
+            // Still image: drawn straight from the file (worker's image path), no
+            // decode source. Leaving `active` null makes the worker draw fallbackUrl.
+            fallbackUrl = toMediaUrl(media.path)
+          } else if (media) {
             fallbackUrl = media.thumbnailPath ? toMediaUrl(media.thumbnailPath) : null
             const url = sourceUrlFor(media)
             if (url) {
@@ -110,7 +114,8 @@ export function useCanvasCompositor(canvasRef: RefObject<HTMLCanvasElement | nul
 
         if (nextClip) {
           const media = items.find((item) => item.id === nextClip.mediaId)
-          const url = media ? sourceUrlFor(media) : null
+          // Images aren't prefetched (they'd fail the video demux and load instantly anyway).
+          const url = media && media.kind !== 'image' ? sourceUrlFor(media) : null
           if (url) next = { clipId: nextClip.id, fileUrl: url, sourceUs: Math.max(0, nextClip.sourceIn) * 1_000_000 }
         }
       }
