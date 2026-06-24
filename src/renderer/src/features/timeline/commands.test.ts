@@ -11,6 +11,7 @@ import {
   sequenceCommand,
   setClipPropertyCommand,
   setMarkersCommand,
+  setTrackPropertyCommand,
   splitClipCommand,
   trimClipCommand
 } from './commands'
@@ -25,6 +26,9 @@ function makeClip(overrides: Partial<Clip> = {}): Clip {
     sourceOut: 10,
     speed: 1,
     volume: 1,
+    fadeIn: 0,
+    fadeOut: 0,
+    muted: false,
     denoise: { enabled: false, strength: 0.5 },
     ...overrides
   }
@@ -32,7 +36,7 @@ function makeClip(overrides: Partial<Clip> = {}): Clip {
 
 function makeModel(clips: Clip[], tracks?: Track[]): TimelineModel {
   return {
-    tracks: tracks ?? [{ id: 't-video', kind: 'video', index: 0, label: 'V1' }],
+    tracks: tracks ?? [{ id: 't-video', kind: 'video', index: 0, label: 'V1', muted: false, solo: false }],
     clips: Object.fromEntries(clips.map((clip) => [clip.id, clip])),
     markers: []
   }
@@ -137,7 +141,7 @@ describe('mergeClipsCommand', () => {
 describe('addTrackCommand', () => {
   it('should add the track on apply and remove it on invert', () => {
     const base = makeModel([])
-    const track: Track = { id: 't-audio', kind: 'audio', index: 1, label: 'A1' }
+    const track: Track = { id: 't-audio', kind: 'audio', index: 1, label: 'A1', muted: false, solo: false }
     const command = addTrackCommand(track)
     const applied = command.apply(base)
     expect(applied.tracks).toContainEqual(track)
@@ -195,6 +199,16 @@ describe('setMarkersCommand', () => {
     const command = setMarkersCommand([], [2, 5])
     const applied = command.apply(base)
     expect(applied.markers).toEqual([2, 5])
+    expect(command.invert(applied)).toEqual(base)
+  })
+})
+
+describe('setTrackPropertyCommand', () => {
+  it('should set a track property and restore it on invert', () => {
+    const base = makeModel([])
+    const command = setTrackPropertyCommand('t-video', { muted: false }, { muted: true })
+    const applied = command.apply(base)
+    expect(applied.tracks.find((track) => track.id === 't-video')?.muted).toBe(true)
     expect(command.invert(applied)).toEqual(base)
   })
 })

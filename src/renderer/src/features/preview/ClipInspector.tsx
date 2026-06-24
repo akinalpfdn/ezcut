@@ -59,6 +59,39 @@ export function ClipInspector() {
         <span className={styles.value}>{Math.round(clip.volume * 100)}%</span>
       </label>
 
+      <label className={styles.field}>
+        <span className={styles.label}>{t('inspector.fadeIn')}</span>
+        <input
+          className={styles.number}
+          type="number"
+          min={0}
+          step={0.1}
+          value={clip.fadeIn}
+          onChange={(event) => useTimelineStore.getState().setClipFade(clip.id, { fadeIn: Number(event.target.value) })}
+        />
+      </label>
+
+      <label className={styles.field}>
+        <span className={styles.label}>{t('inspector.fadeOut')}</span>
+        <input
+          className={styles.number}
+          type="number"
+          min={0}
+          step={0.1}
+          value={clip.fadeOut}
+          onChange={(event) => useTimelineStore.getState().setClipFade(clip.id, { fadeOut: Number(event.target.value) })}
+        />
+      </label>
+
+      <button
+        type="button"
+        className={clip.muted ? `${styles.toggle} ${styles.toggleActive}` : styles.toggle}
+        aria-pressed={clip.muted}
+        onClick={() => useTimelineStore.getState().toggleClipMute(clip.id)}
+      >
+        {clip.muted ? t('inspector.muted') : t('inspector.mute')}
+      </button>
+
       {clip.denoise.enabled ? (
         <label className={styles.field}>
           <span className={styles.label}>{t('inspector.denoiseStrength')}</span>

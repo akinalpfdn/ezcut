@@ -2,6 +2,7 @@ import {
   clipTimelineDuration,
   getTrackClips,
   getTracksSorted,
+  isClipAudible,
   timelineDuration,
   type MediaItem,
   type TimelineModel
@@ -34,6 +35,16 @@ function atempoChain(speed: number): string {
   }
   parts.push(`atempo=${remaining.toFixed(4)}`)
   return `${parts.join(',')},`
+}
+
+/** afade fragment (trailing comma) for a clip's edge fades, or "" for none. */
+function audioFadeChain(fadeIn: number, fadeOut: number, clipDur: number): string {
+  const segments: string[] = []
+  const fi = Math.max(0, Math.min(fadeIn, clipDur))
+  const fo = Math.max(0, Math.min(fadeOut, clipDur))
+  if (fi > 0) segments.push(`afade=t=in:st=0:d=${fi.toFixed(4)}`)
+  if (fo > 0) segments.push(`afade=t=out:st=${Math.max(0, clipDur - fo).toFixed(4)}:d=${fo.toFixed(4)}`)
+  return segments.length > 0 ? `${segments.join(',')},` : ''
 }
 
 /**
@@ -84,7 +95,7 @@ export async function buildFiltergraph(
         videoSegments.push({ label, start, end })
       }
 
-      if (item.hasAudio) {
+      if (item.hasAudio && isClipAudible(model, clip)) {
         let audioInput: number
         if (clip.denoise.enabled) {
           audioInput = addInput(await resolveProxy(item.path, clip.denoise.strength))
@@ -95,9 +106,10 @@ export async function buildFiltergraph(
         }
         const label = `a${index}`
         const delayMs = Math.round(start * 1000)
+        const fades = audioFadeChain(clip.fadeIn, clip.fadeOut, clipTimelineDuration(clip))
         parts.push(
           `[${audioInput}:a]atrim=start=${clip.sourceIn}:end=${clip.sourceOut},asetpts=PTS-STARTPTS,` +
-            `${atempoChain(speed)}volume=${clip.volume},adelay=${delayMs}:all=1[${label}]`
+            `${atempoChain(speed)}${fades}volume=${clip.volume},adelay=${delayMs}:all=1[${label}]`
         )
         audioLabels.push(label)
       }

@@ -17,6 +17,19 @@ export function timelineTimeToSource(clip: Clip, timelineTime: number): number {
   return clip.sourceIn + (timelineTime - clip.startOnTimeline) * speed
 }
 
+/**
+ * Whether a clip's audio should be heard, applying clip mute, track mute, and
+ * solo: if any track is soloed, only soloed tracks are audible. Shared by the
+ * preview audio engine and the exporter so both stay in sync.
+ */
+export function isClipAudible(model: TimelineModel, clip: Clip): boolean {
+  if (clip.muted) return false
+  const track = model.tracks.find((candidate) => candidate.id === clip.trackId)
+  if (!track || track.muted) return false
+  if (model.tracks.some((candidate) => candidate.solo)) return track.solo
+  return true
+}
+
 /** Total timeline duration: the latest clip end across all tracks. */
 export function timelineDuration(model: TimelineModel): number {
   let max = 0

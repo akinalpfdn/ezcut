@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { type Clip, timelineDuration } from '@shared'
+import { clipTimelineDuration, isClipAudible, type Clip, timelineDuration } from '@shared'
 import { useTimelineStore } from '../../../stores/timelineStore'
 import { useTransportStore } from '../../../stores/transportStore'
 import { useMediaStore } from '../../../stores/mediaStore'
@@ -143,6 +143,39 @@ export function useTimelineAudio(): void {
     scheduledRef.current.clear()
   }
 
+  // Schedules the clip's gain as a piecewise-linear envelope: 0 when inaudible
+  // (clip/track mute or non-soloed), otherwise clip.volume with linear fade-in/out
+  // at the edges. Re-applied live on any model change (volume drag, mute/solo,
+  // fade edit). Times are mapped from timeline seconds to AudioContext time via
+  // the anchor; breakpoints in the past collapse to the current value.
+  const applyClipGain = (gain: GainNode, clip: Clip, anchor: Anchor): void => {
+    const ctx = ctxRef.current
+    if (!ctx) return
+    const base = isClipAudible(useTimelineStore.getState().model, clip) ? clip.volume : 0
+    const clipDur = clipTimelineDuration(clip)
+    const startCtx = anchor.ctxTime + (clip.startOnTimeline - anchor.playhead)
+    const endCtx = startCtx + clipDur
+    const fadeIn = Math.max(0, Math.min(clip.fadeIn, clipDur))
+    const fadeOut = Math.max(0, Math.min(clip.fadeOut, clipDur))
+    const fadeInEndCtx = startCtx + fadeIn
+    const fadeOutStartCtx = endCtx - fadeOut
+
+    const gainAt = (t: number): number => {
+      if (base === 0) return 0
+      let g = base
+      if (fadeIn > 0 && t < fadeInEndCtx) g = base * Math.max(0, (t - startCtx) / fadeIn)
+      if (fadeOut > 0 && t > fadeOutStartCtx) g = Math.min(g, base * Math.max(0, (endCtx - t) / fadeOut))
+      return Math.max(0, Math.min(base, g))
+    }
+
+    const now = ctx.currentTime
+    gain.gain.cancelScheduledValues(now)
+    gain.gain.setValueAtTime(gainAt(now), now)
+    for (const t of [fadeInEndCtx, fadeOutStartCtx, endCtx].filter((point) => point > now).sort((a, b) => a - b)) {
+      gain.gain.linearRampToValueAtTime(gainAt(t), t)
+    }
+  }
+
   const playClip = (clip: Clip, buffer: AudioBuffer, anchor: Anchor): void => {
     const { ctx, master } = ensureContext()
     if (scheduledRef.current.has(clip.id) || anchorRef.current !== anchor) return
@@ -161,11 +194,11 @@ export function useTimelineAudio(): void {
     if (remaining <= 0) return
 
     const gain = ctx.createGain()
-    gain.gain.value = clip.volume
     const source = ctx.createBufferSource()
     source.buffer = buffer
     source.playbackRate.value = speed
     source.connect(gain).connect(master)
+    applyClipGain(gain, clip, anchor)
     source.start(Math.max(when, now), Math.max(0, offset), remaining)
     const entry: ScheduledClip = { source, gain }
     source.onended = () => {
@@ -254,10 +287,11 @@ export function useTimelineAudio(): void {
   // Live per-clip volume; stop audio for clips that were removed mid-play (e.g.
   // their source media was deleted from the bin).
   useEffect(() => {
+    const anchor = anchorRef.current
     for (const [clipId, entry] of scheduledRef.current) {
       const clip = model.clips[clipId]
       if (clip) {
-        entry.gain.gain.value = clip.volume
+        if (anchor) applyClipGain(entry.gain, clip, anchor)
       } else {
         try {
           entry.source.onended = null

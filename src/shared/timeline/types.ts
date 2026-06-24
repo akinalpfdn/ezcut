@@ -10,6 +10,10 @@ export interface Track {
   index: number
   /** Short label, e.g. "V1", "A1". */
   label: string
+  /** Silences this track's clips in preview and export. */
+  muted: boolean
+  /** When any track is soloed, only soloed tracks are audible. */
+  solo: boolean
 }
 
 export interface DenoiseSettings {
@@ -32,6 +36,11 @@ export interface Clip {
   speed: number
   /** Gain 0..1+ applied in preview and export. */
   volume: number
+  /** Audio fade-in / fade-out at the clip edges, in timeline seconds (0 = none). */
+  fadeIn: number
+  fadeOut: number
+  /** Silences just this clip in preview and export. */
+  muted: boolean
   denoise: DenoiseSettings
 }
 

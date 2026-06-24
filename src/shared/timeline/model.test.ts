@@ -5,6 +5,7 @@ import {
   clipTimelineEnd,
   getTrackClips,
   getTracksSorted,
+  isClipAudible,
   nextClipStart,
   previousClipEnd,
   resolveNonOverlappingStart,
@@ -24,6 +25,9 @@ function makeClip(overrides: Partial<Clip> = {}): Clip {
     sourceOut: 10,
     speed: 1,
     volume: 1,
+    fadeIn: 0,
+    fadeOut: 0,
+    muted: false,
     denoise: { enabled: false, strength: 0.5 },
     ...overrides
   }
@@ -32,8 +36,8 @@ function makeClip(overrides: Partial<Clip> = {}): Clip {
 function makeModel(clips: Clip[]): TimelineModel {
   return {
     tracks: [
-      { id: 't-video', kind: 'video', index: 0, label: 'V1' },
-      { id: 't-audio', kind: 'audio', index: 1, label: 'A1' }
+      { id: 't-video', kind: 'video', index: 0, label: 'V1', muted: false, solo: false },
+      { id: 't-audio', kind: 'audio', index: 1, label: 'A1', muted: false, solo: false }
     ],
     clips: Object.fromEntries(clips.map((clip) => [clip.id, clip])),
     markers: []
@@ -105,8 +109,8 @@ describe('getTracksSorted', () => {
   it('should order tracks by index', () => {
     const model: TimelineModel = {
       tracks: [
-        { id: 'a', kind: 'audio', index: 2, label: 'A1' },
-        { id: 'v', kind: 'video', index: 0, label: 'V1' }
+        { id: 'a', kind: 'audio', index: 2, label: 'A1', muted: false, solo: false },
+        { id: 'v', kind: 'video', index: 0, label: 'V1', muted: false, solo: false }
       ],
       clips: {},
       markers: []
@@ -221,5 +225,38 @@ describe('nextClipStart', () => {
       makeClip({ id: 'b', startOnTimeline: 10, sourceOut: 5 })
     ])
     expect(nextClipStart(model, 't-video', 2)).toBe(10)
+  })
+})
+
+describe('isClipAudible', () => {
+  it('should be audible by default', () => {
+    const clip = makeClip({ trackId: 't-video' })
+    expect(isClipAudible(makeModel([clip]), clip)).toBe(true)
+  })
+
+  it('should be inaudible when the clip itself is muted', () => {
+    const clip = makeClip({ trackId: 't-video', muted: true })
+    expect(isClipAudible(makeModel([clip]), clip)).toBe(false)
+  })
+
+  it('should be inaudible when its track is muted', () => {
+    const clip = makeClip({ trackId: 't-video' })
+    const model = makeModel([clip])
+    model.tracks[0].muted = true // t-video
+    expect(isClipAudible(model, clip)).toBe(false)
+  })
+
+  it('should be inaudible on a non-soloed track when another track is soloed', () => {
+    const clip = makeClip({ trackId: 't-video' })
+    const model = makeModel([clip])
+    model.tracks[1].solo = true // t-audio soloed
+    expect(isClipAudible(model, clip)).toBe(false)
+  })
+
+  it('should be audible on the soloed track', () => {
+    const clip = makeClip({ trackId: 't-video' })
+    const model = makeModel([clip])
+    model.tracks[0].solo = true // t-video soloed
+    expect(isClipAudible(model, clip)).toBe(true)
   })
 })

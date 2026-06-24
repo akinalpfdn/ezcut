@@ -20,6 +20,10 @@ const clipSchema = z.object({
   sourceOut: z.number(),
   speed: z.number(),
   volume: z.number(),
+  // Defaulted so projects predating fades/mute still load.
+  fadeIn: z.number().default(0),
+  fadeOut: z.number().default(0),
+  muted: z.boolean().default(false),
   denoise: denoiseSchema
 })
 
@@ -27,7 +31,9 @@ const trackSchema = z.object({
   id: z.string(),
   kind: z.enum(['video', 'audio']),
   index: z.number(),
-  label: z.string()
+  label: z.string(),
+  muted: z.boolean().default(false),
+  solo: z.boolean().default(false)
 })
 
 const waveformSchema = z.object({

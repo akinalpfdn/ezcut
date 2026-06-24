@@ -29,6 +29,13 @@ function withTrack(model: TimelineModel, track: Track): TimelineModel {
   return { ...model, tracks: [...model.tracks, track] }
 }
 
+function patchTrack(model: TimelineModel, trackId: string, patch: Partial<Track>): TimelineModel {
+  return {
+    ...model,
+    tracks: model.tracks.map((track) => (track.id === trackId ? { ...track, ...patch } : track))
+  }
+}
+
 function withoutTrack(model: TimelineModel, trackId: string): TimelineModel {
   return { ...model, tracks: model.tracks.filter((track) => track.id !== trackId) }
 }
@@ -108,6 +115,14 @@ export function setClipPropertyCommand(clipId: string, before: Partial<Clip>, af
   return {
     apply: (model) => patchClip(model, clipId, after),
     invert: (model) => patchClip(model, clipId, before)
+  }
+}
+
+/** Generic track-property edit (e.g. mute, solo). */
+export function setTrackPropertyCommand(trackId: string, before: Partial<Track>, after: Partial<Track>): Command {
+  return {
+    apply: (model) => patchTrack(model, trackId, after),
+    invert: (model) => patchTrack(model, trackId, before)
   }
 }
 

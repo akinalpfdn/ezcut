@@ -343,7 +343,27 @@ export function Timeline() {
           <div className={styles.gutterSpacer} style={{ height: rulerHeight }} />
           {sortedTracks.map((track) => (
             <div key={track.id} className={styles.trackHeader} style={{ height: trackHeight }}>
-              {track.label}
+              <span>{track.label}</span>
+              <div className={styles.trackButtons}>
+                <button
+                  type="button"
+                  className={track.muted ? `${styles.trackBtn} ${styles.trackBtnMute}` : styles.trackBtn}
+                  aria-pressed={track.muted}
+                  title={t('timeline.muteTrack')}
+                  onClick={() => useTimelineStore.getState().toggleTrackMute(track.id)}
+                >
+                  M
+                </button>
+                <button
+                  type="button"
+                  className={track.solo ? `${styles.trackBtn} ${styles.trackBtnSolo}` : styles.trackBtn}
+                  aria-pressed={track.solo}
+                  title={t('timeline.soloTrack')}
+                  onClick={() => useTimelineStore.getState().toggleTrackSolo(track.id)}
+                >
+                  S
+                </button>
+              </div>
             </div>
           ))}
         </div>

@@ -21,6 +21,7 @@ import {
   sequenceCommand,
   setClipPropertyCommand,
   setMarkersCommand,
+  setTrackPropertyCommand,
   splitClipCommand,
   trimClipCommand,
   type ClipPlacement,
@@ -37,8 +38,8 @@ function uuid(): string {
 function createInitialModel(): TimelineModel {
   return {
     tracks: [
-      { id: uuid(), kind: 'video', index: 0, label: 'V1' },
-      { id: uuid(), kind: 'audio', index: 1, label: 'A1' }
+      { id: uuid(), kind: 'video', index: 0, label: 'V1', muted: false, solo: false },
+      { id: uuid(), kind: 'audio', index: 1, label: 'A1', muted: false, solo: false }
     ],
     clips: {},
     markers: []
@@ -83,6 +84,10 @@ interface TimelineState {
   addAudioTrack: () => void
   setClipSpeed: (clipId: string, speed: number) => void
   setClipVolume: (clipId: string, volume: number) => void
+  setClipFade: (clipId: string, fade: { fadeIn?: number; fadeOut?: number }) => void
+  toggleClipMute: (clipId: string) => void
+  toggleTrackMute: (trackId: string) => void
+  toggleTrackSolo: (trackId: string) => void
   setClipDenoise: (clipId: string, denoise: Partial<DenoiseSettings>) => void
 
   selectClip: (clipId: string | null) => void
@@ -152,6 +157,9 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
       sourceOut: sourceDuration,
       speed: 1,
       volume: 1,
+      fadeIn: 0,
+      fadeOut: 0,
+      muted: false,
       denoise: { enabled: false, strength: 0.5 }
     }
     get().execute(addClipCommand(clip))
@@ -249,12 +257,15 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
     if (!clip) return
     const split = splitPoint(clip, timelineTime, TIMELINE_CONFIG.minClipDuration)
     if (!split) return
-    const left: Clip = { ...clip, id: uuid(), sourceOut: split.sourceSplit }
+    // The cut edges get no fade (fade-out belongs to the real clip end, fade-in
+    // to the real start); the outer edges keep theirs.
+    const left: Clip = { ...clip, id: uuid(), sourceOut: split.sourceSplit, fadeOut: 0 }
     const right: Clip = {
       ...clip,
       id: uuid(),
       sourceIn: split.sourceSplit,
-      startOnTimeline: clip.startOnTimeline + split.localSeconds
+      startOnTimeline: clip.startOnTimeline + split.localSeconds,
+      fadeIn: 0
     }
     get().execute(splitClipCommand(clip, left, right))
     set({ selectedClipId: left.id })
@@ -314,7 +325,9 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
         id: uuid(),
         kind: 'audio',
         index: maxIndex + 1,
-        label: `A${audioCount + 1}`
+        label: `A${audioCount + 1}`,
+        muted: false,
+        solo: false
       })
     )
   },
@@ -329,6 +342,41 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
     const clip = get().model.clips[clipId]
     if (!clip || volume === clip.volume) return
     get().execute(setClipPropertyCommand(clipId, { volume: clip.volume }, { volume }))
+  },
+
+  setClipFade: (clipId, fade) => {
+    const clip = get().model.clips[clipId]
+    if (!clip) return
+    const before: Partial<Clip> = {}
+    const after: Partial<Clip> = {}
+    if (fade.fadeIn !== undefined && fade.fadeIn !== clip.fadeIn) {
+      before.fadeIn = clip.fadeIn
+      after.fadeIn = Math.max(0, fade.fadeIn)
+    }
+    if (fade.fadeOut !== undefined && fade.fadeOut !== clip.fadeOut) {
+      before.fadeOut = clip.fadeOut
+      after.fadeOut = Math.max(0, fade.fadeOut)
+    }
+    if (Object.keys(after).length === 0) return
+    get().execute(setClipPropertyCommand(clipId, before, after))
+  },
+
+  toggleClipMute: (clipId) => {
+    const clip = get().model.clips[clipId]
+    if (!clip) return
+    get().execute(setClipPropertyCommand(clipId, { muted: clip.muted }, { muted: !clip.muted }))
+  },
+
+  toggleTrackMute: (trackId) => {
+    const track = get().model.tracks.find((candidate) => candidate.id === trackId)
+    if (!track) return
+    get().execute(setTrackPropertyCommand(trackId, { muted: track.muted }, { muted: !track.muted }))
+  },
+
+  toggleTrackSolo: (trackId) => {
+    const track = get().model.tracks.find((candidate) => candidate.id === trackId)
+    if (!track) return
+    get().execute(setTrackPropertyCommand(trackId, { solo: track.solo }, { solo: !track.solo }))
   },
 
   setClipDenoise: (clipId, denoise) => {
