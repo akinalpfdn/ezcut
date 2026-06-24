@@ -9,6 +9,11 @@ interface ClipRef {
   sourceUs: number
 }
 
+/** The incoming clip of a crossfade, drawn on top of the active clip at `alpha`. */
+interface TransitionRef extends ClipRef {
+  alpha: number
+}
+
 interface InitMessage {
   type: 'init'
   canvas: OffscreenCanvas
@@ -19,6 +24,8 @@ interface RenderMessage {
   hasActiveClip: boolean
   active: ClipRef | null
   next: ClipRef | null
+  /** Incoming clip blended over the active one during a crossfade overlap. */
+  transition: TransitionRef | null
   /** Thumbnail to show until the active clip's first frame decodes (or while its
    * proxy is still generating, when `active` is null). */
   fallbackUrl: string | null
@@ -96,6 +103,15 @@ function drawFrame(frame: VideoFrame): void {
   ctx.drawImage(frame, 0, 0, canvas.width, canvas.height)
 }
 
+/** Draws a frame over the current canvas at `alpha` WITHOUT resizing (so it blends
+ * onto whatever the active clip already drew — the crossfade composite). */
+function drawFrameWithAlpha(frame: VideoFrame, alpha: number): void {
+  if (!canvas || !ctx) return
+  ctx.globalAlpha = Math.max(0, Math.min(1, alpha))
+  ctx.drawImage(frame, 0, 0, canvas.width, canvas.height)
+  ctx.globalAlpha = 1
+}
+
 function drawThumbnail(url: string): void {
   if (!canvas || !ctx) return
   const bitmap = ensureThumbnail(url)
@@ -131,6 +147,14 @@ function handleRender(message: RenderMessage): void {
       // loaded project, or a proxy still generating with no thumbnail) — clear
       // rather than leave a stale frame from the previous clip on screen.
       clear()
+    }
+
+    // Crossfade: draw the incoming clip over the active one at the blend alpha.
+    if (message.transition) {
+      keep.add(message.transition.clipId)
+      const source = ensureSource(message.transition.clipId, message.transition.fileUrl)
+      const frame = source?.isLoaded ? source.frameAt(message.transition.sourceUs) : null
+      if (frame) drawFrameWithAlpha(frame, message.transition.alpha)
     }
 
     if (message.next) {

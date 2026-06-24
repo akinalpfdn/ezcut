@@ -4,7 +4,9 @@ import {
   clipTimelineDuration,
   clipTimelineEnd,
   DEFAULT_AUDIO_FX,
+  getClipTransition,
   getTrackClips,
+  nextClipOnTrack,
   resolveNonOverlappingStart,
   splitPoint,
   type AudioFx,
@@ -92,6 +94,9 @@ interface TimelineState {
   toggleTrackSolo: (trackId: string) => void
   setClipDenoise: (clipId: string, denoise: Partial<DenoiseSettings>) => void
   setClipAudioFx: (clipId: string, fx: Partial<AudioFx>) => void
+  /** Adds a transition from a clip into the next adjacent clip (overlapping them). */
+  addTransition: (clipId: string, duration: number) => void
+  removeTransition: (clipId: string) => void
 
   selectClip: (clipId: string | null) => void
   setPxPerSec: (pxPerSec: number) => void
@@ -396,6 +401,52 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
     if (!clip) return
     const next = { ...clip.audioFx, ...fx }
     get().execute(setClipPropertyCommand(clipId, { audioFx: clip.audioFx }, { audioFx: next }))
+  },
+
+  addTransition: (clipId, duration) => {
+    const model = get().model
+    const clip = model.clips[clipId]
+    if (!clip) return
+    const next = nextClipOnTrack(model, clip)
+    if (!next) return
+    // Only when the pair is adjacent or has a gap (never already overlapping).
+    if (next.startOnTimeline < clipTimelineEnd(clip) - 1e-6) return
+    const maxDuration =
+      Math.min(clipTimelineDuration(clip), clipTimelineDuration(next)) - TIMELINE_CONFIG.minClipDuration
+    const seconds = Math.min(Math.max(duration, 0), Math.max(0, maxDuration))
+    if (seconds <= 0) return
+    const nextStart = clipTimelineEnd(clip) - seconds
+    get().execute(
+      sequenceCommand([
+        setClipPropertyCommand(next.id, { startOnTimeline: next.startOnTimeline }, { startOnTimeline: nextStart }),
+        setClipPropertyCommand(
+          clipId,
+          { transitionOut: clip.transitionOut },
+          { transitionOut: { type: 'crossfade', duration: seconds } }
+        )
+      ])
+    )
+  },
+
+  removeTransition: (clipId) => {
+    const model = get().model
+    const clip = model.clips[clipId]
+    if (!clip || !clip.transitionOut) return
+    const info = getClipTransition(model, clip)
+    const commands: Command[] = []
+    if (info) {
+      // Slide the incoming clip back out of the overlap.
+      const restored = info.next.startOnTimeline + info.duration
+      commands.push(
+        setClipPropertyCommand(
+          info.next.id,
+          { startOnTimeline: info.next.startOnTimeline },
+          { startOnTimeline: restored }
+        )
+      )
+    }
+    commands.push(setClipPropertyCommand(clipId, { transitionOut: clip.transitionOut }, { transitionOut: undefined }))
+    get().execute(commands.length === 1 ? commands[0] : sequenceCommand(commands))
   },
 
   selectClip: (clipId) => set({ selectedClipId: clipId }),

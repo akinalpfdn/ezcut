@@ -333,6 +333,16 @@ export function Timeline() {
             label: menuClip?.denoise.enabled ? t('inspector.denoiseOff') : t('inspector.denoise'),
             onSelect: () => toggleClipDenoise(clipMenuId)
           },
+          menuClip?.transitionOut
+            ? {
+                label: t('timeline.removeTransition'),
+                onSelect: () => useTimelineStore.getState().removeTransition(clipMenuId)
+              }
+            : {
+                label: t('timeline.addTransition'),
+                onSelect: () =>
+                  useTimelineStore.getState().addTransition(clipMenuId, TIMELINE_CONFIG.defaultTransitionDuration)
+              },
           { label: t('timeline.delete'), hint: formatCombo(keymap.delete), onSelect: deleteSelected }
         ]
       : [{ label: t('timeline.addAudioTrack'), onSelect: () => useTimelineStore.getState().addAudioTrack() }]

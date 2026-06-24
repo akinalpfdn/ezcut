@@ -1,4 +1,4 @@
-import type { Clip, TimelineModel, Track, TrackKind } from './types'
+import type { Clip, TimelineModel, Track, TrackKind, TransitionType } from './types'
 import type { MediaKind } from '../media/types'
 
 /** Which track kind a media item belongs on: images share the video track. */
@@ -120,6 +120,33 @@ export function canMerge(first: Clip, next: Clip, tolerance: number): boolean {
   const contiguousOnTimeline = Math.abs(next.startOnTimeline - clipTimelineEnd(first)) <= tolerance
   const contiguousInSource = Math.abs(next.sourceIn - first.sourceOut) <= tolerance
   return contiguousOnTimeline && contiguousInSource
+}
+
+/** The next clip after `clip` on its track in start order, or undefined. */
+export function nextClipOnTrack(model: TimelineModel, clip: Clip): Clip | undefined {
+  const clips = getTrackClips(model, clip.trackId)
+  const index = clips.findIndex((candidate) => candidate.id === clip.id)
+  return index >= 0 ? clips[index + 1] : undefined
+}
+
+/**
+ * The transition actually in effect at a clip's outgoing edge: present only when
+ * the clip has `transitionOut` AND the next clip overlaps it by ~that duration.
+ * Deriving it from the real overlap (not just the flag) means a stale flag left by
+ * a drag is ignored by the renderer and exporter instead of mis-blending.
+ */
+export function getClipTransition(
+  model: TimelineModel,
+  clip: Clip,
+  tolerance = 0.001
+): { type: TransitionType; duration: number; next: Clip } | null {
+  const transition = clip.transitionOut
+  if (!transition) return null
+  const next = nextClipOnTrack(model, clip)
+  if (!next) return null
+  const overlap = clipTimelineEnd(clip) - next.startOnTimeline
+  if (Math.abs(overlap - transition.duration) > tolerance) return null
+  return { type: transition.type, duration: transition.duration, next }
 }
 
 /** Start of the nearest clip to the right of `referenceStart` on the track (or Infinity). */

@@ -1,5 +1,6 @@
 import {
   clipTimelineDuration,
+  getClipTransition,
   getTrackClips,
   getTracksSorted,
   isClipAudible,
@@ -100,6 +101,17 @@ export async function buildFiltergraph(
   const videoSegments: { label: string; start: number; end: number }[] = []
   const audioLabels: string[] = []
 
+  // Incoming-clip id -> transition duration. A crossfade is rendered by drawing the
+  // incoming clip on top of the outgoing one (already on the base) with its alpha
+  // fading in over the overlap, so the two dissolve.
+  const incomingTransition = new Map<string, number>()
+  for (const track of getTracksSorted(model)) {
+    for (const clip of getTrackClips(model, track.id)) {
+      const transition = getClipTransition(model, clip)
+      if (transition) incomingTransition.set(transition.next.id, transition.duration)
+    }
+  }
+
   let counter = 0
   for (const track of getTracksSorted(model)) {
     for (const clip of getTrackClips(model, track.id)) {
@@ -114,18 +126,23 @@ export async function buildFiltergraph(
       const isImage = item.kind === 'image'
       if (track.kind === 'video' && (item.hasVideo || isImage)) {
         const label = `v${index}`
+        // The incoming side of a crossfade needs an alpha channel + an alpha
+        // fade-in over the overlap [start, start+duration].
+        const crossfade = incomingTransition.get(clip.id)
+        const pixelFormat = crossfade ? 'yuva420p' : 'yuv420p'
         const fit =
           `scale=${width}:${height}:force_original_aspect_ratio=decrease,` +
-          `pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1,fps=${fps},format=yuv420p`
+          `pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1,fps=${fps},format=${pixelFormat}`
+        const alphaIn = crossfade ? `,fade=t=in:st=${start.toFixed(3)}:d=${crossfade.toFixed(3)}:alpha=1` : ''
         if (isImage) {
           // Loop the still for the clip's span; no trim/speed (it has no source time).
           videoInput = addInput(item.path, ['-loop', '1', '-t', clipTimelineDuration(clip).toFixed(3)])
-          parts.push(`[${videoInput}:v]setpts=PTS-STARTPTS+${start}/TB,${fit}[${label}]`)
+          parts.push(`[${videoInput}:v]setpts=PTS-STARTPTS+${start}/TB,${fit}${alphaIn}[${label}]`)
         } else {
           videoInput = addInput(item.path)
           parts.push(
             `[${videoInput}:v]trim=start=${clip.sourceIn}:end=${clip.sourceOut},` +
-              `setpts=(PTS-STARTPTS)/${speed}+${start}/TB,${fit}[${label}]`
+              `setpts=(PTS-STARTPTS)/${speed}+${start}/TB,${fit}${alphaIn}[${label}]`
           )
         }
         videoSegments.push({ label, start, end })

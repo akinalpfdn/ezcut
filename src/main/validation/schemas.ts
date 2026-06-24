@@ -35,7 +35,8 @@ const clipSchema = z.object({
   fadeOut: z.number().default(0),
   muted: z.boolean().default(false),
   denoise: denoiseSchema,
-  audioFx: audioFxSchema.default(DEFAULT_AUDIO_FX)
+  audioFx: audioFxSchema.default(DEFAULT_AUDIO_FX),
+  transitionOut: z.object({ type: z.enum(['crossfade']), duration: z.number() }).optional()
 })
 
 const trackSchema = z.object({

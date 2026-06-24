@@ -55,6 +55,8 @@
     "markerHint": "Playhead konumuna işaret ekle veya kaldır",
     "muteTrack": "Katmanı sustur",
     "soloTrack": "Katmanı solo yap",
+    "addTransition": "Geçiş ekle",
+    "removeTransition": "Geçişi kaldır",
     "pin": "Pinle",
     "pinHint": "Oynatırken playhead'i ortalayarak takip et",
     "undo": "Geri al",

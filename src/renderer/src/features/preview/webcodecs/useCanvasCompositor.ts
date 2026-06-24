@@ -1,6 +1,7 @@
 import { useEffect, useRef, type RefObject } from 'react'
 import {
   clipTimelineEnd,
+  getClipTransition,
   getTrackClips,
   getTracksSorted,
   timelineTimeToSource,
@@ -17,6 +18,10 @@ interface ClipRef {
   clipId: string
   fileUrl: string
   sourceUs: number
+}
+
+interface TransitionRef extends ClipRef {
+  alpha: number
 }
 
 /**
@@ -84,6 +89,7 @@ export function useCanvasCompositor(canvasRef: RefObject<HTMLCanvasElement | nul
       let hasActiveClip = false
       let active: ClipRef | null = null
       let next: ClipRef | null = null
+      let transition: TransitionRef | null = null
       let fallbackUrl: string | null = null
 
       if (videoTrack) {
@@ -118,15 +124,27 @@ export function useCanvasCompositor(canvasRef: RefObject<HTMLCanvasElement | nul
           const url = media && media.kind !== 'image' ? sourceUrlFor(media) : null
           if (url) next = { clipId: nextClip.id, fileUrl: url, sourceUs: Math.max(0, nextClip.sourceIn) * 1_000_000 }
         }
+
+        // Inside a crossfade overlap: blend the incoming clip over the active one.
+        const xfade = activeClip ? getClipTransition(model, activeClip) : null
+        if (xfade && playheadTime >= xfade.next.startOnTimeline) {
+          const media = items.find((item) => item.id === xfade.next.mediaId)
+          const url = media && media.kind !== 'image' ? sourceUrlFor(media) : null
+          if (url) {
+            const alpha = Math.min(1, Math.max(0, (playheadTime - xfade.next.startOnTimeline) / xfade.duration))
+            const sourceUs = Math.max(0, timelineTimeToSource(xfade.next, playheadTime)) * 1_000_000
+            transition = { clipId: xfade.next.id, fileUrl: url, sourceUs, alpha }
+          }
+        }
       }
 
       // Only post when the resolved render state actually changed — during
       // playback sourceUs advances every frame (so it posts, as needed), but
       // while paused/idle this skips the per-frame structured-clone to the worker.
-      const sig = `${hasActiveClip}|${active?.clipId ?? ''}|${active?.fileUrl ?? ''}|${active?.sourceUs ?? ''}|${next?.clipId ?? ''}|${next?.fileUrl ?? ''}|${next?.sourceUs ?? ''}|${fallbackUrl ?? ''}`
+      const sig = `${hasActiveClip}|${active?.clipId ?? ''}|${active?.fileUrl ?? ''}|${active?.sourceUs ?? ''}|${next?.clipId ?? ''}|${next?.fileUrl ?? ''}|${next?.sourceUs ?? ''}|${fallbackUrl ?? ''}|${transition?.clipId ?? ''}|${transition?.sourceUs ?? ''}|${transition?.alpha ?? ''}`
       if (sig !== lastSig) {
         lastSig = sig
-        worker.postMessage({ type: 'render', hasActiveClip, active, next, fallbackUrl })
+        worker.postMessage({ type: 'render', hasActiveClip, active, next, transition, fallbackUrl })
       }
       rafId = requestAnimationFrame(render)
     }

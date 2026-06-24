@@ -9,7 +9,9 @@ export const TIMELINE_CONFIG = {
   trackHeight: 64,
   rulerHeight: 28,
   /** Shortest clip allowed after a split or trim, in seconds. */
-  minClipDuration: 0.1
+  minClipDuration: 0.1,
+  /** Default transition (crossfade) duration when added, in seconds. */
+  defaultTransitionDuration: 0.5
 } as const
 
 /** Tolerance for treating two clips as contiguous when merging. */

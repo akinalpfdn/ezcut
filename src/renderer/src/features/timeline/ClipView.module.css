@@ -78,3 +78,15 @@
 .handleRight {
   border-left: 1px solid rgba(0, 0, 0, 0.3);
 }
+
+/* Marks the outgoing edge of a clip that has a transition into the next clip. */
+.transition {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: 14px;
+  background: linear-gradient(to right, transparent, var(--color-primary));
+  opacity: 0.75;
+  pointer-events: none;
+}

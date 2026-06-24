@@ -22,6 +22,16 @@ export interface DenoiseSettings {
   strength: number
 }
 
+/** Transition types (Phase 19 ships crossfade; later phases add slide/zoom/…). */
+export type TransitionType = 'crossfade'
+
+/** A transition at a clip's outgoing edge into the next adjacent clip. The two
+ * clips overlap by `duration` seconds (the blend region). */
+export interface Transition {
+  type: TransitionType
+  duration: number
+}
+
 /** Per-clip audio cleanup/enhancement applied on export (ffmpeg filters). */
 export interface AudioFx {
   /** Loudness normalization to a target LUFS (EBU R128). */
@@ -69,6 +79,8 @@ export interface Clip {
   denoise: DenoiseSettings
   /** Audio cleanup/enhancement applied on export. */
   audioFx: AudioFx
+  /** Transition into the next adjacent clip on this track (overlap blend). */
+  transitionOut?: Transition
 }
 
 export interface TimelineModel {

@@ -55,6 +55,8 @@
     "markerHint": "Add or remove a marker at the playhead",
     "muteTrack": "Mute track",
     "soloTrack": "Solo track",
+    "addTransition": "Add transition",
+    "removeTransition": "Remove transition",
     "pin": "Pin",
     "pinHint": "Follow the playhead by centering it during playback",
     "undo": "Undo",
