@@ -3,9 +3,11 @@ import {
   canMerge,
   clipTimelineDuration,
   clipTimelineEnd,
+  DEFAULT_AUDIO_FX,
   getTrackClips,
   resolveNonOverlappingStart,
   splitPoint,
+  type AudioFx,
   type Clip,
   type DenoiseSettings,
   type TimelineModel
@@ -89,6 +91,7 @@ interface TimelineState {
   toggleTrackMute: (trackId: string) => void
   toggleTrackSolo: (trackId: string) => void
   setClipDenoise: (clipId: string, denoise: Partial<DenoiseSettings>) => void
+  setClipAudioFx: (clipId: string, fx: Partial<AudioFx>) => void
 
   selectClip: (clipId: string | null) => void
   setPxPerSec: (pxPerSec: number) => void
@@ -160,7 +163,8 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
       fadeIn: 0,
       fadeOut: 0,
       muted: false,
-      denoise: { enabled: false, strength: 0.5 }
+      denoise: { enabled: false, strength: 0.5 },
+      audioFx: DEFAULT_AUDIO_FX
     }
     get().execute(addClipCommand(clip))
     set({ selectedClipId: clip.id })
@@ -385,6 +389,13 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
     const next = { ...clip.denoise, ...denoise }
     if (next.enabled === clip.denoise.enabled && next.strength === clip.denoise.strength) return
     get().execute(setClipPropertyCommand(clipId, { denoise: clip.denoise }, { denoise: next }))
+  },
+
+  setClipAudioFx: (clipId, fx) => {
+    const clip = get().model.clips[clipId]
+    if (!clip) return
+    const next = { ...clip.audioFx, ...fx }
+    get().execute(setClipPropertyCommand(clipId, { audioFx: clip.audioFx }, { audioFx: next }))
   },
 
   selectClip: (clipId) => set({ selectedClipId: clipId }),

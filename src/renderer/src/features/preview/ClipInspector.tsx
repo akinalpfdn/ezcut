@@ -92,6 +92,39 @@ export function ClipInspector() {
         {clip.muted ? t('inspector.muted') : t('inspector.mute')}
       </button>
 
+      <span className={styles.fxLabel} title={t('inspector.fxHint')}>
+        {t('inspector.fx')}
+      </span>
+
+      {(['normalize', 'gate', 'compressor', 'eq'] as const).map((key) => (
+        <button
+          key={key}
+          type="button"
+          className={clip.audioFx[key] ? `${styles.toggle} ${styles.toggleOn}` : styles.toggle}
+          aria-pressed={clip.audioFx[key]}
+          onClick={() => useTimelineStore.getState().setClipAudioFx(clip.id, { [key]: !clip.audioFx[key] })}
+        >
+          {t(`inspector.${key}`)}
+        </button>
+      ))}
+
+      {clip.audioFx.eq
+        ? (['eqLow', 'eqMid', 'eqHigh'] as const).map((band) => (
+            <label key={band} className={styles.field}>
+              <span className={styles.label}>{t(`inspector.${band}`)}</span>
+              <input
+                className={styles.number}
+                type="number"
+                step={1}
+                value={clip.audioFx[band]}
+                onChange={(event) =>
+                  useTimelineStore.getState().setClipAudioFx(clip.id, { [band]: Number(event.target.value) })
+                }
+              />
+            </label>
+          ))
+        : null}
+
       {clip.denoise.enabled ? (
         <label className={styles.field}>
           <span className={styles.label}>{t('inspector.denoiseStrength')}</span>

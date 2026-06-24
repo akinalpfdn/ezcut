@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { DEFAULT_AUDIO_FX } from '@shared'
 import type { Clip, TimelineModel, Track } from '@shared'
 import {
   addClipCommand,
@@ -30,6 +31,7 @@ function makeClip(overrides: Partial<Clip> = {}): Clip {
     fadeOut: 0,
     muted: false,
     denoise: { enabled: false, strength: 0.5 },
+    audioFx: DEFAULT_AUDIO_FX,
     ...overrides
   }
 }

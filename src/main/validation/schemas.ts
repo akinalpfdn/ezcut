@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import type { AppSettings, ProjectFile } from '@shared'
+import { DEFAULT_AUDIO_FX, type AppSettings, type ProjectFile } from '@shared'
 
 // Schemas for persisted JSON (settings, project, autosave). These files can be
 // hand-edited, corrupted, or written by an older version, so they're validated on
@@ -9,6 +9,16 @@ import type { AppSettings, ProjectFile } from '@shared'
 const denoiseSchema = z.object({
   enabled: z.boolean(),
   strength: z.number()
+})
+
+const audioFxSchema = z.object({
+  normalize: z.boolean(),
+  gate: z.boolean(),
+  compressor: z.boolean(),
+  eq: z.boolean(),
+  eqLow: z.number(),
+  eqMid: z.number(),
+  eqHigh: z.number()
 })
 
 const clipSchema = z.object({
@@ -24,7 +34,8 @@ const clipSchema = z.object({
   fadeIn: z.number().default(0),
   fadeOut: z.number().default(0),
   muted: z.boolean().default(false),
-  denoise: denoiseSchema
+  denoise: denoiseSchema,
+  audioFx: audioFxSchema.default(DEFAULT_AUDIO_FX)
 })
 
 const trackSchema = z.object({

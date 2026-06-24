@@ -13,6 +13,7 @@ import {
   timelineDuration,
   timelineTimeToSource
 } from './model'
+import { DEFAULT_AUDIO_FX } from './types'
 import type { Clip, TimelineModel } from './types'
 
 function makeClip(overrides: Partial<Clip> = {}): Clip {
@@ -29,6 +30,7 @@ function makeClip(overrides: Partial<Clip> = {}): Clip {
     fadeOut: 0,
     muted: false,
     denoise: { enabled: false, strength: 0.5 },
+    audioFx: DEFAULT_AUDIO_FX,
     ...overrides
   }
 }

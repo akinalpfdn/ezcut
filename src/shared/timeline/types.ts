@@ -22,6 +22,31 @@ export interface DenoiseSettings {
   strength: number
 }
 
+/** Per-clip audio cleanup/enhancement applied on export (ffmpeg filters). */
+export interface AudioFx {
+  /** Loudness normalization to a target LUFS (EBU R128). */
+  normalize: boolean
+  /** Noise gate — silences low-level noise between speech. */
+  gate: boolean
+  /** Dynamics compressor — evens out levels. */
+  compressor: boolean
+  /** 3-band EQ (gains in dB; 0 = flat). */
+  eq: boolean
+  eqLow: number
+  eqMid: number
+  eqHigh: number
+}
+
+export const DEFAULT_AUDIO_FX: AudioFx = {
+  normalize: false,
+  gate: false,
+  compressor: false,
+  eq: false,
+  eqLow: 0,
+  eqMid: 0,
+  eqHigh: 0
+}
+
 export interface Clip {
   id: string
   /** References a MediaItem.id in the media store. */
@@ -42,6 +67,8 @@ export interface Clip {
   /** Silences just this clip in preview and export. */
   muted: boolean
   denoise: DenoiseSettings
+  /** Audio cleanup/enhancement applied on export. */
+  audioFx: AudioFx
 }
 
 export interface TimelineModel {

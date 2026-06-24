@@ -4,9 +4,11 @@ import {
   getTracksSorted,
   isClipAudible,
   timelineDuration,
+  type AudioFx,
   type MediaItem,
   type TimelineModel
 } from '@shared'
+import { AUDIO_FX_CONFIG } from '../../config/audioFx'
 
 export interface FiltergraphResult {
   inputs: string[]
@@ -35,6 +37,26 @@ function atempoChain(speed: number): string {
   }
   parts.push(`atempo=${remaining.toFixed(4)}`)
   return `${parts.join(',')},`
+}
+
+/**
+ * Per-clip audio cleanup/enhancement fragment (trailing comma), or "" if none.
+ * Order: gate → EQ → compressor → loudnorm, so noise is removed first and final
+ * loudness normalization sees the processed signal.
+ */
+export function buildAudioFxChain(fx: AudioFx): string {
+  const segments: string[] = []
+  if (fx.gate) segments.push(AUDIO_FX_CONFIG.gate)
+  if (fx.eq) {
+    segments.push(`bass=g=${fx.eqLow}:f=${AUDIO_FX_CONFIG.eq.lowFreq}`)
+    segments.push(
+      `equalizer=f=${AUDIO_FX_CONFIG.eq.midFreq}:width_type=o:width=${AUDIO_FX_CONFIG.eq.midWidth}:g=${fx.eqMid}`
+    )
+    segments.push(`treble=g=${fx.eqHigh}:f=${AUDIO_FX_CONFIG.eq.highFreq}`)
+  }
+  if (fx.compressor) segments.push(AUDIO_FX_CONFIG.compressor)
+  if (fx.normalize) segments.push(AUDIO_FX_CONFIG.loudnorm)
+  return segments.length > 0 ? `${segments.join(',')},` : ''
 }
 
 /** afade fragment (trailing comma) for a clip's edge fades, or "" for none. */
@@ -106,10 +128,11 @@ export async function buildFiltergraph(
         }
         const label = `a${index}`
         const delayMs = Math.round(start * 1000)
+        const fx = buildAudioFxChain(clip.audioFx)
         const fades = audioFadeChain(clip.fadeIn, clip.fadeOut, clipTimelineDuration(clip))
         parts.push(
           `[${audioInput}:a]atrim=start=${clip.sourceIn}:end=${clip.sourceOut},asetpts=PTS-STARTPTS,` +
-            `${atempoChain(speed)}${fades}volume=${clip.volume},adelay=${delayMs}:all=1[${label}]`
+            `${atempoChain(speed)}${fx}${fades}volume=${clip.volume},adelay=${delayMs}:all=1[${label}]`
         )
         audioLabels.push(label)
       }
