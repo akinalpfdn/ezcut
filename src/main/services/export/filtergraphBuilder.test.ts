@@ -79,6 +79,11 @@ const videoMedia: MediaItem[] = [
   { id: 'vb', path: '/b.mp4', name: 'b', kind: 'video', durationSeconds: 3, sizeBytes: 1, hasVideo: true, hasAudio: false, width: 1920, height: 1080 }
 ]
 
+const avMedia: MediaItem[] = [
+  { id: 'va', path: '/a.mp4', name: 'a', kind: 'video', durationSeconds: 3, sizeBytes: 1, hasVideo: true, hasAudio: true, width: 1920, height: 1080 },
+  { id: 'vb', path: '/b.mp4', name: 'b', kind: 'video', durationSeconds: 3, sizeBytes: 1, hasVideo: true, hasAudio: true, width: 1920, height: 1080 }
+]
+
 describe('buildAudioFxChain', () => {
   it('should return empty when no effect is enabled', () => {
     expect(buildAudioFxChain(DEFAULT_AUDIO_FX)).toBe('')
@@ -149,6 +154,18 @@ describe('buildFiltergraph (transitions via xfade)', () => {
       async () => ''
     )
     expect(graph.filterComplex).toContain('xfade=transition=slideleft:duration=1.000:offset=2.000')
+  })
+
+  it('should crossfade the audio across a transition', async () => {
+    const graph = await buildFiltergraph(
+      transitionModel('crossfade'),
+      avMedia,
+      { width: 1280, height: 720, fps: 30 },
+      async () => ''
+    )
+    // Incoming 'b' fades its audio in over [0,1]; outgoing 'a' fades out over its last 1s.
+    expect(graph.filterComplex).toContain('afade=t=in:st=0:d=1.0000')
+    expect(graph.filterComplex).toContain('afade=t=out:st=2.0000:d=1.0000')
   })
 
   it('should concat adjacent clips with no transition (no xfade)', async () => {

@@ -138,6 +138,17 @@ export async function buildFiltergraph(
     return out
   }
 
+  // Incoming-clip id -> transition duration, so the audio of the incoming clip can
+  // fade in over the overlap (the fade-out half is on the outgoing clip) — an
+  // audio crossfade that lines up with the video transition.
+  const incomingTransitionDuration = new Map<string, number>()
+  for (const track of getTracksSorted(model)) {
+    for (const clip of getTrackClips(model, track.id)) {
+      const transition = getClipTransition(model, clip)
+      if (transition) incomingTransitionDuration.set(transition.next.id, transition.duration)
+    }
+  }
+
   let counter = 0
   for (const track of getTracksSorted(model)) {
     for (const clip of getTrackClips(model, track.id)) {
@@ -183,10 +194,15 @@ export async function buildFiltergraph(
         const label = `a${index}`
         const delayMs = Math.round(start * 1000)
         const fx = buildAudioFxChain(clip.audioFx)
-        const fades = audioFadeChain(clip.fadeIn, clip.fadeOut, clipTimelineDuration(clip))
+        const fades = audioFadeChain(clip.fadeIn, clip.fadeOut, length)
+        // Crossfade audio: fade out over an outgoing transition, fade in over an
+        // incoming one — the two halves overlap to dissolve the audio with the video.
+        const crossOut = getClipTransition(model, clip)?.duration ?? 0
+        const crossIn = incomingTransitionDuration.get(clip.id) ?? 0
+        const crossFades = audioFadeChain(crossIn, crossOut, length)
         parts.push(
           `[${audioInput}:a]atrim=start=${clip.sourceIn}:end=${clip.sourceOut},asetpts=PTS-STARTPTS,` +
-            `${atempoChain(speed)}${fx}${fades}volume=${clip.volume},adelay=${delayMs}:all=1[${label}]`
+            `${atempoChain(speed)}${fx}${fades}${crossFades}volume=${clip.volume},adelay=${delayMs}:all=1[${label}]`
         )
         audioLabels.push(label)
       }

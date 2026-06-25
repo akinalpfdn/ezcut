@@ -1,5 +1,12 @@
 import { useEffect, useRef } from 'react'
-import { clipTimelineDuration, isClipAudible, type Clip, timelineDuration } from '@shared'
+import {
+  clipTimelineDuration,
+  getClipTransition,
+  getIncomingTransition,
+  isClipAudible,
+  type Clip,
+  timelineDuration
+} from '@shared'
 import { useTimelineStore } from '../../../stores/timelineStore'
 import { useTransportStore } from '../../../stores/transportStore'
 import { useMediaStore } from '../../../stores/mediaStore'
@@ -151,12 +158,17 @@ export function useTimelineAudio(): void {
   const applyClipGain = (gain: GainNode, clip: Clip, anchor: Anchor): void => {
     const ctx = ctxRef.current
     if (!ctx) return
-    const base = isClipAudible(useTimelineStore.getState().model, clip) ? clip.volume : 0
+    const model = useTimelineStore.getState().model
+    const base = isClipAudible(model, clip) ? clip.volume : 0
     const clipDur = clipTimelineDuration(clip)
     const startCtx = anchor.ctxTime + (clip.startOnTimeline - anchor.playhead)
     const endCtx = startCtx + clipDur
-    const fadeIn = Math.max(0, Math.min(clip.fadeIn, clipDur))
-    const fadeOut = Math.max(0, Math.min(clip.fadeOut, clipDur))
+    // Crossfade a transition's audio: the longer of the user fade and the
+    // transition's overlap on each edge.
+    const crossIn = getIncomingTransition(model, clip)?.duration ?? 0
+    const crossOut = getClipTransition(model, clip)?.duration ?? 0
+    const fadeIn = Math.max(0, Math.min(Math.max(clip.fadeIn, crossIn), clipDur))
+    const fadeOut = Math.max(0, Math.min(Math.max(clip.fadeOut, crossOut), clipDur))
     const fadeInEndCtx = startCtx + fadeIn
     const fadeOutStartCtx = endCtx - fadeOut
 

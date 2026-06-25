@@ -149,6 +149,21 @@ export function getClipTransition(
   return { type: transition.type, duration: transition.duration, next }
 }
 
+/** The transition coming INTO a clip from the previous clip on its track (the
+ * incoming side), or null. Used to apply the audio fade-in half of a crossfade. */
+export function getIncomingTransition(
+  model: TimelineModel,
+  clip: Clip
+): { type: TransitionType; duration: number } | null {
+  const clips = getTrackClips(model, clip.trackId)
+  const index = clips.findIndex((candidate) => candidate.id === clip.id)
+  if (index <= 0) return null
+  const transition = getClipTransition(model, clips[index - 1])
+  return transition && transition.next.id === clip.id
+    ? { type: transition.type, duration: transition.duration }
+    : null
+}
+
 /** Start of the nearest clip to the right of `referenceStart` on the track (or Infinity). */
 export function nextClipStart(
   model: TimelineModel,
