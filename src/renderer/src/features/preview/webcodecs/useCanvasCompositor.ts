@@ -5,7 +5,8 @@ import {
   getTrackClips,
   getTracksSorted,
   timelineTimeToSource,
-  type MediaItem
+  type MediaItem,
+  type TransitionType
 } from '@shared'
 import { useTimelineStore } from '../../../stores/timelineStore'
 import { useTransportStore } from '../../../stores/transportStore'
@@ -21,7 +22,8 @@ interface ClipRef {
 }
 
 interface TransitionRef extends ClipRef {
-  alpha: number
+  transitionType: TransitionType
+  progress: number
 }
 
 /**
@@ -131,9 +133,9 @@ export function useCanvasCompositor(canvasRef: RefObject<HTMLCanvasElement | nul
           const media = items.find((item) => item.id === xfade.next.mediaId)
           const url = media && media.kind !== 'image' ? sourceUrlFor(media) : null
           if (url) {
-            const alpha = Math.min(1, Math.max(0, (playheadTime - xfade.next.startOnTimeline) / xfade.duration))
+            const progress = Math.min(1, Math.max(0, (playheadTime - xfade.next.startOnTimeline) / xfade.duration))
             const sourceUs = Math.max(0, timelineTimeToSource(xfade.next, playheadTime)) * 1_000_000
-            transition = { clipId: xfade.next.id, fileUrl: url, sourceUs, alpha }
+            transition = { clipId: xfade.next.id, fileUrl: url, sourceUs, transitionType: xfade.type, progress }
           }
         }
       }
@@ -141,7 +143,7 @@ export function useCanvasCompositor(canvasRef: RefObject<HTMLCanvasElement | nul
       // Only post when the resolved render state actually changed — during
       // playback sourceUs advances every frame (so it posts, as needed), but
       // while paused/idle this skips the per-frame structured-clone to the worker.
-      const sig = `${hasActiveClip}|${active?.clipId ?? ''}|${active?.fileUrl ?? ''}|${active?.sourceUs ?? ''}|${next?.clipId ?? ''}|${next?.fileUrl ?? ''}|${next?.sourceUs ?? ''}|${fallbackUrl ?? ''}|${transition?.clipId ?? ''}|${transition?.sourceUs ?? ''}|${transition?.alpha ?? ''}`
+      const sig = `${hasActiveClip}|${active?.clipId ?? ''}|${active?.fileUrl ?? ''}|${active?.sourceUs ?? ''}|${next?.clipId ?? ''}|${next?.fileUrl ?? ''}|${next?.sourceUs ?? ''}|${fallbackUrl ?? ''}|${transition?.clipId ?? ''}|${transition?.sourceUs ?? ''}|${transition?.transitionType ?? ''}|${transition?.progress ?? ''}`
       if (sig !== lastSig) {
         lastSig = sig
         worker.postMessage({ type: 'render', hasActiveClip, active, next, transition, fallbackUrl })

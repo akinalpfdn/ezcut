@@ -12,7 +12,8 @@ import {
   type AudioFx,
   type Clip,
   type DenoiseSettings,
-  type TimelineModel
+  type TimelineModel,
+  type TransitionType
 } from '@shared'
 import {
   addClipCommand,
@@ -52,6 +53,20 @@ function createInitialModel(): TimelineModel {
 
 function clampSelection(selectedId: string | null, model: TimelineModel): string | null {
   return selectedId && model.clips[selectedId] ? selectedId : null
+}
+
+/** Commands that shift `fromClipId` and every clip after it (by start order) on a
+ * track by `shift` seconds — keeps downstream transitions/gaps intact when a
+ * transition overlap is created, removed, or resized. */
+function rippleFrom(model: TimelineModel, trackId: string, fromClipId: string, shift: number): Command[] {
+  const trackClips = getTrackClips(model, trackId)
+  const fromIndex = trackClips.findIndex((clip) => clip.id === fromClipId)
+  if (fromIndex < 0) return []
+  return trackClips
+    .slice(fromIndex)
+    .map((clip) =>
+      setClipPropertyCommand(clip.id, { startOnTimeline: clip.startOnTimeline }, { startOnTimeline: clip.startOnTimeline + shift })
+    )
 }
 
 interface TimelineState {
@@ -97,6 +112,8 @@ interface TimelineState {
   /** Adds a transition from a clip into the next adjacent clip (overlapping them). */
   addTransition: (clipId: string, duration: number) => void
   removeTransition: (clipId: string) => void
+  setTransitionType: (clipId: string, type: TransitionType) => void
+  setTransitionDuration: (clipId: string, duration: number) => void
 
   selectClip: (clipId: string | null) => void
   setPxPerSec: (pxPerSec: number) => void
@@ -415,17 +432,19 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
       Math.min(clipTimelineDuration(clip), clipTimelineDuration(next)) - TIMELINE_CONFIG.minClipDuration
     const seconds = Math.min(Math.max(duration, 0), Math.max(0, maxDuration))
     if (seconds <= 0) return
-    const nextStart = clipTimelineEnd(clip) - seconds
-    get().execute(
-      sequenceCommand([
-        setClipPropertyCommand(next.id, { startOnTimeline: next.startOnTimeline }, { startOnTimeline: nextStart }),
-        setClipPropertyCommand(
-          clipId,
-          { transitionOut: clip.transitionOut },
-          { transitionOut: { type: 'crossfade', duration: seconds } }
-        )
-      ])
+    // Ripple the incoming clip + everything after it by the same amount so any
+    // downstream transitions/gaps keep their geometry (otherwise moving just `next`
+    // would silently break the next clip's transition overlap).
+    const shift = clipTimelineEnd(clip) - seconds - next.startOnTimeline
+    const commands = rippleFrom(model, clip.trackId, next.id, shift)
+    commands.push(
+      setClipPropertyCommand(
+        clipId,
+        { transitionOut: clip.transitionOut },
+        { transitionOut: { type: 'crossfade', duration: seconds } }
+      )
     )
+    get().execute(sequenceCommand(commands))
   },
 
   removeTransition: (clipId) => {
@@ -433,20 +452,43 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
     const clip = model.clips[clipId]
     if (!clip || !clip.transitionOut) return
     const info = getClipTransition(model, clip)
-    const commands: Command[] = []
-    if (info) {
-      // Slide the incoming clip back out of the overlap.
-      const restored = info.next.startOnTimeline + info.duration
-      commands.push(
-        setClipPropertyCommand(
-          info.next.id,
-          { startOnTimeline: info.next.startOnTimeline },
-          { startOnTimeline: restored }
-        )
-      )
-    }
+    const commands: Command[] = info ? rippleFrom(model, clip.trackId, info.next.id, info.duration) : []
     commands.push(setClipPropertyCommand(clipId, { transitionOut: clip.transitionOut }, { transitionOut: undefined }))
     get().execute(commands.length === 1 ? commands[0] : sequenceCommand(commands))
+  },
+
+  setTransitionType: (clipId, type) => {
+    const clip = get().model.clips[clipId]
+    if (!clip || !clip.transitionOut || clip.transitionOut.type === type) return
+    get().execute(
+      setClipPropertyCommand(
+        clipId,
+        { transitionOut: clip.transitionOut },
+        { transitionOut: { ...clip.transitionOut, type } }
+      )
+    )
+  },
+
+  setTransitionDuration: (clipId, duration) => {
+    const model = get().model
+    const clip = model.clips[clipId]
+    if (!clip || !clip.transitionOut) return
+    const info = getClipTransition(model, clip)
+    if (!info) return
+    const maxDuration =
+      Math.min(clipTimelineDuration(clip), clipTimelineDuration(info.next)) - TIMELINE_CONFIG.minClipDuration
+    const seconds = Math.min(Math.max(duration, TIMELINE_CONFIG.minClipDuration), Math.max(0, maxDuration))
+    if (seconds <= 0 || Math.abs(seconds - info.duration) < 1e-6) return
+    const shift = clipTimelineEnd(clip) - seconds - info.next.startOnTimeline
+    const commands = rippleFrom(model, clip.trackId, info.next.id, shift)
+    commands.push(
+      setClipPropertyCommand(
+        clipId,
+        { transitionOut: clip.transitionOut },
+        { transitionOut: { ...clip.transitionOut, duration: seconds } }
+      )
+    )
+    get().execute(sequenceCommand(commands))
   },
 
   selectClip: (clipId) => set({ selectedClipId: clipId }),

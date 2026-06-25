@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { TRANSITION_TYPES, type TransitionType } from '@shared'
 import { useTimelineStore } from '../../stores/timelineStore'
 import { useMediaStore } from '../../stores/mediaStore'
 import { useDenoiseStore } from '../../stores/denoiseStore'
@@ -137,6 +138,44 @@ export function ClipInspector() {
             {generating ? t('inspector.generating') : `${Math.round(clip.denoise.strength * 100)}%`}
           </span>
         </label>
+      ) : null}
+
+      {clip.transitionOut ? (
+        <>
+          <span className={styles.fxLabel}>{t('transition.label')}</span>
+          <label className={styles.field}>
+            <select
+              className={styles.select}
+              value={clip.transitionOut.type}
+              onChange={(event) =>
+                useTimelineStore.getState().setTransitionType(clip.id, event.target.value as TransitionType)
+              }
+            >
+              {TRANSITION_TYPES.map((type) => (
+                <option key={type} value={type}>
+                  {t(`transition.${type}`)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className={styles.field}>
+            <span className={styles.label}>{t('transition.duration')}</span>
+            <NumberField
+              className={styles.number}
+              min={0.1}
+              step={0.1}
+              value={clip.transitionOut.duration}
+              onCommit={(value) => useTimelineStore.getState().setTransitionDuration(clip.id, value)}
+            />
+          </label>
+          <button
+            type="button"
+            className={`${styles.toggle} ${styles.toggleActive}`}
+            onClick={() => useTimelineStore.getState().removeTransition(clip.id)}
+          >
+            {t('transition.remove')}
+          </button>
+        </>
       ) : null}
     </div>
   )

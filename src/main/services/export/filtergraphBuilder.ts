@@ -6,10 +6,28 @@ import {
   isClipAudible,
   timelineDuration,
   type AudioFx,
+  type Clip,
   type MediaItem,
-  type TimelineModel
+  type TimelineModel,
+  type TransitionType
 } from '@shared'
 import { AUDIO_FX_CONFIG } from '../../config/audioFx'
+
+/** Each transition type's ffmpeg `xfade` transition name. */
+const XFADE_NAMES: Record<TransitionType, string> = {
+  crossfade: 'fade',
+  slideLeft: 'slideleft',
+  slideRight: 'slideright',
+  slideUp: 'slideup',
+  slideDown: 'slidedown',
+  zoomIn: 'zoomin',
+  wipeLeft: 'wipeleft',
+  wipeRight: 'wiperight',
+  wipeUp: 'wipeup',
+  wipeDown: 'wipedown',
+  circleOpen: 'circleopen',
+  circleClose: 'circleclose'
+}
 
 export interface ExportInput {
   path: string
@@ -77,10 +95,11 @@ function audioFadeChain(fadeIn: number, fadeOut: number, clipDur: number): strin
 }
 
 /**
- * Builds an ffmpeg filter_complex that reproduces the timeline: every clip is
- * trimmed, sped, normalized (scale/pad/setsar/fps/format) and positioned at its
- * timeline time (video via overlay on a black base, audio via adelay), then all
- * audio is mixed. Denoised clips draw audio from their proxy.
+ * Builds an ffmpeg filter_complex that reproduces the timeline. Video: each clip is
+ * trimmed/sped/normalized into a 0-based stream, then folded into one chain —
+ * `xfade` joins clips with a transition, `concat` joins the rest (black fills gaps
+ * and pads the ends to the timeline duration). Audio: each clip is positioned with
+ * adelay and all are mixed. Denoised clips draw audio from their proxy.
  */
 export async function buildFiltergraph(
   model: TimelineModel,
@@ -97,19 +116,26 @@ export async function buildFiltergraph(
   const inputs: ExportInput[] = []
   const addInput = (path: string, args?: string[]): number => inputs.push({ path, args }) - 1
 
-  const parts: string[] = [`color=c=black:s=${width}x${height}:r=${fps}:d=${durationSeconds.toFixed(3)}[base]`]
-  const videoSegments: { label: string; start: number; end: number }[] = []
+  const parts: string[] = []
   const audioLabels: string[] = []
+  const videoStreams: { clip: Clip; label: string; length: number }[] = []
 
-  // Incoming-clip id -> transition duration. A crossfade is rendered by drawing the
-  // incoming clip on top of the outgoing one (already on the base) with its alpha
-  // fading in over the overlap, so the two dissolve.
-  const incomingTransition = new Map<string, number>()
-  for (const track of getTracksSorted(model)) {
-    for (const clip of getTrackClips(model, track.id)) {
-      const transition = getClipTransition(model, clip)
-      if (transition) incomingTransition.set(transition.next.id, transition.duration)
-    }
+  let chainCounter = 0
+  // Black filler of `len` seconds, normalized so it concats/xfades with clip streams.
+  const blackLabel = (len: number): string => {
+    const out = `blk${chainCounter++}`
+    parts.push(`color=c=black:s=${width}x${height}:r=${fps}:d=${len.toFixed(3)},setsar=1,format=yuv420p[${out}]`)
+    return out
+  }
+  const concatTwo = (a: string, b: string): string => {
+    const out = `vc${chainCounter++}`
+    parts.push(`[${a}][${b}]concat=n=2:v=1:a=0[${out}]`)
+    return out
+  }
+  const xfadeTwo = (a: string, b: string, name: string, dur: number, offset: number): string => {
+    const out = `vx${chainCounter++}`
+    parts.push(`[${a}][${b}]xfade=transition=${name}:duration=${dur.toFixed(3)}:offset=${offset.toFixed(3)}[${out}]`)
+    return out
   }
 
   let counter = 0
@@ -119,33 +145,30 @@ export async function buildFiltergraph(
       if (!item) continue
       const speed = clip.speed > 0 ? clip.speed : 1
       const start = clip.startOnTimeline
-      const end = start + clipTimelineDuration(clip)
+      const length = clipTimelineDuration(clip)
       const index = counter++
 
       let videoInput: number | null = null
       const isImage = item.kind === 'image'
       if (track.kind === 'video' && (item.hasVideo || isImage)) {
         const label = `v${index}`
-        // The incoming side of a crossfade needs an alpha channel + an alpha
-        // fade-in over the overlap [start, start+duration].
-        const crossfade = incomingTransition.get(clip.id)
-        const pixelFormat = crossfade ? 'yuva420p' : 'yuv420p'
+        // Normalized, 0-based stream — the chain (below) sequences clips via
+        // concat/xfade, so no timeline positioning here. Always yuv420p; xfade blends.
         const fit =
           `scale=${width}:${height}:force_original_aspect_ratio=decrease,` +
-          `pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1,fps=${fps},format=${pixelFormat}`
-        const alphaIn = crossfade ? `,fade=t=in:st=${start.toFixed(3)}:d=${crossfade.toFixed(3)}:alpha=1` : ''
+          `pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1,fps=${fps},format=yuv420p`
         if (isImage) {
           // Loop the still for the clip's span; no trim/speed (it has no source time).
-          videoInput = addInput(item.path, ['-loop', '1', '-t', clipTimelineDuration(clip).toFixed(3)])
-          parts.push(`[${videoInput}:v]setpts=PTS-STARTPTS+${start}/TB,${fit}${alphaIn}[${label}]`)
+          videoInput = addInput(item.path, ['-loop', '1', '-t', length.toFixed(3)])
+          parts.push(`[${videoInput}:v]setpts=PTS-STARTPTS,${fit}[${label}]`)
         } else {
           videoInput = addInput(item.path)
           parts.push(
             `[${videoInput}:v]trim=start=${clip.sourceIn}:end=${clip.sourceOut},` +
-              `setpts=(PTS-STARTPTS)/${speed}+${start}/TB,${fit}${alphaIn}[${label}]`
+              `setpts=(PTS-STARTPTS)/${speed},${fit}[${label}]`
           )
         }
-        videoSegments.push({ label, start, end })
+        videoStreams.push({ clip, label, length })
       }
 
       if (item.hasAudio && isClipAudible(model, clip)) {
@@ -170,15 +193,47 @@ export async function buildFiltergraph(
     }
   }
 
-  // Overlay each video segment onto the black base at its time.
-  let videoLabel = 'base'
-  videoSegments.forEach((segment, i) => {
-    const out = `vo${i}`
-    parts.push(
-      `[${videoLabel}][${segment.label}]overlay=enable='between(t,${segment.start.toFixed(3)},${segment.end.toFixed(3)})':eof_action=pass[${out}]`
-    )
-    videoLabel = out
-  })
+  // Fold the video streams into one chain: xfade where a transition joins two
+  // clips, concat (with black filling gaps) otherwise, then black-pad to duration.
+  const EPS = 0.001
+  let videoLabel: string
+  if (videoStreams.length === 0) {
+    videoLabel = blackLabel(durationSeconds)
+  } else {
+    let chain = ''
+    let chainLen = 0
+    videoStreams.forEach(({ clip, label, length }, i) => {
+      if (i === 0) {
+        if (clip.startOnTimeline > EPS) {
+          chain = concatTwo(blackLabel(clip.startOnTimeline), label)
+          chainLen = clip.startOnTimeline + length
+        } else {
+          chain = label
+          chainLen = length
+        }
+        return
+      }
+      const prev = videoStreams[i - 1].clip
+      const transition = getClipTransition(model, prev)
+      if (transition && transition.next.id === clip.id) {
+        const offset = Math.max(0, chainLen - transition.duration)
+        chain = xfadeTwo(chain, label, XFADE_NAMES[transition.type], transition.duration, offset)
+        chainLen = chainLen + length - transition.duration
+      } else {
+        const gap = clip.startOnTimeline - chainLen
+        if (gap > EPS) {
+          chain = concatTwo(chain, blackLabel(gap))
+          chainLen += gap
+        }
+        chain = concatTwo(chain, label)
+        chainLen += length
+      }
+    })
+    if (chainLen < durationSeconds - EPS) {
+      chain = concatTwo(chain, blackLabel(durationSeconds - chainLen))
+    }
+    videoLabel = chain
+  }
 
   let audioLabel: string | null = null
   if (audioLabels.length === 1) {

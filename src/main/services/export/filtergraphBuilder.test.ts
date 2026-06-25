@@ -60,15 +60,19 @@ function videoClip(id: string, mediaId: string, start: number, extra: Record<str
   }
 }
 
-const crossfadeModel: TimelineModel = {
-  tracks: [{ id: 'v', kind: 'video', index: 0, label: 'V1', muted: false, solo: false }],
-  clips: {
-    // 'a' ends at 3 and 'b' starts at 2 → they overlap by 1s (the crossfade).
-    a: videoClip('a', 'va', 0, { transitionOut: { type: 'crossfade', duration: 1 } }),
-    b: videoClip('b', 'vb', 2)
-  },
-  markers: []
+function transitionModel(type: string): TimelineModel {
+  return {
+    tracks: [{ id: 'v', kind: 'video', index: 0, label: 'V1', muted: false, solo: false }],
+    clips: {
+      // 'a' ends at 3 and 'b' starts at 2 → they overlap by 1s (the transition).
+      a: videoClip('a', 'va', 0, { transitionOut: { type, duration: 1 } }),
+      b: videoClip('b', 'vb', 2)
+    },
+    markers: []
+  }
 }
+
+const crossfadeModel = transitionModel('crossfade')
 
 const videoMedia: MediaItem[] = [
   { id: 'va', path: '/a.mp4', name: 'a', kind: 'video', durationSeconds: 3, sizeBytes: 1, hasVideo: true, hasAudio: false, width: 1920, height: 1080 },
@@ -119,21 +123,41 @@ describe('buildFiltergraph (images)', () => {
     expect(graph.inputs[0].path).toBe('/x/pic.png')
     expect(graph.inputs[0].args).toEqual(['-loop', '1', '-t', '5.000'])
     expect(graph.audioLabel).toBeNull()
-    expect(graph.filterComplex).toContain('overlay')
+    // Image starts at 2s → leading black is concatenated before it; no trim on the still.
+    expect(graph.filterComplex).toContain('concat')
     expect(graph.filterComplex).not.toContain('trim=')
   })
 })
 
-describe('buildFiltergraph (crossfade)', () => {
-  it('should fade the incoming clip alpha in over the overlap', async () => {
+describe('buildFiltergraph (transitions via xfade)', () => {
+  it('should xfade the two clips with the right offset for a crossfade', async () => {
     const graph = await buildFiltergraph(
       crossfadeModel,
       videoMedia,
       { width: 1280, height: 720, fps: 30 },
       async () => ''
     )
-    // Incoming clip 'b' (starts at 2) gets an alpha channel + alpha fade over [2,3].
-    expect(graph.filterComplex).toContain('format=yuva420p')
-    expect(graph.filterComplex).toContain('fade=t=in:st=2.000:d=1.000:alpha=1')
+    // 'a' (0..3) then 'b' overlap 1s → xfade 'fade' starting at offset 3-1 = 2.
+    expect(graph.filterComplex).toContain('xfade=transition=fade:duration=1.000:offset=2.000')
+  })
+
+  it('should map a slide to its xfade transition name', async () => {
+    const graph = await buildFiltergraph(
+      transitionModel('slideLeft'),
+      videoMedia,
+      { width: 1280, height: 720, fps: 30 },
+      async () => ''
+    )
+    expect(graph.filterComplex).toContain('xfade=transition=slideleft:duration=1.000:offset=2.000')
+  })
+
+  it('should concat adjacent clips with no transition (no xfade)', async () => {
+    const model = transitionModel('crossfade')
+    // Drop the transition + place 'b' adjacent at 3.
+    delete (model.clips.a as { transitionOut?: unknown }).transitionOut
+    model.clips.b.startOnTimeline = 3
+    const graph = await buildFiltergraph(model, videoMedia, { width: 1280, height: 720, fps: 30 }, async () => '')
+    expect(graph.filterComplex).toContain('concat')
+    expect(graph.filterComplex).not.toContain('xfade')
   })
 })

@@ -1,3 +1,4 @@
+import type { TransitionType } from '@shared'
 import { ClipVideoSource } from './clipVideoSource'
 
 /** A clip to draw/prefetch: the resolved decode url (proxy or original) + the
@@ -9,9 +10,11 @@ interface ClipRef {
   sourceUs: number
 }
 
-/** The incoming clip of a crossfade, drawn on top of the active clip at `alpha`. */
+/** The incoming clip of a transition, drawn on top of the active clip. `progress`
+ * ramps 0→1 across the overlap (drives alpha for crossfade, offset for slides). */
 interface TransitionRef extends ClipRef {
-  alpha: number
+  transitionType: TransitionType
+  progress: number
 }
 
 interface InitMessage {
@@ -103,13 +106,78 @@ function drawFrame(frame: VideoFrame): void {
   ctx.drawImage(frame, 0, 0, canvas.width, canvas.height)
 }
 
-/** Draws a frame over the current canvas at `alpha` WITHOUT resizing (so it blends
- * onto whatever the active clip already drew — the crossfade composite). */
-function drawFrameWithAlpha(frame: VideoFrame, alpha: number): void {
+/** Draws the incoming transition frame over the current canvas (what the active
+ * clip already drew) WITHOUT resizing. Mirrors the families ffmpeg xfade exports:
+ * crossfade=alpha, slide=offset, zoom=scale, wipe=rect clip, circle=circle clip. */
+function drawTransition(frame: VideoFrame, type: TransitionType, progress: number): void {
   if (!canvas || !ctx) return
-  ctx.globalAlpha = Math.max(0, Math.min(1, alpha))
-  ctx.drawImage(frame, 0, 0, canvas.width, canvas.height)
-  ctx.globalAlpha = 1
+  const c = ctx
+  const w = canvas.width
+  const h = canvas.height
+  const p = Math.max(0, Math.min(1, progress))
+
+  const clipRect = (x: number, y: number, rw: number, rh: number): void => {
+    c.save()
+    c.beginPath()
+    c.rect(x, y, rw, rh)
+    c.clip()
+    c.drawImage(frame, 0, 0, w, h)
+    c.restore()
+  }
+
+  switch (type) {
+    case 'crossfade':
+      c.globalAlpha = p
+      c.drawImage(frame, 0, 0, w, h)
+      c.globalAlpha = 1
+      return
+    case 'slideLeft':
+      c.drawImage(frame, w * (1 - p), 0, w, h)
+      return
+    case 'slideRight':
+      c.drawImage(frame, -w * (1 - p), 0, w, h)
+      return
+    case 'slideUp':
+      c.drawImage(frame, 0, h * (1 - p), w, h)
+      return
+    case 'slideDown':
+      c.drawImage(frame, 0, -h * (1 - p), w, h)
+      return
+    case 'zoomIn':
+      c.globalAlpha = p
+      c.drawImage(frame, (w - w * p) / 2, (h - h * p) / 2, w * p, h * p)
+      c.globalAlpha = 1
+      return
+    case 'wipeLeft':
+      clipRect(0, 0, w * p, h)
+      return
+    case 'wipeRight':
+      clipRect(w * (1 - p), 0, w * p, h)
+      return
+    case 'wipeUp':
+      clipRect(0, 0, w, h * p)
+      return
+    case 'wipeDown':
+      clipRect(0, h * (1 - p), w, h * p)
+      return
+    case 'circleOpen':
+      c.save()
+      c.beginPath()
+      c.arc(w / 2, h / 2, (Math.hypot(w, h) / 2) * p, 0, Math.PI * 2)
+      c.clip()
+      c.drawImage(frame, 0, 0, w, h)
+      c.restore()
+      return
+    case 'circleClose':
+      c.save()
+      c.beginPath()
+      c.rect(0, 0, w, h)
+      c.arc(w / 2, h / 2, (Math.hypot(w, h) / 2) * (1 - p), 0, Math.PI * 2, true)
+      c.clip('evenodd')
+      c.drawImage(frame, 0, 0, w, h)
+      c.restore()
+      return
+  }
 }
 
 function drawThumbnail(url: string): void {
@@ -149,12 +217,12 @@ function handleRender(message: RenderMessage): void {
       clear()
     }
 
-    // Crossfade: draw the incoming clip over the active one at the blend alpha.
+    // Transition: draw the incoming clip over the active one (alpha or slide).
     if (message.transition) {
       keep.add(message.transition.clipId)
       const source = ensureSource(message.transition.clipId, message.transition.fileUrl)
       const frame = source?.isLoaded ? source.frameAt(message.transition.sourceUs) : null
-      if (frame) drawFrameWithAlpha(frame, message.transition.alpha)
+      if (frame) drawTransition(frame, message.transition.transitionType, message.transition.progress)
     }
 
     if (message.next) {

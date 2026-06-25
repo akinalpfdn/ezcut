@@ -117,7 +117,6 @@ function ClipViewImpl({
           onTrimPointerDown('r', event)
         }}
       />
-      {clip.transitionOut ? <div className={styles.transition} /> : null}
     </div>
   )
 }

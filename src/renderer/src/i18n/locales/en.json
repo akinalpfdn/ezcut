@@ -57,6 +57,7 @@
     "soloTrack": "Solo track",
     "addTransition": "Add transition",
     "removeTransition": "Remove transition",
+    "transitionHint": "Transition — click to edit, right-click for options",
     "pin": "Pin",
     "pinHint": "Follow the playhead by centering it during playback",
     "undo": "Undo",
@@ -84,6 +85,23 @@
     "denoiseOff": "Stop reducing noise",
     "denoiseStrength": "Strength",
     "generating": "Preparing…"
+  },
+  "transition": {
+    "label": "Transition",
+    "duration": "Duration",
+    "crossfade": "Crossfade",
+    "slideLeft": "Slide left",
+    "slideRight": "Slide right",
+    "slideUp": "Slide up",
+    "slideDown": "Slide down",
+    "remove": "Remove",
+    "zoomIn": "Zoom in",
+    "wipeLeft": "Wipe left",
+    "wipeRight": "Wipe right",
+    "wipeUp": "Wipe up",
+    "wipeDown": "Wipe down",
+    "circleOpen": "Circle open",
+    "circleClose": "Circle close"
   },
   "shortcuts": {
     "playPause": "Play / Pause",

@@ -36,7 +36,25 @@ const clipSchema = z.object({
   muted: z.boolean().default(false),
   denoise: denoiseSchema,
   audioFx: audioFxSchema.default(DEFAULT_AUDIO_FX),
-  transitionOut: z.object({ type: z.enum(['crossfade']), duration: z.number() }).optional()
+  transitionOut: z
+    .object({
+      type: z.enum([
+        'crossfade',
+        'slideLeft',
+        'slideRight',
+        'slideUp',
+        'slideDown',
+        'zoomIn',
+        'wipeLeft',
+        'wipeRight',
+        'wipeUp',
+        'wipeDown',
+        'circleOpen',
+        'circleClose'
+      ]),
+      duration: z.number()
+    })
+    .optional()
 })
 
 const trackSchema = z.object({

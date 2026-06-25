@@ -90,6 +90,24 @@
   outline-offset: -2px;
 }
 
+/* Fixed-size bowtie icon at the junction of two transitioned clips (centered on
+ * the point set in JS), so a short transition stays findable on a long timeline. */
+.transitionMarker {
+  position: absolute;
+  z-index: 6;
+  width: 15px;
+  height: 18px;
+  transform: translate(-50%, -50%);
+  background-color: var(--color-primary);
+  clip-path: polygon(0 0, 100% 100%, 100% 0, 0 100%);
+  filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.7));
+  cursor: pointer;
+}
+
+.transitionMarker:hover {
+  background-color: var(--color-primary-hover);
+}
+
 .lane {
   position: absolute;
   left: 0;

@@ -22,8 +22,37 @@ export interface DenoiseSettings {
   strength: number
 }
 
-/** Transition types (Phase 19 ships crossfade; later phases add slide/zoom/…). */
-export type TransitionType = 'crossfade'
+/** Transition types — each maps to an ffmpeg xfade transition (export) and a
+ * canvas blend (preview). */
+export type TransitionType =
+  | 'crossfade'
+  | 'slideLeft'
+  | 'slideRight'
+  | 'slideUp'
+  | 'slideDown'
+  | 'zoomIn'
+  | 'wipeLeft'
+  | 'wipeRight'
+  | 'wipeUp'
+  | 'wipeDown'
+  | 'circleOpen'
+  | 'circleClose'
+
+/** Order shown in the picker. */
+export const TRANSITION_TYPES: TransitionType[] = [
+  'crossfade',
+  'slideLeft',
+  'slideRight',
+  'slideUp',
+  'slideDown',
+  'zoomIn',
+  'wipeLeft',
+  'wipeRight',
+  'wipeUp',
+  'wipeDown',
+  'circleOpen',
+  'circleClose'
+]
 
 /** A transition at a clip's outgoing edge into the next adjacent clip. The two
  * clips overlap by `duration` seconds (the blend region). */

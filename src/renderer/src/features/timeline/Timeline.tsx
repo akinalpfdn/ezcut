@@ -12,6 +12,9 @@ import {
 import { useTranslation } from 'react-i18next'
 import {
   clipTimelineDuration,
+  clipTimelineEnd,
+  getClipTransition,
+  getTrackClips,
   getTracksSorted,
   IMAGE_MAX_DURATION,
   nextClipStart,
@@ -41,7 +44,7 @@ import { Playhead } from './Playhead'
 import styles from './Timeline.module.css'
 
 interface MenuState {
-  type: 'clip' | 'track'
+  type: 'clip' | 'track' | 'transition'
   id: string
   x: number
   y: number
@@ -54,7 +57,19 @@ interface DragState {
   sourceDuration: number
   pointerStartX: number
   patch: { startOnTimeline: number; trackId: string; sourceIn: number; sourceOut: number }
+  pointerStartY: number
+  /** True once the pointer has moved past the drag threshold — distinguishes a real
+   * drag from a click, so a click on an (overlapping) transitioned clip doesn't get
+   * re-resolved and jumped on pointerup. */
+  moved: boolean
+  /** Transitions to dissolve on the first real move (so editing a transitioned clip
+   * doesn't fight the sanctioned overlap) — the clip's own outgoing one and/or the
+   * incoming one from the previous clip. Emptied once dissolved. */
+  dissolveClipIds: string[]
 }
+
+/** Pointer travel (px) before a press becomes a drag rather than a click. */
+const DRAG_THRESHOLD_PX = 4
 
 const { trackHeight, rulerHeight, snapThresholdPx, minClipDuration } = TIMELINE_CONFIG
 
@@ -154,6 +169,32 @@ export function Timeline() {
   const onPointerMove = useCallback((event: PointerEvent) => {
     const drag = dragRef.current
     if (!drag) return
+    // Ignore sub-threshold jitter so a click stays a click. On the first real move,
+    // dissolve any transition this clip is in (restoring the overlap) and re-baseline,
+    // so the drag continues smoothly from the clip's restored position.
+    if (!drag.moved) {
+      if (Math.hypot(event.clientX - drag.pointerStartX, event.clientY - drag.pointerStartY) < DRAG_THRESHOLD_PX) {
+        return
+      }
+      drag.moved = true
+      if (drag.dissolveClipIds.length > 0) {
+        const ids = drag.dissolveClipIds
+        drag.dissolveClipIds = []
+        for (const id of ids) useTimelineStore.getState().removeTransition(id)
+        const fresh = useTimelineStore.getState().model.clips[drag.clipId]
+        if (fresh) {
+          drag.original = fresh
+          drag.patch = {
+            startOnTimeline: fresh.startOnTimeline,
+            trackId: fresh.trackId,
+            sourceIn: fresh.sourceIn,
+            sourceOut: fresh.sourceOut
+          }
+          drag.pointerStartX = event.clientX
+          drag.pointerStartY = event.clientY
+        }
+      }
+    }
     const state = useTimelineStore.getState()
     const ps = state.pxPerSec
     const points = collectSnapPoints(state.model, drag.clipId, useTransportStore.getState().playheadTime)
@@ -213,15 +254,19 @@ export function Timeline() {
       cancelAnimationFrame(moveRafRef.current)
       moveRafRef.current = null
     }
-    const store = useTimelineStore.getState()
-    if (drag.kind === 'move') {
-      store.moveClip(drag.clipId, { trackId: drag.patch.trackId, startOnTimeline: drag.patch.startOnTimeline })
-    } else {
-      store.trimClip(drag.clipId, {
-        sourceIn: drag.patch.sourceIn,
-        sourceOut: drag.patch.sourceOut,
-        startOnTimeline: drag.patch.startOnTimeline
-      })
+    // Only commit when the pointer actually dragged — a plain click just selects
+    // (and must never re-resolve a transitioned clip's overlap into a jump).
+    if (drag.moved) {
+      const store = useTimelineStore.getState()
+      if (drag.kind === 'move') {
+        store.moveClip(drag.clipId, { trackId: drag.patch.trackId, startOnTimeline: drag.patch.startOnTimeline })
+      } else {
+        store.trimClip(drag.clipId, {
+          sourceIn: drag.patch.sourceIn,
+          sourceOut: drag.patch.sourceOut,
+          startOnTimeline: drag.patch.startOnTimeline
+        })
+      }
     }
     dragRef.current = null
     forceRender()
@@ -237,22 +282,35 @@ export function Timeline() {
 
   const beginDrag = (kind: DragState['kind'], clip: Clip, event: ReactPointerEvent): void => {
     event.preventDefault()
-    useTimelineStore.getState().selectClip(clip.id)
+    const store = useTimelineStore.getState()
+    store.selectClip(clip.id)
     const media = mediaById(clip.mediaId)
     // Images have no fixed source length, so they can be stretched up to a cap.
     const sourceDuration = media?.kind === 'image' ? IMAGE_MAX_DURATION : (media?.durationSeconds ?? clip.sourceOut)
+    // If the clip is part of a transition (its own outgoing one, or it's the
+    // incoming side of the previous clip's), dissolve that transition on the first
+    // move — the sanctioned overlap otherwise reads as a collision and the clip jumps.
+    const incomingFrom = getTrackClips(store.model, clip.trackId).find(
+      (candidate) => getClipTransition(store.model, candidate)?.next.id === clip.id
+    )
+    const dissolveClipIds: string[] = []
+    if (clip.transitionOut) dissolveClipIds.push(clip.id)
+    if (incomingFrom) dissolveClipIds.push(incomingFrom.id)
     dragRef.current = {
       kind,
       clipId: clip.id,
       original: clip,
       sourceDuration,
       pointerStartX: event.clientX,
+      pointerStartY: event.clientY,
+      moved: false,
       patch: {
         startOnTimeline: clip.startOnTimeline,
         trackId: clip.trackId,
         sourceIn: clip.sourceIn,
         sourceOut: clip.sourceOut
-      }
+      },
+      dissolveClipIds
     }
     window.addEventListener('pointermove', onPointerMove)
     window.addEventListener('pointerup', onPointerUp)
@@ -325,7 +383,14 @@ export function Timeline() {
   const menuClip = clipMenuId ? (model.clips[clipMenuId] ?? null) : null
 
   const menuItems: ContextMenuItem[] =
-    clipMenuId
+    menu?.type === 'transition'
+      ? [
+          {
+            label: t('timeline.removeTransition'),
+            onSelect: () => useTimelineStore.getState().removeTransition(menu.id)
+          }
+        ]
+      : clipMenuId
       ? [
           { label: t('timeline.split'), hint: formatCombo(keymap.split), onSelect: splitSelected },
           { label: t('timeline.merge'), onSelect: mergeSelected },
@@ -350,6 +415,17 @@ export function Timeline() {
   const drag = dragRef.current
   const clips = Object.values(model.clips)
   const isEmpty = clips.length === 0
+
+  // A fixed-size icon at each transition's junction (the midpoint of the overlap),
+  // so it's findable regardless of how short the transition is on a long timeline.
+  const transitionMarkers = sortedTracks.flatMap((track, index) =>
+    getTrackClips(model, track.id).flatMap((clip) => {
+      const transition = getClipTransition(model, clip)
+      if (!transition) return []
+      const junction = (transition.next.startOnTimeline + clipTimelineEnd(clip)) / 2
+      return [{ clipId: clip.id, index, left: junction * pxPerSec }]
+    })
+  )
 
   return (
     <section className={styles.timeline}>
@@ -433,6 +509,24 @@ export function Timeline() {
                   />
                 )
               })}
+
+              {transitionMarkers.map((marker) => (
+                <div
+                  key={`tr-${marker.clipId}`}
+                  className={styles.transitionMarker}
+                  style={{ left: marker.left, top: marker.index * trackHeight + trackHeight / 2 }}
+                  title={t('timeline.transitionHint')}
+                  onPointerDown={(event) => {
+                    event.stopPropagation()
+                    useTimelineStore.getState().selectClip(marker.clipId)
+                  }}
+                  onContextMenu={(event) => {
+                    event.preventDefault()
+                    event.stopPropagation()
+                    setMenu({ type: 'transition', id: marker.clipId, x: event.clientX, y: event.clientY })
+                  }}
+                />
+              ))}
 
               {isEmpty ? <div className={styles.empty}>{t('timeline.dropHint')}</div> : null}
             </div>

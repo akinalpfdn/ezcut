@@ -57,6 +57,7 @@
     "soloTrack": "Katmanı solo yap",
     "addTransition": "Geçiş ekle",
     "removeTransition": "Geçişi kaldır",
+    "transitionHint": "Geçiş — düzenlemek için tıkla, seçenekler için sağ-tık",
     "pin": "Pinle",
     "pinHint": "Oynatırken playhead'i ortalayarak takip et",
     "undo": "Geri al",
@@ -84,6 +85,23 @@
     "denoiseOff": "Gürültü azaltmayı kapat",
     "denoiseStrength": "Şiddet",
     "generating": "Hazırlanıyor…"
+  },
+  "transition": {
+    "label": "Geçiş",
+    "duration": "Süre",
+    "crossfade": "Çapraz geçiş",
+    "slideLeft": "Sola kaydır",
+    "slideRight": "Sağa kaydır",
+    "slideUp": "Yukarı kaydır",
+    "slideDown": "Aşağı kaydır",
+    "remove": "Kaldır",
+    "zoomIn": "Yakınlaş",
+    "wipeLeft": "Sola sil",
+    "wipeRight": "Sağa sil",
+    "wipeUp": "Yukarı sil",
+    "wipeDown": "Aşağı sil",
+    "circleOpen": "Daire aç",
+    "circleClose": "Daire kapat"
   },
   "shortcuts": {
     "playPause": "Oynat / Duraklat",
