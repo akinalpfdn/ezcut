@@ -112,10 +112,30 @@ export interface Clip {
   transitionOut?: Transition
 }
 
+/** A time-ranged text title rendered on top of the video (its own overlay layer,
+ * not a media clip). Position/size are normalized to the frame so they scale across
+ * resolutions. */
+export interface TextOverlay {
+  id: string
+  text: string
+  /** Timeline placement, in seconds. */
+  start: number
+  duration: number
+  /** Anchor (text centre) as a 0..1 fraction of frame width/height. */
+  x: number
+  y: number
+  /** Font size as a fraction of frame height (e.g. 0.06 = 6%). */
+  fontSize: number
+  /** Hex color, e.g. "#ffffff". */
+  color: string
+}
+
 export interface TimelineModel {
   tracks: Track[]
   /** Clips keyed by id. */
   clips: Record<string, Clip>
   /** Timeline annotations in seconds (sorted); navigation + snap targets. */
   markers: number[]
+  /** Text titles rendered over the video. */
+  textOverlays: TextOverlay[]
 }

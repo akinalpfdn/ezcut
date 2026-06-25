@@ -88,13 +88,25 @@ const mediaItemSchema = z.object({
   needsProxy: z.boolean().optional()
 })
 
+const textOverlaySchema = z.object({
+  id: z.string(),
+  text: z.string(),
+  start: z.number(),
+  duration: z.number(),
+  x: z.number(),
+  y: z.number(),
+  fontSize: z.number(),
+  color: z.string()
+})
+
 const projectFileSchema = z.object({
   version: z.number(),
   model: z.object({
     tracks: z.array(trackSchema),
     clips: z.record(z.string(), clipSchema),
-    // Older projects predate markers; default keeps them loadable.
-    markers: z.array(z.number()).default([])
+    // Older projects predate these; defaults keep them loadable.
+    markers: z.array(z.number()).default([]),
+    textOverlays: z.array(textOverlaySchema).default([])
   }),
   media: z.array(mediaItemSchema)
 })

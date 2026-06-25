@@ -88,6 +88,16 @@ export function useCanvasCompositor(canvasRef: RefObject<HTMLCanvasElement | nul
       const items = useMediaStore.getState().items
       const videoTrack = getTracksSorted(model).find((track) => track.kind === 'video')
 
+      const texts = model.textOverlays
+        .filter((overlay) => playheadTime >= overlay.start && playheadTime < overlay.start + overlay.duration)
+        .map((overlay) => ({
+          text: overlay.text,
+          x: overlay.x,
+          y: overlay.y,
+          fontSize: overlay.fontSize,
+          color: overlay.color
+        }))
+
       let hasActiveClip = false
       let active: ClipRef | null = null
       let next: ClipRef | null = null
@@ -143,10 +153,11 @@ export function useCanvasCompositor(canvasRef: RefObject<HTMLCanvasElement | nul
       // Only post when the resolved render state actually changed — during
       // playback sourceUs advances every frame (so it posts, as needed), but
       // while paused/idle this skips the per-frame structured-clone to the worker.
-      const sig = `${hasActiveClip}|${active?.clipId ?? ''}|${active?.fileUrl ?? ''}|${active?.sourceUs ?? ''}|${next?.clipId ?? ''}|${next?.fileUrl ?? ''}|${next?.sourceUs ?? ''}|${fallbackUrl ?? ''}|${transition?.clipId ?? ''}|${transition?.sourceUs ?? ''}|${transition?.transitionType ?? ''}|${transition?.progress ?? ''}`
+      const textsSig = texts.map((t) => `${t.text}|${t.x}|${t.y}|${t.fontSize}|${t.color}`).join('~')
+      const sig = `${hasActiveClip}|${active?.clipId ?? ''}|${active?.fileUrl ?? ''}|${active?.sourceUs ?? ''}|${next?.clipId ?? ''}|${next?.fileUrl ?? ''}|${next?.sourceUs ?? ''}|${fallbackUrl ?? ''}|${transition?.clipId ?? ''}|${transition?.sourceUs ?? ''}|${transition?.transitionType ?? ''}|${transition?.progress ?? ''}|${textsSig}`
       if (sig !== lastSig) {
         lastSig = sig
-        worker.postMessage({ type: 'render', hasActiveClip, active, next, transition, fallbackUrl })
+        worker.postMessage({ type: 'render', hasActiveClip, active, next, transition, texts, fallbackUrl })
       }
       rafId = requestAnimationFrame(render)
     }

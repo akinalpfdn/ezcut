@@ -43,6 +43,7 @@
   },
   "timeline": {
     "addAudioTrack": "+ Ses katmanı",
+    "addText": "+ Metin",
     "split": "Böl",
     "merge": "Birleştir",
     "duplicate": "Çoğalt",
@@ -85,6 +86,12 @@
     "denoiseOff": "Gürültü azaltmayı kapat",
     "denoiseStrength": "Şiddet",
     "generating": "Hazırlanıyor…"
+  },
+  "textInspector": {
+    "placeholder": "Metin gir…",
+    "size": "Boyut",
+    "color": "Renk",
+    "remove": "Kaldır"
   },
   "transition": {
     "label": "Geçiş",

@@ -1,4 +1,4 @@
-import type { Clip, TimelineModel, Track } from '@shared'
+import type { Clip, TextOverlay, TimelineModel, Track } from '@shared'
 
 /** An undoable edit. apply/invert are pure and exact inverses, so redo === apply
  * and the same command can round-trip through the undo/redo stacks. */
@@ -145,6 +145,44 @@ export function setMarkersCommand(before: number[], after: number[]): Command {
   return {
     apply: (model) => ({ ...model, markers: after }),
     invert: (model) => ({ ...model, markers: before })
+  }
+}
+
+// --- text overlay commands ---
+
+function withTextOverlay(model: TimelineModel, overlay: TextOverlay): TimelineModel {
+  return { ...model, textOverlays: [...model.textOverlays, overlay] }
+}
+
+function withoutTextOverlay(model: TimelineModel, id: string): TimelineModel {
+  return { ...model, textOverlays: model.textOverlays.filter((overlay) => overlay.id !== id) }
+}
+
+function patchTextOverlay(model: TimelineModel, id: string, patch: Partial<TextOverlay>): TimelineModel {
+  return {
+    ...model,
+    textOverlays: model.textOverlays.map((overlay) => (overlay.id === id ? { ...overlay, ...patch } : overlay))
+  }
+}
+
+export function addTextOverlayCommand(overlay: TextOverlay): Command {
+  return {
+    apply: (model) => withTextOverlay(model, overlay),
+    invert: (model) => withoutTextOverlay(model, overlay.id)
+  }
+}
+
+export function removeTextOverlayCommand(overlay: TextOverlay): Command {
+  return {
+    apply: (model) => withoutTextOverlay(model, overlay.id),
+    invert: (model) => withTextOverlay(model, overlay)
+  }
+}
+
+export function setTextOverlayCommand(id: string, before: Partial<TextOverlay>, after: Partial<TextOverlay>): Command {
+  return {
+    apply: (model) => patchTextOverlay(model, id, after),
+    invert: (model) => patchTextOverlay(model, id, before)
   }
 }
 

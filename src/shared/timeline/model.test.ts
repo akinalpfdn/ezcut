@@ -43,7 +43,8 @@ function makeModel(clips: Clip[]): TimelineModel {
       { id: 't-audio', kind: 'audio', index: 1, label: 'A1', muted: false, solo: false }
     ],
     clips: Object.fromEntries(clips.map((clip) => [clip.id, clip])),
-    markers: []
+    markers: [],
+    textOverlays: []
   }
 }
 
@@ -116,7 +117,8 @@ describe('getTracksSorted', () => {
         { id: 'v', kind: 'video', index: 0, label: 'V1', muted: false, solo: false }
       ],
       clips: {},
-      markers: []
+      markers: [],
+      textOverlays: []
     }
     expect(getTracksSorted(model).map((track) => track.id)).toEqual(['v', 'a'])
   })

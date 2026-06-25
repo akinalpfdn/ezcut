@@ -17,6 +17,15 @@ interface TransitionRef extends ClipRef {
   progress: number
 }
 
+/** A text overlay to draw on top of the frame (position/size normalized to the frame). */
+interface TextDraw {
+  text: string
+  x: number
+  y: number
+  fontSize: number
+  color: string
+}
+
 interface InitMessage {
   type: 'init'
   canvas: OffscreenCanvas
@@ -29,6 +38,8 @@ interface RenderMessage {
   next: ClipRef | null
   /** Incoming clip blended over the active one during a crossfade overlap. */
   transition: TransitionRef | null
+  /** Text overlays active at the current time, drawn on top of everything. */
+  texts: TextDraw[]
   /** Thumbnail to show until the active clip's first frame decodes (or while its
    * proxy is still generating, when `active` is null). */
   fallbackUrl: string | null
@@ -191,6 +202,22 @@ function drawThumbnail(url: string): void {
   ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
 }
 
+/** Draws text overlays on top of the current canvas (positions/size are fractions
+ * of the frame, so they scale with resolution). */
+function drawTexts(texts: TextDraw[]): void {
+  if (!canvas || !ctx || texts.length === 0) return
+  const width = canvas.width
+  const height = canvas.height
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  for (const overlay of texts) {
+    const size = Math.max(1, overlay.fontSize * height)
+    ctx.font = `bold ${size}px sans-serif`
+    ctx.fillStyle = overlay.color
+    ctx.fillText(overlay.text, overlay.x * width, overlay.y * height)
+  }
+}
+
 function handleRender(message: RenderMessage): void {
   const keep = new Set<string>()
 
@@ -231,6 +258,8 @@ function handleRender(message: RenderMessage): void {
       if (source?.isLoaded) source.prefetch(message.next.sourceUs)
     }
   }
+
+  drawTexts(message.texts)
 
   // Bounded memory: only the active + next sources hold decoded frames; dispose
   // the rest (their demuxed chunks stay cached, so revisiting is still cheap —

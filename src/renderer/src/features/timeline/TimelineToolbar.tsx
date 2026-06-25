@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { useTimelineStore } from '../../stores/timelineStore'
 import { useMediaStore } from '../../stores/mediaStore'
+import { useTransportStore } from '../../stores/transportStore'
 import { duplicateSelected, rippleDeleteSelected, splitSelected, toggleMarkerAtPlayhead } from './editorActions'
 import styles from './TimelineToolbar.module.css'
 
@@ -30,6 +31,13 @@ export function TimelineToolbar() {
         onClick={() => store.getState().addAudioTrack()}
       >
         {t('timeline.addAudioTrack')}
+      </button>
+      <button
+        type="button"
+        className={styles.button}
+        onClick={() => store.getState().addTextOverlay(useTransportStore.getState().playheadTime)}
+      >
+        {t('timeline.addText')}
       </button>
 
       <span className={styles.divider} />

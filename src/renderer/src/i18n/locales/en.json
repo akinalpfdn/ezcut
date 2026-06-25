@@ -43,6 +43,7 @@
   },
   "timeline": {
     "addAudioTrack": "+ Audio track",
+    "addText": "+ Text",
     "split": "Split",
     "merge": "Merge",
     "duplicate": "Duplicate",
@@ -85,6 +86,12 @@
     "denoiseOff": "Stop reducing noise",
     "denoiseStrength": "Strength",
     "generating": "Preparing…"
+  },
+  "textInspector": {
+    "placeholder": "Enter text…",
+    "size": "Size",
+    "color": "Color",
+    "remove": "Remove"
   },
   "transition": {
     "label": "Transition",

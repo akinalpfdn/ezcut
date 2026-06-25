@@ -22,7 +22,8 @@ function imageModel(): TimelineModel {
         audioFx: DEFAULT_AUDIO_FX
       }
     },
-    markers: []
+    markers: [],
+    textOverlays: []
   }
 }
 
@@ -68,7 +69,8 @@ function transitionModel(type: string): TimelineModel {
       a: videoClip('a', 'va', 0, { transitionOut: { type, duration: 1 } }),
       b: videoClip('b', 'vb', 2)
     },
-    markers: []
+    markers: [],
+    textOverlays: []
   }
 }
 

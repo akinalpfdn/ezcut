@@ -40,7 +40,8 @@ function makeModel(clips: Clip[], tracks?: Track[]): TimelineModel {
   return {
     tracks: tracks ?? [{ id: 't-video', kind: 'video', index: 0, label: 'V1', muted: false, solo: false }],
     clips: Object.fromEntries(clips.map((clip) => [clip.id, clip])),
-    markers: []
+    markers: [],
+    textOverlays: []
   }
 }
 

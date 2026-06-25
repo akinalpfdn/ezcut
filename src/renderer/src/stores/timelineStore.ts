@@ -12,20 +12,24 @@ import {
   type AudioFx,
   type Clip,
   type DenoiseSettings,
+  type TextOverlay,
   type TimelineModel,
   type TransitionType
 } from '@shared'
 import {
   addClipCommand,
+  addTextOverlayCommand,
   addTrackCommand,
   closeGapsCommand,
   mergeClipsCommand,
   moveClipCommand,
   removeClipCommand,
   removeClipsCommand,
+  removeTextOverlayCommand,
   sequenceCommand,
   setClipPropertyCommand,
   setMarkersCommand,
+  setTextOverlayCommand,
   setTrackPropertyCommand,
   splitClipCommand,
   trimClipCommand,
@@ -47,7 +51,8 @@ function createInitialModel(): TimelineModel {
       { id: uuid(), kind: 'audio', index: 1, label: 'A1', muted: false, solo: false }
     ],
     clips: {},
-    markers: []
+    markers: [],
+    textOverlays: []
   }
 }
 
@@ -74,6 +79,7 @@ interface TimelineState {
   undoStack: Command[]
   redoStack: Command[]
   selectedClipId: string | null
+  selectedOverlayId: string | null
   pxPerSec: number
   pinPlayhead: boolean
 
@@ -115,6 +121,12 @@ interface TimelineState {
   setTransitionType: (clipId: string, type: TransitionType) => void
   setTransitionDuration: (clipId: string, duration: number) => void
 
+  addTextOverlay: (start: number) => void
+  removeTextOverlay: (id: string) => void
+  updateTextOverlay: (id: string, patch: Partial<TextOverlay>) => void
+  moveTextOverlay: (id: string, start: number, duration: number) => void
+  selectOverlay: (id: string | null) => void
+
   selectClip: (clipId: string | null) => void
   setPxPerSec: (pxPerSec: number) => void
   zoomIn: () => void
@@ -127,6 +139,7 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
   undoStack: [],
   redoStack: [],
   selectedClipId: null,
+  selectedOverlayId: null,
   pxPerSec: TIMELINE_CONFIG.defaultPxPerSec,
   pinPlayhead: false,
 
@@ -168,7 +181,8 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
       model,
       undoStack: [],
       redoStack: [],
-      selectedClipId: null
+      selectedClipId: null,
+      selectedOverlayId: null
     }),
 
   addClipFromMedia: (mediaId, trackId, startOnTimeline, sourceDuration) => {
@@ -491,7 +505,61 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
     get().execute(sequenceCommand(commands))
   },
 
-  selectClip: (clipId) => set({ selectedClipId: clipId }),
+  addTextOverlay: (start) => {
+    const overlay: TextOverlay = {
+      id: uuid(),
+      text: 'Text',
+      start: Math.max(0, start),
+      duration: 3,
+      x: 0.5,
+      y: 0.85,
+      fontSize: 0.06,
+      color: '#ffffff'
+    }
+    get().execute(addTextOverlayCommand(overlay))
+    set({ selectedOverlayId: overlay.id, selectedClipId: null })
+  },
+
+  removeTextOverlay: (id) => {
+    const overlay = get().model.textOverlays.find((candidate) => candidate.id === id)
+    if (!overlay) return
+    get().execute(removeTextOverlayCommand(overlay))
+    if (get().selectedOverlayId === id) set({ selectedOverlayId: null })
+  },
+
+  updateTextOverlay: (id, patch) => {
+    const overlay = get().model.textOverlays.find((candidate) => candidate.id === id)
+    if (!overlay) return
+    const before: Partial<TextOverlay> = {}
+    const after: Partial<TextOverlay> = {}
+    for (const key of Object.keys(patch) as (keyof TextOverlay)[]) {
+      if (patch[key] !== undefined && patch[key] !== overlay[key]) {
+        Object.assign(before, { [key]: overlay[key] })
+        Object.assign(after, { [key]: patch[key] })
+      }
+    }
+    if (Object.keys(after).length === 0) return
+    get().execute(setTextOverlayCommand(id, before, after))
+  },
+
+  moveTextOverlay: (id, start, duration) => {
+    const overlay = get().model.textOverlays.find((candidate) => candidate.id === id)
+    if (!overlay) return
+    const nextStart = Math.max(0, start)
+    const nextDuration = Math.max(TIMELINE_CONFIG.minClipDuration, duration)
+    if (nextStart === overlay.start && nextDuration === overlay.duration) return
+    get().execute(
+      setTextOverlayCommand(
+        id,
+        { start: overlay.start, duration: overlay.duration },
+        { start: nextStart, duration: nextDuration }
+      )
+    )
+  },
+
+  selectOverlay: (id) => set({ selectedOverlayId: id, selectedClipId: null }),
+
+  selectClip: (clipId) => set({ selectedClipId: clipId, selectedOverlayId: null }),
   setPxPerSec: (pxPerSec) =>
     set({
       pxPerSec: Math.min(Math.max(pxPerSec, TIMELINE_CONFIG.minPxPerSec), TIMELINE_CONFIG.maxPxPerSec)
