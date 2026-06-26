@@ -108,6 +108,63 @@
   background-color: var(--color-primary-hover);
 }
 
+.textLane {
+  background-color: var(--color-surface-2);
+}
+
+.textBlock {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-primary-active);
+  overflow: hidden;
+  cursor: grab;
+  user-select: none;
+}
+
+.textBlock:active {
+  cursor: grabbing;
+}
+
+.textBlockSelected {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -1px;
+}
+
+.textBlockLabel {
+  flex: 1;
+  padding: 0 var(--space-3);
+  font-size: var(--text-xs);
+  color: var(--color-on-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+
+.overlayHandle {
+  flex-shrink: 0;
+  width: 8px;
+  height: 100%;
+  cursor: ew-resize;
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.overlayHandle:hover {
+  background-color: var(--color-on-primary);
+}
+
+.overlayHandleLeft {
+  border-right: 1px solid rgba(0, 0, 0, 0.3);
+}
+
+.overlayHandleRight {
+  border-left: 1px solid rgba(0, 0, 0, 0.3);
+}
+
 .lane {
   position: absolute;
   left: 0;

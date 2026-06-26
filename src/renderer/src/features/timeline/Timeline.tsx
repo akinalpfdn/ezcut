@@ -23,7 +23,8 @@ import {
   timelineDuration,
   trackKindForMedia,
   type Clip,
-  type MediaItem
+  type MediaItem,
+  type TextOverlay
 } from '@shared'
 import { useTimelineStore } from '../../stores/timelineStore'
 import { useTransportStore } from '../../stores/transportStore'
@@ -68,6 +69,15 @@ interface DragState {
   dissolveClipIds: string[]
 }
 
+interface OverlayDragState {
+  kind: 'move' | 'trim-l' | 'trim-r'
+  id: string
+  original: TextOverlay
+  pointerStartX: number
+  moved: boolean
+  patch: { start: number; duration: number }
+}
+
 /** Pointer travel (px) before a press becomes a drag rather than a click. */
 const DRAG_THRESHOLD_PX = 4
 
@@ -78,6 +88,7 @@ export function Timeline() {
   const model = useTimelineStore((state) => state.model)
   const pxPerSec = useTimelineStore((state) => state.pxPerSec)
   const selectedClipId = useTimelineStore((state) => state.selectedClipId)
+  const selectedOverlayId = useTimelineStore((state) => state.selectedOverlayId)
   const isPlaying = useTransportStore((state) => state.isPlaying)
   const pinPlayhead = useTimelineStore((state) => state.pinPlayhead)
   const mediaItems = useMediaStore((state) => state.items)
@@ -86,6 +97,7 @@ export function Timeline() {
   const tracksRef = useRef<HTMLDivElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const dragRef = useRef<DragState | null>(null)
+  const overlayDragRef = useRef<OverlayDragState | null>(null)
   const moveRafRef = useRef<number | null>(null)
   const [, forceRender] = useReducer((tick: number) => tick + 1, 0)
   const [menu, setMenu] = useState<MenuState | null>(null)
@@ -164,7 +176,9 @@ export function Timeline() {
 
   const contentDuration = Math.max(timelineDuration(model), 20) + 10
   const width = contentDuration * pxPerSec
-  const tracksHeight = sortedTracks.length * trackHeight
+  // One extra row below the tracks holds the text overlays.
+  const textRowTop = sortedTracks.length * trackHeight
+  const tracksHeight = textRowTop + trackHeight
 
   const onPointerMove = useCallback((event: PointerEvent) => {
     const drag = dragRef.current
@@ -316,6 +330,79 @@ export function Timeline() {
     window.addEventListener('pointerup', onPointerUp)
   }
 
+  const onOverlayPointerMove = useCallback(
+    (event: PointerEvent) => {
+      const drag = overlayDragRef.current
+      if (!drag) return
+      if (!drag.moved) {
+        if (Math.abs(event.clientX - drag.pointerStartX) < DRAG_THRESHOLD_PX) return
+        drag.moved = true
+      }
+      const state = useTimelineStore.getState()
+      const ps = state.pxPerSec
+      const points = collectSnapPoints(state.model, null, useTransportStore.getState().playheadTime)
+      const threshold = snapThresholdPx / ps
+      const delta = (event.clientX - drag.pointerStartX) / ps
+      const o = drag.original
+      if (drag.kind === 'move') {
+        const start = Math.max(0, snapValue(Math.max(0, o.start + delta), points, threshold))
+        drag.patch = { start, duration: o.duration }
+      } else if (drag.kind === 'trim-l') {
+        let start = Math.max(0, snapValue(Math.max(0, o.start + delta), points, threshold))
+        start = Math.min(start, o.start + o.duration - minClipDuration)
+        drag.patch = { start, duration: o.start + o.duration - start }
+      } else {
+        const end = snapValue(o.start + o.duration + delta, points, threshold)
+        drag.patch = { start: o.start, duration: Math.max(minClipDuration, end - o.start) }
+      }
+      scheduleDragRender()
+    },
+    [scheduleDragRender]
+  )
+
+  const onOverlayPointerUp = useCallback(() => {
+    const drag = overlayDragRef.current
+    if (!drag) return
+    window.removeEventListener('pointermove', onOverlayPointerMove)
+    window.removeEventListener('pointerup', onOverlayPointerUp)
+    if (moveRafRef.current !== null) {
+      cancelAnimationFrame(moveRafRef.current)
+      moveRafRef.current = null
+    }
+    if (drag.moved) {
+      useTimelineStore.getState().moveTextOverlay(drag.id, drag.patch.start, drag.patch.duration)
+    }
+    overlayDragRef.current = null
+    forceRender()
+  }, [onOverlayPointerMove])
+
+  const beginOverlayDrag = (
+    kind: OverlayDragState['kind'],
+    overlay: TextOverlay,
+    event: ReactPointerEvent
+  ): void => {
+    event.preventDefault()
+    event.stopPropagation()
+    useTimelineStore.getState().selectOverlay(overlay.id)
+    overlayDragRef.current = {
+      kind,
+      id: overlay.id,
+      original: overlay,
+      pointerStartX: event.clientX,
+      moved: false,
+      patch: { start: overlay.start, duration: overlay.duration }
+    }
+    window.addEventListener('pointermove', onOverlayPointerMove)
+    window.addEventListener('pointerup', onOverlayPointerUp)
+  }
+
+  useEffect(() => {
+    return () => {
+      window.removeEventListener('pointermove', onOverlayPointerMove)
+      window.removeEventListener('pointerup', onOverlayPointerUp)
+    }
+  }, [onOverlayPointerMove, onOverlayPointerUp])
+
   // Imports OS-dropped files through the shared pipeline, then places each on a
   // track of its kind at the (snapped) drop time. Runs after the async import, so
   // the drop position is captured before awaiting.
@@ -458,6 +545,9 @@ export function Timeline() {
               </div>
             </div>
           ))}
+          <div className={styles.trackHeader} style={{ height: trackHeight }}>
+            <span>{t('timeline.textRow')}</span>
+          </div>
         </div>
 
         <div ref={scrollRef} className={styles.scroll}>
@@ -487,6 +577,44 @@ export function Timeline() {
                   style={{ top: index * trackHeight, height: trackHeight }}
                 />
               ))}
+              <div
+                className={`${styles.lane} ${styles.textLane}`}
+                style={{ top: textRowTop, height: trackHeight }}
+              />
+
+              {model.textOverlays.map((overlay) => {
+                const display =
+                  overlayDragRef.current?.id === overlay.id
+                    ? { ...overlay, ...overlayDragRef.current.patch }
+                    : overlay
+                return (
+                  <div
+                    key={overlay.id}
+                    className={
+                      overlay.id === selectedOverlayId
+                        ? `${styles.textBlock} ${styles.textBlockSelected}`
+                        : styles.textBlock
+                    }
+                    style={{
+                      left: display.start * pxPerSec,
+                      width: Math.max(8, display.duration * pxPerSec),
+                      top: textRowTop,
+                      height: trackHeight
+                    }}
+                    onPointerDown={(event) => beginOverlayDrag('move', overlay, event)}
+                  >
+                    <div
+                      className={`${styles.overlayHandle} ${styles.overlayHandleLeft}`}
+                      onPointerDown={(event) => beginOverlayDrag('trim-l', overlay, event)}
+                    />
+                    <span className={styles.textBlockLabel}>{overlay.text || t('timeline.textRow')}</span>
+                    <div
+                      className={`${styles.overlayHandle} ${styles.overlayHandleRight}`}
+                      onPointerDown={(event) => beginOverlayDrag('trim-r', overlay, event)}
+                    />
+                  </div>
+                )
+              })}
 
               {clips.map((clip) => {
                 const display = drag?.clipId === clip.id ? { ...clip, ...drag.patch } : clip

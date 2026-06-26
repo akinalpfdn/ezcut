@@ -44,6 +44,7 @@
   "timeline": {
     "addAudioTrack": "+ Ses katmanı",
     "addText": "+ Metin",
+    "textRow": "Metin",
     "split": "Böl",
     "merge": "Birleştir",
     "duplicate": "Çoğalt",
