@@ -11,6 +11,9 @@ export const exportService = {
   cancel(): Promise<Result<void>> {
     return window.electronAPI.cancelExport()
   },
+  showInFolder(path: string): Promise<Result<void>> {
+    return window.electronAPI.showInFolder(path)
+  },
   onProgress(callback: (progress: ExportProgress) => void): () => void {
     return window.electronAPI.onExportProgress(callback)
   }

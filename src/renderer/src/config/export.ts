@@ -1,6 +1,7 @@
-import type { ExportContainer, QualityPreset } from '@shared'
+import type { ExportCodec, ExportContainer, QualityPreset } from '@shared'
 
 export const EXPORT_CONTAINERS: ExportContainer[] = ['mp4', 'mov', 'webm']
+export const EXPORT_CODECS: ExportCodec[] = ['h264', 'h265']
 export const QUALITY_PRESETS: QualityPreset[] = ['high', 'medium', 'low']
 export const EXPORT_FPS_OPTIONS = [24, 30, 60]
 
@@ -20,6 +21,7 @@ export const RESOLUTION_PRESETS: ResolutionPreset[] = [
 
 export const DEFAULT_EXPORT = {
   container: 'mp4' as ExportContainer,
+  codec: 'h264' as ExportCodec,
   fps: 30,
   quality: 'high' as QualityPreset,
   width: 1920,

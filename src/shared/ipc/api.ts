@@ -67,6 +67,9 @@ export interface ElectronAPI {
   /** Opens a save dialog for the export output; resolves to a path or null. */
   selectExportPath(container: ExportContainer): Promise<Result<string | null>>
 
+  /** Reveals a file in the OS file manager (selected in its folder). */
+  showInFolder(path: string): Promise<Result<void>>
+
   /** Runs the export to completion (or cancellation). Progress arrives via onExportProgress. */
   startExport(request: ExportRequest): Promise<Result<void>>
 

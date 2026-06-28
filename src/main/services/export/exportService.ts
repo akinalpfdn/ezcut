@@ -24,6 +24,8 @@ function sendProgress(progress: ExportProgress): void {
 export async function runExport(request: ExportRequest): Promise<void> {
   const { model, media, options, outputPath } = request
   cancelled = false
+  let textTempFiles: string[] = []
+  let filterComplex = ''
 
   try {
     // Denoise proxies generated here are tagged so a cancel can kill them.
@@ -33,6 +35,8 @@ export async function runExport(request: ExportRequest): Promise<void> {
       { width: options.width, height: options.height, fps: options.fps },
       (mediaPath, strength) => generateDenoiseProxy(mediaPath, strength, EXPORT_DENOISE_TAG)
     )
+    textTempFiles = graph.textTempFiles
+    filterComplex = graph.filterComplex
     if (cancelled) return
     const args = buildExportArgs(graph, options, outputPath)
 
@@ -51,9 +55,12 @@ export async function runExport(request: ExportRequest): Promise<void> {
       await unlink(outputPath).catch(() => undefined)
       return
     }
+    // Surface the graph in the dev console so a filter parse error is debuggable.
+    console.error('[export] failed; filter_complex:\n', filterComplex)
     throw error
   } finally {
     currentChild = null
+    await Promise.all(textTempFiles.map((path) => unlink(path).catch(() => undefined)))
   }
 }
 

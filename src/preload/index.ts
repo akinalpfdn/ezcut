@@ -27,6 +27,7 @@ const electronAPI: ElectronAPI = {
   loadSettings: () => ipcRenderer.invoke(IpcChannels.loadSettings),
   saveSettings: (settings) => ipcRenderer.invoke(IpcChannels.saveSettings, settings),
   selectExportPath: (container) => ipcRenderer.invoke(IpcChannels.selectExportPath, container),
+  showInFolder: (path) => ipcRenderer.invoke(IpcChannels.showInFolder, path),
   startExport: (request) => ipcRenderer.invoke(IpcChannels.startExport, request),
   cancelExport: () => ipcRenderer.invoke(IpcChannels.cancelExport),
   onExportProgress: (callback) => {

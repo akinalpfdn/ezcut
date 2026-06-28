@@ -132,6 +132,12 @@
   text-align: right;
 }
 
+.doneRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
 .done {
   margin: 0;
   color: var(--color-success);

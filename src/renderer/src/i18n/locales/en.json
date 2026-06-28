@@ -142,10 +142,15 @@
     "save": "Save",
     "open": "Open"
   },
+  "codec": {
+    "h264": "H.264",
+    "h265": "H.265 (smaller)"
+  },
   "export": {
     "title": "Export",
     "close": "Close",
     "container": "Format",
+    "codec": "Codec",
     "resolution": "Resolution",
     "source": "Source",
     "custom": "Custom",
@@ -155,6 +160,7 @@
     "start": "Export",
     "cancel": "Cancel",
     "done": "Done",
+    "openFolder": "Open folder",
     "empty": "The timeline is empty."
   },
   "quality": {
@@ -164,6 +170,7 @@
   },
   "common": {
     "detail": "Technical detail",
+    "copy": "Copy",
     "retry": "Retry"
   },
   "errors": {

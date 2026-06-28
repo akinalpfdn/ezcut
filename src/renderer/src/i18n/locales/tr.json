@@ -142,10 +142,15 @@
     "save": "Kaydet",
     "open": "Aç"
   },
+  "codec": {
+    "h264": "H.264",
+    "h265": "H.265 (daha küçük)"
+  },
   "export": {
     "title": "Dışa aktar",
     "close": "Kapat",
     "container": "Biçim",
+    "codec": "Codec",
     "resolution": "Çözünürlük",
     "source": "Kaynak",
     "custom": "Özel",
@@ -155,6 +160,7 @@
     "start": "Dışa aktar",
     "cancel": "İptal",
     "done": "Tamamlandı",
+    "openFolder": "Klasörü aç",
     "empty": "Zaman çizelgesi boş."
   },
   "quality": {
@@ -164,6 +170,7 @@
   },
   "common": {
     "detail": "Teknik ayrıntı",
+    "copy": "Kopyala",
     "retry": "Tekrar dene"
   },
   "errors": {

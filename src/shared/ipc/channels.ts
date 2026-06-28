@@ -16,6 +16,7 @@ export const IpcChannels = {
   loadSettings: 'settings:load',
   saveSettings: 'settings:save',
   selectExportPath: 'export:selectPath',
+  showInFolder: 'shell:showInFolder',
   startExport: 'export:start',
   cancelExport: 'export:cancel',
   exportProgress: 'export:progress',

@@ -12,7 +12,14 @@ export function buildExportArgs(
 ): string[] {
   const profile = CONTAINER_PROFILES[options.container]
   const isVp9 = profile.videoCodec.includes('vp9')
-  const crf = isVp9 ? QUALITY_CRF[options.quality].vp9 : QUALITY_CRF[options.quality].x264
+  // webm is always VP9; mp4/mov honor the codec choice (H.265 ≈ half the size).
+  const useH265 = !isVp9 && options.codec === 'h265'
+  const videoCodec = isVp9 ? profile.videoCodec : useH265 ? 'libx265' : 'libx264'
+  const crf = isVp9
+    ? QUALITY_CRF[options.quality].vp9
+    : useH265
+      ? QUALITY_CRF[options.quality].x265
+      : QUALITY_CRF[options.quality].x264
 
   const args: string[] = ['-y']
   for (const input of graph.inputs) {
@@ -22,8 +29,10 @@ export function buildExportArgs(
   args.push('-filter_complex', graph.filterComplex)
   args.push('-map', `[${graph.videoLabel}]`)
   if (graph.audioLabel) args.push('-map', `[${graph.audioLabel}]`)
-  args.push('-c:v', profile.videoCodec, '-crf', String(crf), '-pix_fmt', 'yuv420p')
-  if (profile.videoCodec === 'libx264') args.push('-preset', 'medium')
+  args.push('-c:v', videoCodec, '-crf', String(crf), '-pix_fmt', 'yuv420p')
+  if (videoCodec === 'libx264' || videoCodec === 'libx265') args.push('-preset', 'medium')
+  // hvc1 tag so HEVC mp4/mov plays in QuickTime / Windows / Apple devices.
+  if (useH265) args.push('-tag:v', 'hvc1')
   if (graph.audioLabel) args.push('-c:a', profile.audioCodec)
   args.push('-t', graph.durationSeconds.toFixed(3), outputPath)
   return args

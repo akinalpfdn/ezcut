@@ -18,6 +18,12 @@ export function ErrorNotice({ error, onRetry }: ErrorNoticeProps) {
         <details className={styles.details}>
           <summary className={styles.summary}>{t('common.detail')}</summary>
           <pre className={styles.detailText}>{error.detail}</pre>
+          <Button
+            variant="ghost"
+            onClick={() => void navigator.clipboard.writeText(`[${error.code}] ${error.detail ?? ''}`)}
+          >
+            {t('common.copy')}
+          </Button>
         </details>
       ) : null}
       {onRetry ? (

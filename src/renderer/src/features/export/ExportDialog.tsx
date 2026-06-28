@@ -1,11 +1,12 @@
 import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { AppErrorPayload, ExportContainer, QualityPreset } from '@shared'
+import type { AppErrorPayload, ExportCodec, ExportContainer, QualityPreset } from '@shared'
 import { useTimelineStore } from '../../stores/timelineStore'
 import { useMediaStore } from '../../stores/mediaStore'
 import { exportService } from '../../services/exportService'
 import {
   DEFAULT_EXPORT,
+  EXPORT_CODECS,
   EXPORT_CONTAINERS,
   EXPORT_FPS_OPTIONS,
   QUALITY_PRESETS,
@@ -34,6 +35,7 @@ export function ExportDialog({ onClose }: ExportDialogProps) {
   }
 
   const [container, setContainer] = useState<ExportContainer>(DEFAULT_EXPORT.container)
+  const [codec, setCodec] = useState<ExportCodec>(DEFAULT_EXPORT.codec)
   const [resolutionId, setResolutionId] = useState('source')
   const [customWidth, setCustomWidth] = useState(source.width)
   const [customHeight, setCustomHeight] = useState(source.height)
@@ -43,6 +45,7 @@ export function ExportDialog({ onClose }: ExportDialogProps) {
   const [exporting, setExporting] = useState(false)
   const [progress, setProgress] = useState(0)
   const [done, setDone] = useState(false)
+  const [outputPath, setOutputPath] = useState<string | null>(null)
   const [error, setError] = useState<AppErrorPayload | null>(null)
   const cancelledRef = useRef(false)
 
@@ -61,6 +64,7 @@ export function ExportDialog({ onClose }: ExportDialogProps) {
     }
     if (!pathResult.value) return
 
+    setOutputPath(pathResult.value)
     const { width, height } = resolveSize()
     cancelledRef.current = false
     setExporting(true)
@@ -72,7 +76,7 @@ export function ExportDialog({ onClose }: ExportDialogProps) {
     const result = await exportService.start({
       model: useTimelineStore.getState().model,
       media: useMediaStore.getState().items,
-      options: { container, width, height, fps, quality },
+      options: { container, codec, width, height, fps, quality },
       outputPath: pathResult.value
     })
     unsubscribe()
@@ -117,6 +121,26 @@ export function ExportDialog({ onClose }: ExportDialogProps) {
                       {value.toUpperCase()}
                     </option>
                   ))}
+                </select>
+              </label>
+
+              <label className={styles.row}>
+                <span className={styles.label}>{t('export.codec')}</span>
+                <select
+                  className={styles.select}
+                  value={container === 'webm' ? 'h264' : codec}
+                  disabled={exporting || container === 'webm'}
+                  onChange={(event) => setCodec(event.target.value as ExportCodec)}
+                >
+                  {container === 'webm' ? (
+                    <option value="h264">VP9</option>
+                  ) : (
+                    EXPORT_CODECS.map((value) => (
+                      <option key={value} value={value}>
+                        {t(`codec.${value}`)}
+                      </option>
+                    ))
+                  )}
                 </select>
               </label>
 
@@ -207,7 +231,16 @@ export function ExportDialog({ onClose }: ExportDialogProps) {
               </div>
             ) : null}
 
-            {done ? <p className={styles.done}>{t('export.done')}</p> : null}
+            {done ? (
+              <div className={styles.doneRow}>
+                <p className={styles.done}>{t('export.done')}</p>
+                {outputPath ? (
+                  <Button variant="ghost" onClick={() => void exportService.showInFolder(outputPath)}>
+                    {t('export.openFolder')}
+                  </Button>
+                ) : null}
+              </div>
+            ) : null}
             {error ? <ErrorNotice error={error} /> : null}
 
             <footer className={styles.footer}>

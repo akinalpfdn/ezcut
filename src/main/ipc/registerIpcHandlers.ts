@@ -1,3 +1,4 @@
+import { shell } from 'electron'
 import { handle } from './handle'
 import { IpcChannels, type AppSettings } from '@shared'
 import { getMediaToolingInfo } from '../services/ffmpeg/mediaToolingService'
@@ -62,6 +63,9 @@ export function registerIpcHandlers(): void {
   handle<[ExportContainer], string | null>(IpcChannels.selectExportPath, (container) =>
     selectExportPath(container)
   )
+  handle<[string], void>(IpcChannels.showInFolder, (path) => {
+    shell.showItemInFolder(path)
+  })
   handle<[ExportRequest], void>(IpcChannels.startExport, (request) => runExport(request))
   handle(IpcChannels.cancelExport, () => cancelExport())
 

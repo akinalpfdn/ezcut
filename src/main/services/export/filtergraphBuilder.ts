@@ -12,6 +12,7 @@ import {
   type TransitionType
 } from '@shared'
 import { AUDIO_FX_CONFIG } from '../../config/audioFx'
+import { escapeDrawtextText, resolveTextFontName } from './textFont'
 
 /** Each transition type's ffmpeg `xfade` transition name. */
 const XFADE_NAMES: Record<TransitionType, string> = {
@@ -41,6 +42,8 @@ export interface FiltergraphResult {
   videoLabel: string
   audioLabel: string | null
   durationSeconds: number
+  /** Temp files (text overlay content) the caller must delete after the export. */
+  textTempFiles: string[]
 }
 
 /** Resolves (generating if needed) the denoised proxy for a source. */
@@ -251,6 +254,26 @@ export async function buildFiltergraph(
     videoLabel = chain
   }
 
+  // Text overlays: a drawtext per overlay on top of the video. Font by family via
+  // fontconfig (no fontfile path), text inline (no textfile path) — keeps absolute
+  // Windows paths out of the filtergraph entirely. Centred via text_w/text_h.
+  const textTempFiles: string[] = []
+  if (model.textOverlays.length > 0) {
+    const fontName = resolveTextFontName()
+    for (const overlay of model.textOverlays) {
+      const size = Math.max(1, Math.round(overlay.fontSize * height))
+      const color = overlay.color.replace('#', '0x')
+      const end = overlay.start + overlay.duration
+      const out = `tx${chainCounter++}`
+      parts.push(
+        `[${videoLabel}]drawtext=font='${fontName}':text=${escapeDrawtextText(overlay.text)}:` +
+          `fontsize=${size}:fontcolor=${color}:x=${overlay.x.toFixed(4)}*w-text_w/2:y=${overlay.y.toFixed(4)}*h-text_h/2:` +
+          `enable='between(t,${overlay.start.toFixed(3)},${end.toFixed(3)})'[${out}]`
+      )
+      videoLabel = out
+    }
+  }
+
   let audioLabel: string | null = null
   if (audioLabels.length === 1) {
     audioLabel = audioLabels[0] ?? null
@@ -259,5 +282,5 @@ export async function buildFiltergraph(
     parts.push(`${audioLabels.map((label) => `[${label}]`).join('')}amix=inputs=${audioLabels.length}:normalize=0:dropout_transition=0[aout]`)
   }
 
-  return { inputs, filterComplex: parts.join(';'), videoLabel, audioLabel, durationSeconds }
+  return { inputs, filterComplex: parts.join(';'), videoLabel, audioLabel, durationSeconds, textTempFiles }
 }
