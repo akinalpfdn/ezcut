@@ -90,8 +90,11 @@
   },
   "textInspector": {
     "placeholder": "Metin gir…",
+    "font": "Yazı tipi",
     "size": "Boyut",
     "color": "Renk",
+    "box": "Kutu",
+    "dragHint": "Konumlandırmak için metni önizlemede sürükle",
     "remove": "Kaldır"
   },
   "transition": {
@@ -145,6 +148,11 @@
   "codec": {
     "h264": "H.264",
     "h265": "H.265 (daha küçük)"
+  },
+  "fontFamily": {
+    "sans": "Sans",
+    "serif": "Serif",
+    "mono": "Mono"
   },
   "export": {
     "title": "Dışa aktar",

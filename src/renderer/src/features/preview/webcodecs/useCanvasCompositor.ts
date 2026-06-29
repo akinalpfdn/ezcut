@@ -32,7 +32,12 @@ interface TransitionRef extends ClipRef {
  * thread only reads the stores, resolves which clip/url/time to show (proxy when
  * needed), and posts that small state to the worker. The audio engine is the clock.
  */
-export function useCanvasCompositor(canvasRef: RefObject<HTMLCanvasElement | null>): void {
+export function useCanvasCompositor(
+  canvasRef: RefObject<HTMLCanvasElement | null>,
+  /** Receives the live frame dimensions from the worker, for letterbox-aware
+   * pointer mapping (text drag-to-position). */
+  frameSizeRef?: RefObject<{ width: number; height: number }>
+): void {
   const workerRef = useRef<Worker | null>(null)
 
   useEffect(() => {
@@ -46,6 +51,11 @@ export function useCanvasCompositor(canvasRef: RefObject<HTMLCanvasElement | nul
       const worker = new Worker(new URL('./compositorWorker.ts', import.meta.url), { type: 'module' })
       const offscreen = canvas.transferControlToOffscreen()
       worker.postMessage({ type: 'init', canvas: offscreen }, [offscreen])
+      worker.onmessage = (event: MessageEvent<{ type: 'size'; width: number; height: number }>): void => {
+        if (event.data?.type === 'size' && frameSizeRef?.current) {
+          frameSizeRef.current = { width: event.data.width, height: event.data.height }
+        }
+      }
       workerRef.current = worker
     }
     const worker = workerRef.current
@@ -95,7 +105,9 @@ export function useCanvasCompositor(canvasRef: RefObject<HTMLCanvasElement | nul
           x: overlay.x,
           y: overlay.y,
           fontSize: overlay.fontSize,
-          color: overlay.color
+          color: overlay.color,
+          background: overlay.background,
+          fontFamily: overlay.fontFamily
         }))
 
       let hasActiveClip = false
@@ -153,7 +165,9 @@ export function useCanvasCompositor(canvasRef: RefObject<HTMLCanvasElement | nul
       // Only post when the resolved render state actually changed — during
       // playback sourceUs advances every frame (so it posts, as needed), but
       // while paused/idle this skips the per-frame structured-clone to the worker.
-      const textsSig = texts.map((t) => `${t.text}|${t.x}|${t.y}|${t.fontSize}|${t.color}`).join('~')
+      const textsSig = texts
+        .map((t) => `${t.text}|${t.x}|${t.y}|${t.fontSize}|${t.color}|${t.background}|${t.fontFamily}`)
+        .join('~')
       const sig = `${hasActiveClip}|${active?.clipId ?? ''}|${active?.fileUrl ?? ''}|${active?.sourceUs ?? ''}|${next?.clipId ?? ''}|${next?.fileUrl ?? ''}|${next?.sourceUs ?? ''}|${fallbackUrl ?? ''}|${transition?.clipId ?? ''}|${transition?.sourceUs ?? ''}|${transition?.transitionType ?? ''}|${transition?.progress ?? ''}|${textsSig}`
       if (sig !== lastSig) {
         lastSig = sig

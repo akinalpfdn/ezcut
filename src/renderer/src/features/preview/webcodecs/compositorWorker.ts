@@ -1,4 +1,4 @@
-import type { TransitionType } from '@shared'
+import type { FontFamily, TransitionType } from '@shared'
 import { ClipVideoSource } from './clipVideoSource'
 
 /** A clip to draw/prefetch: the resolved decode url (proxy or original) + the
@@ -24,6 +24,13 @@ interface TextDraw {
   y: number
   fontSize: number
   color: string
+  background: boolean
+  fontFamily: FontFamily
+}
+
+/** Maps a font family to a CSS generic the canvas understands. */
+function cssFontFamily(family: FontFamily): string {
+  return family === 'serif' ? 'serif' : family === 'mono' ? 'monospace' : 'sans-serif'
 }
 
 interface InitMessage {
@@ -52,7 +59,23 @@ const MAX_THUMBNAILS = 24
 
 let canvas: OffscreenCanvas | null = null
 let ctx: OffscreenCanvasRenderingContext2D | null = null
+// The video is composited onto this offscreen "base" layer (no text). Each render
+// the base is blitted to the visible canvas and text is drawn on top — so moving a
+// text overlay while paused can never accumulate (ghost) over a stale frame.
+let baseCanvas: OffscreenCanvas | null = null
+let baseCtx: OffscreenCanvasRenderingContext2D | null = null
+let postedWidth = 0
+let postedHeight = 0
 const sources = new Map<string, ClipVideoSource>()
+
+/** Tells the main thread the current frame dimensions so it can map preview pointer
+ * coordinates (which include object-fit letterboxing) onto the frame for text drags. */
+function notifySize(): void {
+  if (!baseCanvas || (baseCanvas.width === postedWidth && baseCanvas.height === postedHeight)) return
+  postedWidth = baseCanvas.width
+  postedHeight = baseCanvas.height
+  self.postMessage({ type: 'size', width: baseCanvas.width, height: baseCanvas.height })
+}
 const loading = new Set<string>()
 const thumbnails = new Map<string, ImageBitmap>()
 const thumbnailLoading = new Set<string>()
@@ -103,28 +126,30 @@ function ensureThumbnail(url: string): ImageBitmap | null {
 }
 
 function clear(): void {
-  if (!canvas || !ctx) return
-  ctx.fillStyle = '#000000'
-  ctx.fillRect(0, 0, canvas.width, canvas.height)
+  if (!baseCanvas || !baseCtx) return
+  baseCtx.fillStyle = '#000000'
+  baseCtx.fillRect(0, 0, baseCanvas.width, baseCanvas.height)
+  notifySize()
 }
 
 function drawFrame(frame: VideoFrame): void {
-  if (!canvas || !ctx) return
-  if (canvas.width !== frame.displayWidth || canvas.height !== frame.displayHeight) {
-    canvas.width = frame.displayWidth
-    canvas.height = frame.displayHeight
+  if (!baseCanvas || !baseCtx) return
+  if (baseCanvas.width !== frame.displayWidth || baseCanvas.height !== frame.displayHeight) {
+    baseCanvas.width = frame.displayWidth
+    baseCanvas.height = frame.displayHeight
   }
-  ctx.drawImage(frame, 0, 0, canvas.width, canvas.height)
+  baseCtx.drawImage(frame, 0, 0, baseCanvas.width, baseCanvas.height)
+  notifySize()
 }
 
 /** Draws the incoming transition frame over the current canvas (what the active
  * clip already drew) WITHOUT resizing. Mirrors the families ffmpeg xfade exports:
  * crossfade=alpha, slide=offset, zoom=scale, wipe=rect clip, circle=circle clip. */
 function drawTransition(frame: VideoFrame, type: TransitionType, progress: number): void {
-  if (!canvas || !ctx) return
-  const c = ctx
-  const w = canvas.width
-  const h = canvas.height
+  if (!baseCanvas || !baseCtx) return
+  const c = baseCtx
+  const w = baseCanvas.width
+  const h = baseCanvas.height
   const p = Math.max(0, Math.min(1, progress))
 
   const clipRect = (x: number, y: number, rw: number, rh: number): void => {
@@ -192,29 +217,47 @@ function drawTransition(frame: VideoFrame, type: TransitionType, progress: numbe
 }
 
 function drawThumbnail(url: string): void {
-  if (!canvas || !ctx) return
+  if (!baseCanvas || !baseCtx) return
   const bitmap = ensureThumbnail(url)
   if (!bitmap) return // not ready yet — keep the last drawn content
-  if (canvas.width !== bitmap.width || canvas.height !== bitmap.height) {
-    canvas.width = bitmap.width
-    canvas.height = bitmap.height
+  if (baseCanvas.width !== bitmap.width || baseCanvas.height !== bitmap.height) {
+    baseCanvas.width = bitmap.width
+    baseCanvas.height = bitmap.height
   }
-  ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
+  baseCtx.drawImage(bitmap, 0, 0, baseCanvas.width, baseCanvas.height)
+  notifySize()
 }
 
 /** Draws text overlays on top of the current canvas (positions/size are fractions
  * of the frame, so they scale with resolution). */
 function drawTexts(texts: TextDraw[]): void {
   if (!canvas || !ctx || texts.length === 0) return
+  const c = ctx
   const width = canvas.width
   const height = canvas.height
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
+  c.textAlign = 'center'
+  c.textBaseline = 'middle'
   for (const overlay of texts) {
     const size = Math.max(1, overlay.fontSize * height)
-    ctx.font = `bold ${size}px sans-serif`
-    ctx.fillStyle = overlay.color
-    ctx.fillText(overlay.text, overlay.x * width, overlay.y * height)
+    c.font = `bold ${size}px ${cssFontFamily(overlay.fontFamily)}`
+    const px = overlay.x * width
+    const py = overlay.y * height
+    if (overlay.background) {
+      const pad = size * 0.25
+      const boxW = c.measureText(overlay.text).width + pad * 2
+      const boxH = size + pad * 2
+      c.fillStyle = 'rgba(0, 0, 0, 0.5)'
+      c.fillRect(px - boxW / 2, py - boxH / 2, boxW, boxH)
+    }
+    // A subtle shadow keeps text legible over any footage.
+    c.shadowColor = 'rgba(0, 0, 0, 0.7)'
+    c.shadowBlur = size * 0.08
+    c.shadowOffsetY = size * 0.03
+    c.fillStyle = overlay.color
+    c.fillText(overlay.text, px, py)
+    c.shadowColor = 'transparent'
+    c.shadowBlur = 0
+    c.shadowOffsetY = 0
   }
 }
 
@@ -259,6 +302,17 @@ function handleRender(message: RenderMessage): void {
     }
   }
 
+  // Blit the freshly-composited base onto the visible canvas, then draw text on
+  // top. The base is rebuilt every render, so text never accumulates over a stale
+  // frame (the ghosting seen when dragging a text overlay while paused).
+  if (canvas && ctx && baseCanvas) {
+    if (canvas.width !== baseCanvas.width || canvas.height !== baseCanvas.height) {
+      canvas.width = baseCanvas.width
+      canvas.height = baseCanvas.height
+    }
+    ctx.drawImage(baseCanvas, 0, 0)
+  }
+
   drawTexts(message.texts)
 
   // Bounded memory: only the active + next sources hold decoded frames; dispose
@@ -277,6 +331,8 @@ self.onmessage = (event: MessageEvent<IncomingMessage>): void => {
   if (data.type === 'init') {
     canvas = data.canvas
     ctx = canvas.getContext('2d')
+    baseCanvas = new OffscreenCanvas(canvas.width, canvas.height)
+    baseCtx = baseCanvas.getContext('2d')
   } else if (data.type === 'render') {
     handleRender(data)
   }

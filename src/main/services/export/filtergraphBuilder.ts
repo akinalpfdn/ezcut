@@ -12,7 +12,7 @@ import {
   type TransitionType
 } from '@shared'
 import { AUDIO_FX_CONFIG } from '../../config/audioFx'
-import { escapeDrawtextText, resolveTextFontName } from './textFont'
+import { escapeDrawtextText, resolveFamilyFontName } from './textFont'
 
 /** Each transition type's ffmpeg `xfade` transition name. */
 const XFADE_NAMES: Record<TransitionType, string> = {
@@ -259,15 +259,21 @@ export async function buildFiltergraph(
   // Windows paths out of the filtergraph entirely. Centred via text_w/text_h.
   const textTempFiles: string[] = []
   if (model.textOverlays.length > 0) {
-    const fontName = resolveTextFontName()
     for (const overlay of model.textOverlays) {
+      const fontName = resolveFamilyFontName(overlay.fontFamily)
       const size = Math.max(1, Math.round(overlay.fontSize * height))
       const color = overlay.color.replace('#', '0x')
       const end = overlay.start + overlay.duration
       const out = `tx${chainCounter++}`
+      // Subtle shadow for legibility (mirrors the preview); optional translucent box.
+      const shadow = `:shadowcolor=black@0.6:shadowx=0:shadowy=${Math.max(1, Math.round(size * 0.03))}`
+      const box = overlay.background
+        ? `:box=1:boxcolor=black@0.5:boxborderw=${Math.max(1, Math.round(size * 0.25))}`
+        : ''
       parts.push(
         `[${videoLabel}]drawtext=font='${fontName}':text=${escapeDrawtextText(overlay.text)}:` +
-          `fontsize=${size}:fontcolor=${color}:x=${overlay.x.toFixed(4)}*w-text_w/2:y=${overlay.y.toFixed(4)}*h-text_h/2:` +
+          `fontsize=${size}:fontcolor=${color}${box}${shadow}:` +
+          `x=${overlay.x.toFixed(4)}*w-text_w/2:y=${overlay.y.toFixed(4)}*h-text_h/2:` +
           `enable='between(t,${overlay.start.toFixed(3)},${end.toFixed(3)})'[${out}]`
       )
       videoLabel = out

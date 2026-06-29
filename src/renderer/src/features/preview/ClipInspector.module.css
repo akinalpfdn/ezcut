@@ -94,6 +94,12 @@
   color: var(--color-on-primary);
 }
 
+.hint {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
 .fxLabel {
   font-size: var(--text-xs);
   color: var(--color-text-muted);

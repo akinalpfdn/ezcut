@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import type { TextOverlay } from '@shared'
+import { FONT_FAMILIES, type FontFamily, type TextOverlay } from '@shared'
 import { useTimelineStore } from '../../stores/timelineStore'
 import { NumberField } from '../../components/NumberField'
 import styles from './ClipInspector.module.css'
@@ -29,6 +29,21 @@ export function TextInspector() {
       />
 
       <label className={styles.field}>
+        <span className={styles.label}>{t('textInspector.font')}</span>
+        <select
+          className={styles.select}
+          value={overlay.fontFamily}
+          onChange={(event) => update({ fontFamily: event.target.value as FontFamily })}
+        >
+          {FONT_FAMILIES.map((family) => (
+            <option key={family} value={family}>
+              {t(`fontFamily.${family}`)}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <label className={styles.field}>
         <span className={styles.label}>{t('textInspector.size')}</span>
         <NumberField
           className={styles.number}
@@ -43,6 +58,17 @@ export function TextInspector() {
         <span className={styles.label}>{t('textInspector.color')}</span>
         <input type="color" value={overlay.color} onChange={(event) => update({ color: event.target.value })} />
       </label>
+
+      <button
+        type="button"
+        className={overlay.background ? `${styles.toggle} ${styles.toggleOn}` : styles.toggle}
+        aria-pressed={overlay.background}
+        onClick={() => update({ background: !overlay.background })}
+      >
+        {t('textInspector.box')}
+      </button>
+
+      <p className={styles.hint}>{t('textInspector.dragHint')}</p>
 
       <button
         type="button"

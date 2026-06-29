@@ -125,6 +125,10 @@ interface TimelineState {
   removeTextOverlay: (id: string) => void
   updateTextOverlay: (id: string, patch: Partial<TextOverlay>) => void
   moveTextOverlay: (id: string, start: number, duration: number) => void
+  /** Live x/y position update during a preview drag (transient, no undo entry). */
+  dragOverlayPosition: (id: string, x: number, y: number) => void
+  /** Commits a finished preview drag as a single undoable move from the start position. */
+  commitOverlayPosition: (id: string, fromX: number, fromY: number) => void
   selectOverlay: (id: string | null) => void
 
   selectClip: (clipId: string | null) => void
@@ -514,7 +518,9 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
       x: 0.5,
       y: 0.85,
       fontSize: 0.06,
-      color: '#ffffff'
+      color: '#ffffff',
+      background: false,
+      fontFamily: 'sans'
     }
     get().execute(addTextOverlayCommand(overlay))
     set({ selectedOverlayId: overlay.id, selectedClipId: null })
@@ -555,6 +561,22 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
         { start: nextStart, duration: nextDuration }
       )
     )
+  },
+
+  dragOverlayPosition: (id, x, y) =>
+    set((state) => ({
+      model: {
+        ...state.model,
+        textOverlays: state.model.textOverlays.map((overlay) =>
+          overlay.id === id ? { ...overlay, x, y } : overlay
+        )
+      }
+    })),
+
+  commitOverlayPosition: (id, fromX, fromY) => {
+    const overlay = get().model.textOverlays.find((candidate) => candidate.id === id)
+    if (!overlay || (overlay.x === fromX && overlay.y === fromY)) return
+    get().execute(setTextOverlayCommand(id, { x: fromX, y: fromY }, { x: overlay.x, y: overlay.y }))
   },
 
   selectOverlay: (id) => set({ selectedOverlayId: id, selectedClipId: null }),

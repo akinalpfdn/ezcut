@@ -25,6 +25,11 @@
   object-fit: contain;
 }
 
+/* A text overlay is selected: dragging on the preview repositions it. */
+.canvasDraggable {
+  cursor: move;
+}
+
 .empty {
   position: absolute;
   inset: 0;

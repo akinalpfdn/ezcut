@@ -90,8 +90,11 @@
   },
   "textInspector": {
     "placeholder": "Enter text…",
+    "font": "Font",
     "size": "Size",
     "color": "Color",
+    "box": "Box",
+    "dragHint": "Drag the text in the preview to position it",
     "remove": "Remove"
   },
   "transition": {
@@ -145,6 +148,11 @@
   "codec": {
     "h264": "H.264",
     "h265": "H.265 (smaller)"
+  },
+  "fontFamily": {
+    "sans": "Sans",
+    "serif": "Serif",
+    "mono": "Mono"
   },
   "export": {
     "title": "Export",
