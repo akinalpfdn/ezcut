@@ -1,6 +1,13 @@
 import type { FontFamily, TextAlign, TextEffect, TransitionType } from '@shared'
 import { ClipVideoSource } from './clipVideoSource'
 
+/** Scale + pan of a clip within the composition (1 = contain-fit, 0 = centred). */
+interface Transform {
+  scale: number
+  posX: number
+  posY: number
+}
+
 /** A clip to draw/prefetch: the resolved decode url (proxy or original) + the
  * source time to show. Clip selection + proxy resolution happen on the main
  * thread; this worker only demuxes, decodes, and draws. */
@@ -15,6 +22,7 @@ interface ClipRef {
 interface TransitionRef extends ClipRef {
   transitionType: TransitionType
   progress: number
+  transform: Transform
 }
 
 /** A text overlay to draw on top of the frame (position/size normalized to the frame). */
@@ -105,6 +113,10 @@ interface InitMessage {
 
 interface RenderMessage {
   type: 'render'
+  /** Composition (output frame) size, derived from the project aspect ratio. */
+  comp: { width: number; height: number }
+  /** Scale/pan of the active clip (also used for an image fallback). */
+  activeTransform: Transform
   hasActiveClip: boolean
   active: ClipRef | null
   next: ClipRef | null
@@ -190,6 +202,36 @@ function ensureThumbnail(url: string): ImageBitmap | null {
   return null
 }
 
+/** Resizes the base canvas to the composition (output) size. */
+function setComposition(width: number, height: number): void {
+  if (!baseCanvas) return
+  if (baseCanvas.width !== width || baseCanvas.height !== height) {
+    baseCanvas.width = width
+    baseCanvas.height = height
+  }
+  notifySize()
+}
+
+/** Contain-fit rect of a source (srcW×srcH) within the composition, then scaled +
+ * panned by the clip transform. */
+function containRect(srcW: number, srcH: number, t: Transform): { dx: number; dy: number; dw: number; dh: number } {
+  const cw = baseCanvas?.width ?? srcW
+  const ch = baseCanvas?.height ?? srcH
+  const fit = Math.min(cw / srcW, ch / srcH)
+  const dw = srcW * fit * t.scale
+  const dh = srcH * fit * t.scale
+  return { dx: (cw - dw) / 2 + t.posX * cw, dy: (ch - dh) / 2 + t.posY * ch, dw, dh }
+}
+
+/** Clears to black (letterbox), then draws the source contain-fit + transformed. */
+function drawSource(src: CanvasImageSource, srcW: number, srcH: number, t: Transform): void {
+  if (!baseCanvas || !baseCtx) return
+  baseCtx.fillStyle = '#000000'
+  baseCtx.fillRect(0, 0, baseCanvas.width, baseCanvas.height)
+  const r = containRect(srcW, srcH, t)
+  baseCtx.drawImage(src, r.dx, r.dy, r.dw, r.dh)
+}
+
 function clear(): void {
   if (!baseCanvas || !baseCtx) return
   baseCtx.fillStyle = '#000000'
@@ -197,56 +239,52 @@ function clear(): void {
   notifySize()
 }
 
-function drawFrame(frame: VideoFrame): void {
-  if (!baseCanvas || !baseCtx) return
-  if (baseCanvas.width !== frame.displayWidth || baseCanvas.height !== frame.displayHeight) {
-    baseCanvas.width = frame.displayWidth
-    baseCanvas.height = frame.displayHeight
-  }
-  baseCtx.drawImage(frame, 0, 0, baseCanvas.width, baseCanvas.height)
+function drawFrame(frame: VideoFrame, t: Transform): void {
+  drawSource(frame, frame.displayWidth, frame.displayHeight, t)
   notifySize()
 }
 
-/** Draws the incoming transition frame over the current canvas (what the active
- * clip already drew) WITHOUT resizing. Mirrors the families ffmpeg xfade exports:
- * crossfade=alpha, slide=offset, zoom=scale, wipe=rect clip, circle=circle clip. */
-function drawTransition(frame: VideoFrame, type: TransitionType, progress: number): void {
+/** Draws the incoming transition clip over the active one, contain-fit + transformed.
+ * Mirrors the ffmpeg xfade families: crossfade=alpha, slide=offset, zoom=scale,
+ * wipe=rect clip, circle=circle clip. Offsets span the whole composition. */
+function drawTransition(frame: VideoFrame, type: TransitionType, progress: number, t: Transform): void {
   if (!baseCanvas || !baseCtx) return
   const c = baseCtx
   const w = baseCanvas.width
   const h = baseCanvas.height
   const p = Math.max(0, Math.min(1, progress))
-
+  const r = containRect(frame.displayWidth, frame.displayHeight, t)
+  const blit = (offX: number, offY: number): void => c.drawImage(frame, r.dx + offX, r.dy + offY, r.dw, r.dh)
   const clipRect = (x: number, y: number, rw: number, rh: number): void => {
     c.save()
     c.beginPath()
     c.rect(x, y, rw, rh)
     c.clip()
-    c.drawImage(frame, 0, 0, w, h)
+    blit(0, 0)
     c.restore()
   }
 
   switch (type) {
     case 'crossfade':
       c.globalAlpha = p
-      c.drawImage(frame, 0, 0, w, h)
+      blit(0, 0)
       c.globalAlpha = 1
       return
     case 'slideLeft':
-      c.drawImage(frame, w * (1 - p), 0, w, h)
+      blit(w * (1 - p), 0)
       return
     case 'slideRight':
-      c.drawImage(frame, -w * (1 - p), 0, w, h)
+      blit(-w * (1 - p), 0)
       return
     case 'slideUp':
-      c.drawImage(frame, 0, h * (1 - p), w, h)
+      blit(0, h * (1 - p))
       return
     case 'slideDown':
-      c.drawImage(frame, 0, -h * (1 - p), w, h)
+      blit(0, -h * (1 - p))
       return
     case 'zoomIn':
       c.globalAlpha = p
-      c.drawImage(frame, (w - w * p) / 2, (h - h * p) / 2, w * p, h * p)
+      c.drawImage(frame, r.dx + (r.dw * (1 - p)) / 2, r.dy + (r.dh * (1 - p)) / 2, r.dw * p, r.dh * p)
       c.globalAlpha = 1
       return
     case 'wipeLeft':
@@ -266,7 +304,7 @@ function drawTransition(frame: VideoFrame, type: TransitionType, progress: numbe
       c.beginPath()
       c.arc(w / 2, h / 2, (Math.hypot(w, h) / 2) * p, 0, Math.PI * 2)
       c.clip()
-      c.drawImage(frame, 0, 0, w, h)
+      blit(0, 0)
       c.restore()
       return
     case 'circleClose':
@@ -275,21 +313,16 @@ function drawTransition(frame: VideoFrame, type: TransitionType, progress: numbe
       c.rect(0, 0, w, h)
       c.arc(w / 2, h / 2, (Math.hypot(w, h) / 2) * (1 - p), 0, Math.PI * 2, true)
       c.clip('evenodd')
-      c.drawImage(frame, 0, 0, w, h)
+      blit(0, 0)
       c.restore()
       return
   }
 }
 
-function drawThumbnail(url: string): void {
-  if (!baseCanvas || !baseCtx) return
+function drawThumbnail(url: string, t: Transform): void {
   const bitmap = ensureThumbnail(url)
   if (!bitmap) return // not ready yet — keep the last drawn content
-  if (baseCanvas.width !== bitmap.width || baseCanvas.height !== bitmap.height) {
-    baseCanvas.width = bitmap.width
-    baseCanvas.height = bitmap.height
-  }
-  baseCtx.drawImage(bitmap, 0, 0, baseCanvas.width, baseCanvas.height)
+  drawSource(bitmap, bitmap.width, bitmap.height, t)
   notifySize()
 }
 
@@ -434,6 +467,8 @@ function drawTexts(texts: TextDraw[]): void {
 
 function handleRender(message: RenderMessage): void {
   const keep = new Set<string>()
+  setComposition(message.comp.width, message.comp.height)
+  const activeTransform = message.activeTransform
 
   if (!message.hasActiveClip) {
     clear()
@@ -443,14 +478,14 @@ function handleRender(message: RenderMessage): void {
       const source = ensureSource(message.active.clipId, message.active.fileUrl)
       const frame = source?.isLoaded ? source.frameAt(message.active.sourceUs) : null
       if (frame) {
-        drawFrame(frame)
+        drawFrame(frame, activeTransform)
       } else if ((!source || !source.isLoaded) && message.fallbackUrl) {
         // Initial load / proxy still generating — show the thumbnail (a brief
         // mid-playback decode gap instead keeps the last frame, no flash).
-        drawThumbnail(message.fallbackUrl)
+        drawThumbnail(message.fallbackUrl, activeTransform)
       }
     } else if (message.fallbackUrl) {
-      drawThumbnail(message.fallbackUrl)
+      drawThumbnail(message.fallbackUrl, activeTransform)
     } else {
       // Active clip whose media/url can't be resolved (a dangling reference in a
       // loaded project, or a proxy still generating with no thumbnail) — clear
@@ -463,7 +498,9 @@ function handleRender(message: RenderMessage): void {
       keep.add(message.transition.clipId)
       const source = ensureSource(message.transition.clipId, message.transition.fileUrl)
       const frame = source?.isLoaded ? source.frameAt(message.transition.sourceUs) : null
-      if (frame) drawTransition(frame, message.transition.transitionType, message.transition.progress)
+      if (frame) {
+        drawTransition(frame, message.transition.transitionType, message.transition.progress, message.transition.transform)
+      }
     }
 
     if (message.next) {

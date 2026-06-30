@@ -1,10 +1,12 @@
 import { useEffect, useRef, type RefObject } from 'react'
 import {
   clipTimelineEnd,
+  compositionSize,
   getClipTransition,
   getTrackClips,
   getTracksSorted,
   timelineTimeToSource,
+  type Clip,
   type MediaItem,
   type TransitionType
 } from '@shared'
@@ -16,6 +18,17 @@ import { toMediaUrl } from '../../../utils/mediaUrl'
 import { previewNeedsProxy } from '../../../utils/proxyPolicy'
 import { animState } from '../textAnimation'
 
+interface Transform {
+  scale: number
+  posX: number
+  posY: number
+}
+
+const transformOf = (clip: Clip): Transform => ({ scale: clip.scale, posX: clip.posX, posY: clip.posY })
+
+/** Preview composition long edge (px); the worker draws into this resolution. */
+const PREVIEW_LONG_EDGE = 1280
+
 interface ClipRef {
   clipId: string
   fileUrl: string
@@ -25,6 +38,7 @@ interface ClipRef {
 interface TransitionRef extends ClipRef {
   transitionType: TransitionType
   progress: number
+  transform: Transform
 }
 
 /**
@@ -98,6 +112,8 @@ export function useCanvasCompositor(
       const playheadTime = useTransportStore.getState().playheadTime
       const items = useMediaStore.getState().items
       const videoTrack = getTracksSorted(model).find((track) => track.kind === 'video')
+      const comp = compositionSize(model.aspectRatio, PREVIEW_LONG_EDGE)
+      let activeTransform: Transform = { scale: 1, posX: 0, posY: 0 }
 
       const texts = model.textOverlays
         .filter((overlay) => playheadTime >= overlay.start && playheadTime < overlay.start + overlay.duration)
@@ -160,6 +176,7 @@ export function useCanvasCompositor(
 
         if (activeClip) {
           hasActiveClip = true
+          activeTransform = transformOf(activeClip)
           const media = items.find((item) => item.id === activeClip.mediaId)
           if (media && media.kind === 'image') {
             // Still image: drawn straight from the file (worker's image path), no
@@ -190,7 +207,14 @@ export function useCanvasCompositor(
           if (url) {
             const progress = Math.min(1, Math.max(0, (playheadTime - xfade.next.startOnTimeline) / xfade.duration))
             const sourceUs = Math.max(0, timelineTimeToSource(xfade.next, playheadTime)) * 1_000_000
-            transition = { clipId: xfade.next.id, fileUrl: url, sourceUs, transitionType: xfade.type, progress }
+            transition = {
+              clipId: xfade.next.id,
+              fileUrl: url,
+              sourceUs,
+              transitionType: xfade.type,
+              progress,
+              transform: transformOf(xfade.next)
+            }
           }
         }
       }
@@ -204,10 +228,11 @@ export function useCanvasCompositor(
             `${t.text}|${t.x}|${t.y}|${t.fontSize}|${t.color}|${t.fillType}|${t.gradientFrom}|${t.gradientTo}|${t.gradientAngle}|${t.background}|${t.fontFamily}|${t.align}|${t.bold}|${t.italic}|${t.effect}|${t.effectColor}|${t.effectIntensity}|${t.effectDirection}|${t.boxColor}|${t.boxOpacity}|${t.boxRadius}|${t.boxPadding}|${t.opacity}|${t.rotation}|${t.animAlpha.toFixed(3)}|${t.animDx.toFixed(4)}|${t.animDy.toFixed(4)}|${t.animScale.toFixed(3)}|${t.animReveal.toFixed(3)}`
         )
         .join('~')
-      const sig = `${hasActiveClip}|${active?.clipId ?? ''}|${active?.fileUrl ?? ''}|${active?.sourceUs ?? ''}|${next?.clipId ?? ''}|${next?.fileUrl ?? ''}|${next?.sourceUs ?? ''}|${fallbackUrl ?? ''}|${transition?.clipId ?? ''}|${transition?.sourceUs ?? ''}|${transition?.transitionType ?? ''}|${transition?.progress ?? ''}|${textsSig}`
+      const tSig = `${transition?.transform.scale ?? ''}|${transition?.transform.posX ?? ''}|${transition?.transform.posY ?? ''}`
+      const sig = `${comp.width}x${comp.height}|${activeTransform.scale}|${activeTransform.posX}|${activeTransform.posY}|${hasActiveClip}|${active?.clipId ?? ''}|${active?.fileUrl ?? ''}|${active?.sourceUs ?? ''}|${next?.clipId ?? ''}|${next?.fileUrl ?? ''}|${next?.sourceUs ?? ''}|${fallbackUrl ?? ''}|${transition?.clipId ?? ''}|${transition?.sourceUs ?? ''}|${transition?.transitionType ?? ''}|${transition?.progress ?? ''}|${tSig}|${textsSig}`
       if (sig !== lastSig) {
         lastSig = sig
-        worker.postMessage({ type: 'render', hasActiveClip, active, next, transition, texts, fallbackUrl })
+        worker.postMessage({ type: 'render', comp, activeTransform, hasActiveClip, active, next, transition, texts, fallbackUrl })
       }
       rafId = requestAnimationFrame(render)
     }

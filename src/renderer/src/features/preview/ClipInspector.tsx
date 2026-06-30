@@ -5,6 +5,7 @@ import { useMediaStore } from '../../stores/mediaStore'
 import { useDenoiseStore } from '../../stores/denoiseStore'
 import { MAX_CLIP_VOLUME, PLAYBACK_SPEEDS } from '../../config/playback'
 import { NumberField } from '../../components/NumberField'
+import { SliderField } from '../../components/SliderField'
 import styles from './ClipInspector.module.css'
 
 export function ClipInspector() {
@@ -31,6 +32,39 @@ export function ClipInspector() {
       <span className={styles.name} title={media?.name}>
         {media?.name ?? '—'}
       </span>
+
+      {media?.kind !== 'audio' ? (
+        <div className={styles.section}>
+          <span className={styles.sectionTitle}>{t('inspector.transform')}</span>
+          <label className={styles.field}>
+            <span className={styles.label}>{t('inspector.scale')}</span>
+            <SliderField
+              min={10}
+              max={300}
+              value={Math.round(clip.scale * 100)}
+              onChange={(value) => useTimelineStore.getState().setClipTransform(clip.id, { scale: value / 100 })}
+            />
+          </label>
+          <label className={styles.field}>
+            <span className={styles.label}>{t('inspector.posX')}</span>
+            <SliderField
+              min={-50}
+              max={50}
+              value={Math.round(clip.posX * 100)}
+              onChange={(value) => useTimelineStore.getState().setClipTransform(clip.id, { posX: value / 100 })}
+            />
+          </label>
+          <label className={styles.field}>
+            <span className={styles.label}>{t('inspector.posY')}</span>
+            <SliderField
+              min={-50}
+              max={50}
+              value={Math.round(clip.posY * 100)}
+              onChange={(value) => useTimelineStore.getState().setClipTransform(clip.id, { posY: value / 100 })}
+            />
+          </label>
+        </div>
+      ) : null}
 
       <label className={styles.field}>
         <span className={styles.label}>{t('inspector.speed')}</span>

@@ -54,7 +54,11 @@ const clipSchema = z.object({
       ]),
       duration: z.number()
     })
-    .optional()
+    .optional(),
+  // Composition transform (interim phase) — defaulted for older projects.
+  scale: z.number().default(1),
+  posX: z.number().default(0),
+  posY: z.number().default(0)
 })
 
 const trackSchema = z.object({
@@ -139,7 +143,8 @@ const projectFileSchema = z.object({
     clips: z.record(z.string(), clipSchema),
     // Older projects predate these; defaults keep them loadable.
     markers: z.array(z.number()).default([]),
-    textOverlays: z.array(textOverlaySchema).default([])
+    textOverlays: z.array(textOverlaySchema).default([]),
+    aspectRatio: z.enum(['16:9', '9:16', '1:1', '4:5']).default('16:9')
   }),
   media: z.array(mediaItemSchema)
 })

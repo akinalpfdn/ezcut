@@ -32,6 +32,9 @@ function makeClip(overrides: Partial<Clip> = {}): Clip {
     muted: false,
     denoise: { enabled: false, strength: 0.5 },
     audioFx: DEFAULT_AUDIO_FX,
+    scale: 1,
+    posX: 0,
+    posY: 0,
     ...overrides
   }
 }
@@ -41,7 +44,8 @@ function makeModel(clips: Clip[], tracks?: Track[]): TimelineModel {
     tracks: tracks ?? [{ id: 't-video', kind: 'video', index: 0, label: 'V1', muted: false, solo: false }],
     clips: Object.fromEntries(clips.map((clip) => [clip.id, clip])),
     markers: [],
-    textOverlays: []
+    textOverlays: [],
+    aspectRatio: '16:9'
   }
 }
 

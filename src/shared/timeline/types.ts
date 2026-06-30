@@ -110,6 +110,11 @@ export interface Clip {
   audioFx: AudioFx
   /** Transition into the next adjacent clip on this track (overlap blend). */
   transitionOut?: Transition
+  /** Zoom relative to the contain-fit size in the composition (1 = fit). */
+  scale: number
+  /** Pan as a fraction of the composition (0 = centred). */
+  posX: number
+  posY: number
 }
 
 /** Text overlay font family: a generic preset ('sans'/'serif'/'mono') or any
@@ -225,6 +230,25 @@ export interface TextOverlay {
   animOutDuration: number
 }
 
+/** Project aspect ratio (the composition frame the video is fitted into). */
+export type AspectRatio = '16:9' | '9:16' | '1:1' | '4:5'
+export const ASPECT_RATIOS: AspectRatio[] = ['16:9', '9:16', '1:1', '4:5']
+
+const ASPECT_WH: Record<AspectRatio, [number, number]> = {
+  '16:9': [16, 9],
+  '9:16': [9, 16],
+  '1:1': [1, 1],
+  '4:5': [4, 5]
+}
+
+/** Composition pixel size for an aspect, fitting within longEdge (even dimensions). */
+export function compositionSize(aspect: AspectRatio, longEdge: number): { width: number; height: number } {
+  const [aw, ah] = ASPECT_WH[aspect]
+  const even = (n: number): number => Math.max(2, Math.round(n / 2) * 2)
+  if (aw >= ah) return { width: even(longEdge), height: even((longEdge * ah) / aw) }
+  return { width: even((longEdge * aw) / ah), height: even(longEdge) }
+}
+
 export interface TimelineModel {
   tracks: Track[]
   /** Clips keyed by id. */
@@ -233,4 +257,6 @@ export interface TimelineModel {
   markers: number[]
   /** Text titles rendered over the video. */
   textOverlays: TextOverlay[]
+  /** Composition aspect ratio. */
+  aspectRatio: AspectRatio
 }

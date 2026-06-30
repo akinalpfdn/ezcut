@@ -32,6 +32,9 @@ function makeClip(overrides: Partial<Clip> = {}): Clip {
     muted: false,
     denoise: { enabled: false, strength: 0.5 },
     audioFx: DEFAULT_AUDIO_FX,
+    scale: 1,
+    posX: 0,
+    posY: 0,
     ...overrides
   }
 }
@@ -44,7 +47,8 @@ function makeModel(clips: Clip[]): TimelineModel {
     ],
     clips: Object.fromEntries(clips.map((clip) => [clip.id, clip])),
     markers: [],
-    textOverlays: []
+    textOverlays: [],
+    aspectRatio: '16:9'
   }
 }
 
@@ -118,7 +122,8 @@ describe('getTracksSorted', () => {
       ],
       clips: {},
       markers: [],
-      textOverlays: []
+      textOverlays: [],
+      aspectRatio: '16:9'
     }
     expect(getTracksSorted(model).map((track) => track.id)).toEqual(['v', 'a'])
   })

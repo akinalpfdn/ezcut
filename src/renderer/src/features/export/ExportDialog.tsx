@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { AppErrorPayload, ExportCodec, ExportContainer, QualityPreset } from '@shared'
+import { compositionSize, type AppErrorPayload, type ExportCodec, type ExportContainer, type QualityPreset } from '@shared'
 import { useTimelineStore } from '../../stores/timelineStore'
 import { useMediaStore } from '../../stores/mediaStore'
 import { exportService } from '../../services/exportService'
@@ -23,6 +23,7 @@ interface ExportDialogProps {
 export function ExportDialog({ onClose }: ExportDialogProps) {
   const { t } = useTranslation()
   const hasClips = useTimelineStore((state) => Object.keys(state.model.clips).length > 0)
+  const aspectRatio = useTimelineStore((state) => state.model.aspectRatio)
   const sourceVideo = useMediaStore(
     (state) =>
       state.items.find(
@@ -49,11 +50,17 @@ export function ExportDialog({ onClose }: ExportDialogProps) {
   const [error, setError] = useState<AppErrorPayload | null>(null)
   const cancelledRef = useRef(false)
 
+  // Export dimensions follow the project's aspect ratio; the resolution preset only
+  // picks the long edge (so "1080p" is 1920×1080 landscape or 1080×1920 portrait).
   function resolveSize(): { width: number; height: number } {
-    if (resolutionId === 'source') return source
-    if (resolutionId === 'custom') return { width: customWidth, height: customHeight }
-    const preset = RESOLUTION_PRESETS.find((entry) => entry.id === resolutionId)
-    return { width: preset?.width ?? source.width, height: preset?.height ?? source.height }
+    let longEdge: number
+    if (resolutionId === 'source') longEdge = Math.max(source.width, source.height)
+    else if (resolutionId === 'custom') longEdge = Math.max(customWidth, customHeight)
+    else {
+      const preset = RESOLUTION_PRESETS.find((entry) => entry.id === resolutionId)
+      longEdge = preset?.width && preset.height ? Math.max(preset.width, preset.height) : Math.max(source.width, source.height)
+    }
+    return compositionSize(aspectRatio, longEdge)
   }
 
   async function handleExport(): Promise<void> {

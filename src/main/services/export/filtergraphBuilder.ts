@@ -177,18 +177,31 @@ export async function buildFiltergraph(
         const label = `v${index}`
         // Normalized, 0-based stream — the chain (below) sequences clips via
         // concat/xfade, so no timeline positioning here. Always yuv420p; xfade blends.
-        const fit =
-          `scale=${width}:${height}:force_original_aspect_ratio=decrease,` +
-          `pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1,fps=${fps},format=yuv420p`
-        if (isImage) {
-          // Loop the still for the clip's span; no trim/speed (it has no source time).
-          videoInput = addInput(item.path, ['-loop', '1', '-t', length.toFixed(3)])
-          parts.push(`[${videoInput}:v]setpts=PTS-STARTPTS,${fit}[${label}]`)
-        } else {
-          videoInput = addInput(item.path)
+        const prefix = isImage
+          ? // Loop the still for the clip's span; no trim/speed (it has no source time).
+            `[${(videoInput = addInput(item.path, ['-loop', '1', '-t', length.toFixed(3)]))}:v]setpts=PTS-STARTPTS`
+          : `[${(videoInput = addInput(item.path))}:v]trim=start=${clip.sourceIn}:end=${clip.sourceOut},setpts=(PTS-STARTPTS)/${speed}`
+
+        const transformed = clip.scale !== 1 || clip.posX !== 0 || clip.posY !== 0
+        if (!transformed) {
+          // Contain-fit, centred (the default).
           parts.push(
-            `[${videoInput}:v]trim=start=${clip.sourceIn}:end=${clip.sourceOut},` +
-              `setpts=(PTS-STARTPTS)/${speed},${fit}[${label}]`
+            `${prefix},scale=${width}:${height}:force_original_aspect_ratio=decrease,` +
+              `pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1,fps=${fps},format=yuv420p[${label}]`
+          )
+        } else {
+          // Scale the contain-fit by clip.scale, then overlay onto a black frame at the
+          // pan offset (overlay crops what spills past the frame). Mirrors the preview.
+          const scaled = `sc${chainCounter++}`
+          const bg = `bg${chainCounter++}`
+          parts.push(
+            `${prefix},scale=${Math.round(width * clip.scale)}:${Math.round(height * clip.scale)}:` +
+              `force_original_aspect_ratio=decrease,setsar=1,fps=${fps},format=yuv420p[${scaled}]`
+          )
+          parts.push(`color=c=black:s=${width}x${height}:r=${fps}:d=${length.toFixed(3)},format=yuv420p[${bg}]`)
+          parts.push(
+            `[${bg}][${scaled}]overlay=x=(W-w)/2+(${clip.posX.toFixed(4)})*W:` +
+              `y=(H-h)/2+(${clip.posY.toFixed(4)})*H:shortest=1,format=yuv420p[${label}]`
           )
         }
         videoStreams.push({ clip, label, length })

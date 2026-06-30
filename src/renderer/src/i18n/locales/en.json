@@ -32,6 +32,9 @@
   "preview": {
     "empty": "Select a clip to preview"
   },
+  "format": {
+    "label": "Format"
+  },
   "transport": {
     "play": "Play",
     "pause": "Pause",
@@ -69,6 +72,10 @@
   },
   "inspector": {
     "empty": "Select a clip or text to edit its properties",
+    "transform": "Transform",
+    "scale": "Scale",
+    "posX": "X",
+    "posY": "Y",
     "speed": "Speed",
     "volume": "Volume",
     "fadeIn": "Fade in",

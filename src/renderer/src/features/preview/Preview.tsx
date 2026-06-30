@@ -1,6 +1,6 @@
-import { useRef, type PointerEvent as ReactPointerEvent } from 'react'
+import { useRef, type PointerEvent as ReactPointerEvent, type WheelEvent as ReactWheelEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { FontFamily, TextOverlay } from '@shared'
+import { clipTimelineEnd, getTrackClips, getTracksSorted, type FontFamily, type TextOverlay } from '@shared'
 import { useTimelineStore } from '../../stores/timelineStore'
 import { useTransportStore } from '../../stores/transportStore'
 import { useCanvasCompositor } from './webcodecs/useCanvasCompositor'
@@ -59,6 +59,15 @@ export function Preview() {
   // letterboxing when mapping a pointer onto the frame for text drag-to-position.
   const frameSizeRef = useRef({ width: 0, height: 0 })
   const dragRef = useRef<{ id: string; origX: number; origY: number; grabX: number; grabY: number } | null>(null)
+  // Clip pan drag (when not dragging a text overlay).
+  const clipDragRef = useRef<{
+    id: string
+    origScale: number
+    origPosX: number
+    origPosY: number
+    grabX: number
+    grabY: number
+  } | null>(null)
 
   // Video is composited on the canvas (WebCodecs); audio is the master clock
   // (Web Audio) that the canvas follows. No media elements.
@@ -83,6 +92,18 @@ export function Preview() {
 
   const clamp01 = (value: number): number => Math.min(1, Math.max(0, value))
 
+  // The video clip under the playhead (the one shown), for pan/zoom in the preview.
+  const activeVideoClip = (): { id: string; scale: number; posX: number; posY: number } | null => {
+    const model = useTimelineStore.getState().model
+    const playhead = useTransportStore.getState().playheadTime
+    const videoTrack = getTracksSorted(model).find((track) => track.kind === 'video')
+    if (!videoTrack) return null
+    const clip = getTrackClips(model, videoTrack.id).find(
+      (candidate) => playhead >= candidate.startOnTimeline && playhead < clipTimelineEnd(candidate)
+    )
+    return clip ? { id: clip.id, scale: clip.scale, posX: clip.posX, posY: clip.posY } : null
+  }
+
   // Click a visible text to select it (hit-test against its measured bounds), then
   // drag it in the same gesture. Clicking empty space deselects. Drag moves by the
   // pointer's delta (no jump on click).
@@ -105,7 +126,20 @@ export function Preview() {
       }
     }
     if (!hit) {
+      // No text under the pointer: deselect any overlay and start panning the clip.
       if (state.selectedOverlayId) state.selectOverlay(null)
+      const active = activeVideoClip()
+      if (active) {
+        event.currentTarget.setPointerCapture(event.pointerId)
+        clipDragRef.current = {
+          id: active.id,
+          origScale: active.scale,
+          origPosX: active.posX,
+          origPosY: active.posY,
+          grabX: grab.x,
+          grabY: grab.y
+        }
+      }
       return
     }
     if (state.selectedOverlayId !== hit.id) state.selectOverlay(hit.id)
@@ -114,23 +148,50 @@ export function Preview() {
   }
 
   const onPointerMove = (event: ReactPointerEvent<HTMLCanvasElement>): void => {
-    const drag = dragRef.current
-    if (!drag) return
     const point = mapPointer(event.clientX, event.clientY)
     if (!point) return
-    const x = clamp01(drag.origX + (point.x - drag.grabX))
-    const y = clamp01(drag.origY + (point.y - drag.grabY))
-    useTimelineStore.getState().dragOverlayPosition(drag.id, x, y)
+    const drag = dragRef.current
+    if (drag) {
+      const x = clamp01(drag.origX + (point.x - drag.grabX))
+      const y = clamp01(drag.origY + (point.y - drag.grabY))
+      useTimelineStore.getState().dragOverlayPosition(drag.id, x, y)
+      return
+    }
+    const clipDrag = clipDragRef.current
+    if (clipDrag) {
+      useTimelineStore.getState().dragClipTransform(clipDrag.id, {
+        posX: clipDrag.origPosX + (point.x - clipDrag.grabX),
+        posY: clipDrag.origPosY + (point.y - clipDrag.grabY)
+      })
+    }
   }
 
   const onPointerUp = (event: ReactPointerEvent<HTMLCanvasElement>): void => {
-    const drag = dragRef.current
-    if (!drag) return
-    dragRef.current = null
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId)
     }
-    useTimelineStore.getState().commitOverlayPosition(drag.id, drag.origX, drag.origY)
+    const drag = dragRef.current
+    if (drag) {
+      dragRef.current = null
+      useTimelineStore.getState().commitOverlayPosition(drag.id, drag.origX, drag.origY)
+      return
+    }
+    const clipDrag = clipDragRef.current
+    if (clipDrag) {
+      clipDragRef.current = null
+      useTimelineStore
+        .getState()
+        .commitClipTransform(clipDrag.id, { scale: clipDrag.origScale, posX: clipDrag.origPosX, posY: clipDrag.origPosY })
+    }
+  }
+
+  // Wheel over the preview zooms the active clip (no text overlay selected).
+  const onWheel = (event: ReactWheelEvent<HTMLCanvasElement>): void => {
+    const active = activeVideoClip()
+    if (!active) return
+    const factor = event.deltaY < 0 ? 1.06 : 1 / 1.06
+    const scale = Math.min(5, Math.max(0.1, active.scale * factor))
+    useTimelineStore.getState().setClipTransform(active.id, { scale })
   }
 
   return (
@@ -143,6 +204,7 @@ export function Preview() {
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerUp}
+          onWheel={onWheel}
         />
         {!hasClips ? <div className={styles.empty}>{t('preview.empty')}</div> : null}
       </div>

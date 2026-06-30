@@ -9,6 +9,7 @@ import {
   nextClipOnTrack,
   resolveNonOverlappingStart,
   splitPoint,
+  type AspectRatio,
   type AudioFx,
   type Clip,
   type DenoiseSettings,
@@ -52,7 +53,8 @@ function createInitialModel(): TimelineModel {
     ],
     clips: {},
     markers: [],
-    textOverlays: []
+    textOverlays: [],
+    aspectRatio: '16:9'
   }
 }
 
@@ -109,6 +111,11 @@ interface TimelineState {
   addAudioTrack: () => void
   setClipSpeed: (clipId: string, speed: number) => void
   setClipVolume: (clipId: string, volume: number) => void
+  setAspectRatio: (aspect: AspectRatio) => void
+  setClipTransform: (clipId: string, patch: { scale?: number; posX?: number; posY?: number }) => void
+  /** Live transform update during a preview drag (no undo entry). */
+  dragClipTransform: (clipId: string, patch: { scale?: number; posX?: number; posY?: number }) => void
+  commitClipTransform: (clipId: string, before: { scale: number; posX: number; posY: number }) => void
   setClipFade: (clipId: string, fade: { fadeIn?: number; fadeOut?: number }) => void
   toggleClipMute: (clipId: string) => void
   toggleTrackMute: (trackId: string) => void
@@ -204,7 +211,10 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
       fadeOut: 0,
       muted: false,
       denoise: { enabled: false, strength: 0.5 },
-      audioFx: DEFAULT_AUDIO_FX
+      audioFx: DEFAULT_AUDIO_FX,
+      scale: 1,
+      posX: 0,
+      posY: 0
     }
     get().execute(addClipCommand(clip))
     set({ selectedClipId: clip.id })
@@ -386,6 +396,43 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
     const clip = get().model.clips[clipId]
     if (!clip || volume === clip.volume) return
     get().execute(setClipPropertyCommand(clipId, { volume: clip.volume }, { volume }))
+  },
+
+  setAspectRatio: (aspect) => set((state) => ({ model: { ...state.model, aspectRatio: aspect } })),
+
+  setClipTransform: (clipId, patch) => {
+    const clip = get().model.clips[clipId]
+    if (!clip) return
+    const before: Partial<Clip> = {}
+    const after: Partial<Clip> = {}
+    for (const key of ['scale', 'posX', 'posY'] as const) {
+      const value = patch[key]
+      if (value !== undefined && value !== clip[key]) {
+        before[key] = clip[key]
+        after[key] = value
+      }
+    }
+    if (Object.keys(after).length === 0) return
+    get().execute(setClipPropertyCommand(clipId, before, after))
+  },
+
+  dragClipTransform: (clipId, patch) =>
+    set((state) => {
+      const clip = state.model.clips[clipId]
+      if (!clip) return {}
+      return { model: { ...state.model, clips: { ...state.model.clips, [clipId]: { ...clip, ...patch } } } }
+    }),
+
+  commitClipTransform: (clipId, before) => {
+    const clip = get().model.clips[clipId]
+    if (!clip || (clip.scale === before.scale && clip.posX === before.posX && clip.posY === before.posY)) return
+    get().execute(
+      setClipPropertyCommand(
+        clipId,
+        { scale: before.scale, posX: before.posX, posY: before.posY },
+        { scale: clip.scale, posX: clip.posX, posY: clip.posY }
+      )
+    )
   },
 
   setClipFade: (clipId, fade) => {

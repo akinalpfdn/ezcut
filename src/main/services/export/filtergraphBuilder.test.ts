@@ -19,11 +19,15 @@ function imageModel(): TimelineModel {
         fadeOut: 0,
         muted: false,
         denoise: { enabled: false, strength: 0.5 },
-        audioFx: DEFAULT_AUDIO_FX
+        audioFx: DEFAULT_AUDIO_FX,
+        scale: 1,
+        posX: 0,
+        posY: 0
       }
     },
     markers: [],
-    textOverlays: []
+    textOverlays: [],
+    aspectRatio: '16:9'
   }
 }
 
@@ -57,6 +61,9 @@ function videoClip(id: string, mediaId: string, start: number, extra: Record<str
     muted: false,
     denoise: { enabled: false, strength: 0.5 },
     audioFx: DEFAULT_AUDIO_FX,
+    scale: 1,
+    posX: 0,
+    posY: 0,
     ...extra
   }
 }
@@ -70,7 +77,8 @@ function transitionModel(type: string): TimelineModel {
       b: videoClip('b', 'vb', 2)
     },
     markers: [],
-    textOverlays: []
+    textOverlays: [],
+    aspectRatio: '16:9'
   }
 }
 
@@ -222,6 +230,28 @@ function textModel(text: string): TimelineModel {
 }
 
 const render = { width: 1280, height: 720, fps: 30 }
+
+describe('buildFiltergraph (clip transform)', () => {
+  it('should contain-fit + pad an untransformed clip (no overlay)', async () => {
+    const graph = await buildFiltergraph(transitionModel('crossfade'), videoMedia, render, async () => '')
+    expect(graph.filterComplex).toContain('force_original_aspect_ratio=decrease')
+    expect(graph.filterComplex).not.toContain('overlay=')
+  })
+
+  it('should scale + overlay a transformed clip onto black', async () => {
+    const model: TimelineModel = {
+      tracks: [{ id: 'v', kind: 'video', index: 0, label: 'V1', muted: false, solo: false }],
+      clips: { a: videoClip('a', 'va', 0, { scale: 1.5, posX: 0.1 }) },
+      markers: [],
+      textOverlays: [],
+      aspectRatio: '9:16'
+    }
+    const graph = await buildFiltergraph(model, videoMedia, { width: 1080, height: 1920, fps: 30 }, async () => '')
+    expect(graph.filterComplex).toContain('color=c=black:s=1080x1920')
+    expect(graph.filterComplex).toContain('overlay=x=(W-w)/2+(0.1000)*W')
+    expect(graph.filterComplex).toContain('scale=1620:2880') // 1080*1.5, 1920*1.5
+  })
+})
 
 describe('buildFiltergraph (text overlays via ASS)', () => {
   it('should burn in an ASS subtitle file when there are overlays', async () => {

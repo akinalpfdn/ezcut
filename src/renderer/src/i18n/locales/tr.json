@@ -32,6 +32,9 @@
   "preview": {
     "empty": "Önizlemek için bir klip seç"
   },
+  "format": {
+    "label": "Format"
+  },
   "transport": {
     "play": "Oynat",
     "pause": "Duraklat",
@@ -69,6 +72,10 @@
   },
   "inspector": {
     "empty": "Düzenlemek için bir klip ya da metin seç",
+    "transform": "Dönüşüm",
+    "scale": "Ölçek",
+    "posX": "X",
+    "posY": "Y",
     "speed": "Hız",
     "volume": "Ses",
     "fadeIn": "Açılış",
