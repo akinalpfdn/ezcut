@@ -521,7 +521,21 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
       color: '#ffffff',
       background: false,
       fontFamily: 'sans',
-      align: 'center'
+      align: 'center',
+      bold: true,
+      italic: false,
+      outlineColor: '#000000',
+      outlineWidth: 0,
+      boxColor: '#000000',
+      boxOpacity: 0.5,
+      boxRadius: 0,
+      boxPadding: 0.25,
+      opacity: 1,
+      rotation: 0,
+      animationIn: 'none',
+      animationOut: 'none',
+      animInDuration: 0.4,
+      animOutDuration: 0.4
     }
     get().execute(addTextOverlayCommand(overlay))
     set({ selectedOverlayId: overlay.id, selectedClipId: null })

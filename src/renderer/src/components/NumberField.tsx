@@ -6,6 +6,7 @@ interface NumberFieldProps {
   className?: string
   step?: number
   min?: number
+  max?: number
 }
 
 /**
@@ -15,7 +16,7 @@ interface NumberFieldProps {
  * field is focused (empty allowed), commits any valid number as you type, and
  * resyncs to the canonical value on blur.
  */
-export function NumberField({ value, onCommit, className, step, min }: NumberFieldProps) {
+export function NumberField({ value, onCommit, className, step, min, max }: NumberFieldProps) {
   const [text, setText] = useState(String(value))
   const focused = useRef(false)
 
@@ -30,6 +31,7 @@ export function NumberField({ value, onCommit, className, step, min }: NumberFie
       className={className}
       step={step}
       min={min}
+      max={max}
       value={text}
       onFocus={() => {
         focused.current = true

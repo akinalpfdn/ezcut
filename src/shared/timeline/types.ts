@@ -112,13 +112,37 @@ export interface Clip {
   transitionOut?: Transition
 }
 
-/** Text overlay font family (maps to a canvas generic + an ffmpeg fontconfig family). */
-export type FontFamily = 'sans' | 'serif' | 'mono'
+/** Text overlay font family: a generic preset ('sans'/'serif'/'mono') or any
+ * installed system font family name. Both the canvas preview and the ASS exporter
+ * resolve it by name. */
+export type FontFamily = string
+/** Built-in generic presets, shown first in the picker; resolve to platform defaults. */
 export const FONT_FAMILIES: FontFamily[] = ['sans', 'serif', 'mono']
 
 /** Horizontal alignment of a (possibly multi-line) text overlay relative to its anchor. */
 export type TextAlign = 'left' | 'center' | 'right'
 export const TEXT_ALIGNS: TextAlign[] = ['left', 'center', 'right']
+
+/** In/out animation preset for a text overlay (applied at its start/end edges). */
+export type TextAnimation =
+  | 'none'
+  | 'fade'
+  | 'slideUp'
+  | 'slideDown'
+  | 'slideLeft'
+  | 'slideRight'
+  | 'scale'
+  | 'pop'
+export const TEXT_ANIMATIONS: TextAnimation[] = [
+  'none',
+  'fade',
+  'slideUp',
+  'slideDown',
+  'slideLeft',
+  'slideRight',
+  'scale',
+  'pop'
+]
 
 /** A time-ranged text title rendered on top of the video (its own overlay layer,
  * not a media clip). Position/size are normalized to the frame so they scale across
@@ -136,11 +160,30 @@ export interface TextOverlay {
   fontSize: number
   /** Hex color, e.g. "#ffffff". */
   color: string
-  /** Draw a translucent box behind the text for legibility. */
+  /** Draw a box behind the text for legibility. */
   background: boolean
   fontFamily: FontFamily
   /** Horizontal alignment of the text block (matters for multi-line). */
   align: TextAlign
+  bold: boolean
+  italic: boolean
+  /** Outline (stroke) around the glyphs. Width is a fraction of font size (0 = off). */
+  outlineColor: string
+  outlineWidth: number
+  /** Background box appearance (when `background`). Radius/padding are fractions of font size. */
+  boxColor: string
+  boxOpacity: number
+  boxRadius: number
+  boxPadding: number
+  /** Text fill opacity, 0..1. */
+  opacity: number
+  /** Rotation in degrees, clockwise, around the anchor. */
+  rotation: number
+  /** Entry/exit animations and their durations (seconds). */
+  animationIn: TextAnimation
+  animationOut: TextAnimation
+  animInDuration: number
+  animOutDuration: number
 }
 
 export interface TimelineModel {

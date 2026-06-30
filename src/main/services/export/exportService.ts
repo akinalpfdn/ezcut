@@ -1,5 +1,6 @@
 import { type ChildProcess } from 'node:child_process'
-import { unlink } from 'node:fs/promises'
+import { unlink, writeFile } from 'node:fs/promises'
+import { dirname } from 'node:path'
 import { BrowserWindow } from 'electron'
 import { IpcChannels, type ExportProgress, type ExportRequest } from '@shared'
 import { resolveFfmpegPath } from '../ffmpeg/binaryPaths'
@@ -24,7 +25,7 @@ function sendProgress(progress: ExportProgress): void {
 export async function runExport(request: ExportRequest): Promise<void> {
   const { model, media, options, outputPath } = request
   cancelled = false
-  let textTempFiles: string[] = []
+  let assPath: string | null = null
   let filterComplex = ''
 
   try {
@@ -35,13 +36,21 @@ export async function runExport(request: ExportRequest): Promise<void> {
       { width: options.width, height: options.height, fps: options.fps },
       (mediaPath, strength) => generateDenoiseProxy(mediaPath, strength, EXPORT_DENOISE_TAG)
     )
-    textTempFiles = graph.textTempFiles
     filterComplex = graph.filterComplex
     if (cancelled) return
+    // Write the text-overlay subtitle file; ffmpeg runs with cwd = its dir so the
+    // filter can reference it by basename (no Windows path escaping).
+    let cwd: string | undefined
+    if (graph.assFile) {
+      assPath = graph.assFile.path
+      cwd = dirname(graph.assFile.path)
+      await writeFile(graph.assFile.path, graph.assFile.content, 'utf-8')
+    }
     const args = buildExportArgs(graph, options, outputPath)
 
     await runFfmpegWithProgress(resolveFfmpegPath(), args, {
       durationSeconds: graph.durationSeconds,
+      cwd,
       onProgress: (ratio) => sendProgress({ ratio, timeSeconds: ratio * graph.durationSeconds }),
       onSpawn: (child) => {
         currentChild = child
@@ -60,7 +69,7 @@ export async function runExport(request: ExportRequest): Promise<void> {
     throw error
   } finally {
     currentChild = null
-    await Promise.all(textTempFiles.map((path) => unlink(path).catch(() => undefined)))
+    if (assPath) await unlink(assPath).catch(() => undefined)
   }
 }
 

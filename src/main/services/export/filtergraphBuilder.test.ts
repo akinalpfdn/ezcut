@@ -181,31 +181,55 @@ describe('buildFiltergraph (transitions via xfade)', () => {
   })
 })
 
-function textModel(text: string, align: 'left' | 'center' | 'right'): TimelineModel {
+function textModel(text: string): TimelineModel {
   const model = imageModel()
   model.textOverlays = [
-    { id: 't1', text, start: 0, duration: 5, x: 0.5, y: 0.5, fontSize: 0.1, color: '#ffffff', background: false, fontFamily: 'sans', align }
+    {
+      id: 't1',
+      text,
+      start: 0,
+      duration: 5,
+      x: 0.5,
+      y: 0.5,
+      fontSize: 0.1,
+      color: '#ffffff',
+      background: false,
+      fontFamily: 'sans',
+      align: 'center',
+      bold: true,
+      italic: false,
+      outlineColor: '#000000',
+      outlineWidth: 0,
+      boxColor: '#000000',
+      boxOpacity: 0.5,
+      boxRadius: 0,
+      boxPadding: 0.25,
+      opacity: 1,
+      rotation: 0,
+      animationIn: 'none',
+      animationOut: 'none',
+      animInDuration: 0.4,
+      animOutDuration: 0.4
+    }
   ]
   return model
 }
 
 const render = { width: 1280, height: 720, fps: 30 }
-const countDrawtext = (filter: string): number => (filter.match(/drawtext=/g) ?? []).length
 
-describe('buildFiltergraph (text overlays)', () => {
-  it('should emit one drawtext per line for multi-line text', async () => {
-    const graph = await buildFiltergraph(textModel('Line A\nLine B', 'center'), imageMedia, render, async () => '')
-    expect(countDrawtext(graph.filterComplex)).toBe(2)
+describe('buildFiltergraph (text overlays via ASS)', () => {
+  it('should burn in an ASS subtitle file when there are overlays', async () => {
+    const graph = await buildFiltergraph(textModel('Hello'), imageMedia, render, async () => '')
+    expect(graph.filterComplex).toContain("subtitles=f='ezcut-subtitles.ass'")
+    expect(graph.assFile).not.toBeNull()
+    expect(graph.assFile?.content).toContain('Dialogue:')
+    // Referenced by basename so the export can run with cwd = the temp dir.
+    expect(graph.assFile?.path.endsWith('ezcut-subtitles.ass')).toBe(true)
   })
 
-  it('should anchor left-aligned text without centering by text_w', async () => {
-    const graph = await buildFiltergraph(textModel('Hi', 'left'), imageMedia, render, async () => '')
-    expect(graph.filterComplex).toContain('x=0.5000*w:')
-    expect(graph.filterComplex).not.toContain('text_w')
-  })
-
-  it('should skip blank lines but keep their vertical slot', async () => {
-    const graph = await buildFiltergraph(textModel('Top\n\nBottom', 'center'), imageMedia, render, async () => '')
-    expect(countDrawtext(graph.filterComplex)).toBe(2)
+  it('should not produce an ASS file when there are no overlays', async () => {
+    const graph = await buildFiltergraph(imageModel(), imageMedia, render, async () => '')
+    expect(graph.assFile).toBeNull()
+    expect(graph.filterComplex).not.toContain('subtitles=')
   })
 })

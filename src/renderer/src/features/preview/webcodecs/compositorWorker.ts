@@ -27,11 +27,38 @@ interface TextDraw {
   background: boolean
   fontFamily: FontFamily
   align: TextAlign
+  bold: boolean
+  italic: boolean
+  outlineColor: string
+  outlineWidth: number
+  boxColor: string
+  boxOpacity: number
+  boxRadius: number
+  boxPadding: number
+  opacity: number
+  rotation: number
+  animAlpha: number
+  animDx: number
+  animDy: number
+  animScale: number
 }
 
-/** Maps a font family to a CSS generic the canvas understands. */
+/** Maps a font family to a canvas font token: a generic keyword for the presets,
+ * else the system family name quoted (so multi-word names parse). */
 function cssFontFamily(family: FontFamily): string {
-  return family === 'serif' ? 'serif' : family === 'mono' ? 'monospace' : 'sans-serif'
+  if (family === 'sans') return 'sans-serif'
+  if (family === 'serif') return 'serif'
+  if (family === 'mono') return 'monospace'
+  return `"${family.replace(/"/g, '')}"`
+}
+
+/** #RRGGBB + alpha → canvas rgba() string. */
+function hexToRgba(hex: string, alpha: number): string {
+  const h = hex.replace('#', '').padEnd(6, '0')
+  const r = parseInt(h.slice(0, 2), 16)
+  const g = parseInt(h.slice(2, 4), 16)
+  const b = parseInt(h.slice(4, 6), 16)
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`
 }
 
 interface InitMessage {
@@ -241,37 +268,68 @@ function drawTexts(texts: TextDraw[]): void {
     const lines = overlay.text.split('\n')
     const size = Math.max(1, overlay.fontSize * height)
     const lineHeight = size * 1.2
-    c.font = `bold ${size}px ${cssFontFamily(overlay.fontFamily)}`
-    c.textAlign = overlay.align
     const anchorX = overlay.x * width
-    // Vertically center the whole block on the anchor.
-    const firstCenterY = overlay.y * height - ((lines.length - 1) / 2) * lineHeight
+    const anchorY = overlay.y * height
+
+    c.save()
+    c.globalAlpha = overlay.animAlpha
+    // Slide (global) then rotate + scale about the anchor.
+    c.translate(overlay.animDx * height, overlay.animDy * height)
+    c.translate(anchorX, anchorY)
+    if (overlay.rotation) c.rotate((overlay.rotation * Math.PI) / 180)
+    if (overlay.animScale !== 1) c.scale(overlay.animScale, overlay.animScale)
+    c.translate(-anchorX, -anchorY)
+    c.font = `${overlay.italic ? 'italic ' : ''}${overlay.bold ? 'bold' : 'normal'} ${size}px ${cssFontFamily(overlay.fontFamily)}`
+    c.textAlign = overlay.align
+    c.lineJoin = 'round'
+    const firstCenterY = anchorY - ((lines.length - 1) / 2) * lineHeight
     for (let i = 0; i < lines.length; i += 1) {
       const line = lines[i] ?? ''
       const cy = firstCenterY + i * lineHeight
+      const lineW = c.measureText(line).width
       if (overlay.background && line.length > 0) {
-        const pad = size * 0.25
-        const lineW = c.measureText(line).width
-        // Box left depends on how the line sits relative to the anchor.
+        const pad = size * overlay.boxPadding
         const boxLeft =
           overlay.align === 'left'
             ? anchorX - pad
             : overlay.align === 'right'
               ? anchorX - lineW - pad
               : anchorX - lineW / 2 - pad
-        c.fillStyle = 'rgba(0, 0, 0, 0.5)'
-        c.fillRect(boxLeft, cy - size / 2 - pad, lineW + pad * 2, size + pad * 2)
+        const boxW = lineW + pad * 2
+        const boxH = size + pad * 2
+        const radius = Math.min(size * overlay.boxRadius, boxW / 2, boxH / 2)
+        c.fillStyle = hexToRgba(overlay.boxColor, overlay.boxOpacity)
+        c.beginPath()
+        c.roundRect(boxLeft, cy - boxH / 2, boxW, boxH, radius)
+        c.fill()
       }
-      // A subtle shadow keeps text legible over any footage.
-      c.shadowColor = 'rgba(0, 0, 0, 0.7)'
-      c.shadowBlur = size * 0.08
-      c.shadowOffsetY = size * 0.03
-      c.fillStyle = overlay.color
-      c.fillText(line, anchorX, cy)
-      c.shadowColor = 'transparent'
-      c.shadowBlur = 0
-      c.shadowOffsetY = 0
+      const setShadow = (): void => {
+        c.shadowColor = 'rgba(0, 0, 0, 0.7)'
+        c.shadowBlur = size * 0.08
+        c.shadowOffsetY = size * 0.03
+      }
+      const clearShadow = (): void => {
+        c.shadowColor = 'transparent'
+        c.shadowBlur = 0
+        c.shadowOffsetY = 0
+      }
+      if (overlay.outlineWidth > 0) {
+        // Outline casts the shadow, then the fill draws clean on top.
+        setShadow()
+        c.lineWidth = size * overlay.outlineWidth * 2
+        c.strokeStyle = hexToRgba(overlay.outlineColor, overlay.opacity)
+        c.strokeText(line, anchorX, cy)
+        clearShadow()
+        c.fillStyle = hexToRgba(overlay.color, overlay.opacity)
+        c.fillText(line, anchorX, cy)
+      } else {
+        setShadow()
+        c.fillStyle = hexToRgba(overlay.color, overlay.opacity)
+        c.fillText(line, anchorX, cy)
+        clearShadow()
+      }
     }
+    c.restore()
   }
 }
 

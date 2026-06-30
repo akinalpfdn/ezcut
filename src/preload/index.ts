@@ -28,6 +28,7 @@ const electronAPI: ElectronAPI = {
   saveSettings: (settings) => ipcRenderer.invoke(IpcChannels.saveSettings, settings),
   selectExportPath: (container) => ipcRenderer.invoke(IpcChannels.selectExportPath, container),
   showInFolder: (path) => ipcRenderer.invoke(IpcChannels.showInFolder, path),
+  listFonts: () => ipcRenderer.invoke(IpcChannels.listFonts),
   startExport: (request) => ipcRenderer.invoke(IpcChannels.startExport, request),
   cancelExport: () => ipcRenderer.invoke(IpcChannels.cancelExport),
   onExportProgress: (callback) => {

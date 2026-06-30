@@ -14,6 +14,7 @@ import { cancelFfmpegJobs } from '../services/ffmpeg/jobQueue'
 import { loadSettings, saveSettings } from '../services/settings/settingsService'
 import { runExport, cancelExport } from '../services/export/exportService'
 import { selectExportPath } from '../services/dialog/exportDialog'
+import { listFonts } from '../services/fonts/fontService'
 import {
   autosaveProject,
   loadAutosave,
@@ -66,6 +67,7 @@ export function registerIpcHandlers(): void {
   handle<[string], void>(IpcChannels.showInFolder, (path) => {
     shell.showItemInFolder(path)
   })
+  handle<[], string[]>(IpcChannels.listFonts, () => listFonts())
   handle<[ExportRequest], void>(IpcChannels.startExport, (request) => runExport(request))
   handle(IpcChannels.cancelExport, () => cancelExport())
 

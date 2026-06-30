@@ -11,8 +11,15 @@ import {
   type TimelineModel,
   type TransitionType
 } from '@shared'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { AUDIO_FX_CONFIG } from '../../config/audioFx'
-import { escapeDrawtextText, resolveFamilyFontName } from './textFont'
+import { buildAssDocument } from './assBuilder'
+
+/** Temp .ass filename for an export's text overlays. Exports run one at a time
+ * (single ffmpeg child), so a fixed name is safe and lets ffmpeg reference it by
+ * basename with cwd set to the temp dir — avoiding Windows filter path escaping. */
+const ASS_FILENAME = 'ezcut-subtitles.ass'
 
 /** Each transition type's ffmpeg `xfade` transition name. */
 const XFADE_NAMES: Record<TransitionType, string> = {
@@ -42,8 +49,10 @@ export interface FiltergraphResult {
   videoLabel: string
   audioLabel: string | null
   durationSeconds: number
-  /** Temp files (text overlay content) the caller must delete after the export. */
-  textTempFiles: string[]
+  /** ASS subtitle file for text overlays: the caller writes `content` to `path`
+   * before running ffmpeg (which references it by basename, cwd = its dir) and
+   * deletes it after. Null when there are no text overlays. */
+  assFile: { path: string; content: string } | null
 }
 
 /** Resolves (generating if needed) the denoised proxy for a source. */
@@ -254,45 +263,18 @@ export async function buildFiltergraph(
     videoLabel = chain
   }
 
-  // Text overlays: a drawtext per LINE on top of the video (one filter per line
-  // avoids escaping newlines in the filtergraph and lets us center each line
-  // explicitly). Font by family via fontconfig (no fontfile path), text inline (no
-  // textfile path) — keeps absolute Windows paths out of the filtergraph entirely.
-  const textTempFiles: string[] = []
+  // Text overlays: rendered via libass. Generate an .ass document and burn it in
+  // with the `subtitles` filter. The file is referenced by basename (ffmpeg runs
+  // with cwd = its dir), so no absolute Windows path enters the filtergraph.
+  let assFile: { path: string; content: string } | null = null
   if (model.textOverlays.length > 0) {
-    for (const overlay of model.textOverlays) {
-      const fontName = resolveFamilyFontName(overlay.fontFamily)
-      const size = Math.max(1, Math.round(overlay.fontSize * height))
-      const color = overlay.color.replace('#', '0x')
-      const end = overlay.start + overlay.duration
-      const enable = `enable='between(t,${overlay.start.toFixed(3)},${end.toFixed(3)})'`
-      // Subtle shadow for legibility (mirrors the preview); optional translucent box.
-      const shadow = `:shadowcolor=black@0.6:shadowx=0:shadowy=${Math.max(1, Math.round(size * 0.03))}`
-      const box = overlay.background
-        ? `:box=1:boxcolor=black@0.5:boxborderw=${Math.max(1, Math.round(size * 0.25))}`
-        : ''
-      // Anchor x depends on alignment (left edge / centre / right edge at overlay.x).
-      const xExpr =
-        overlay.align === 'left'
-          ? `${overlay.x.toFixed(4)}*w`
-          : overlay.align === 'right'
-            ? `${overlay.x.toFixed(4)}*w-text_w`
-            : `${overlay.x.toFixed(4)}*w-text_w/2`
-      const lines = overlay.text.split('\n')
-      const lineHeight = Math.round(size * 1.2)
-      lines.forEach((line, i) => {
-        if (line.trim().length === 0) return // blank line: keep its vertical slot, draw nothing
-        // Center the whole block on overlay.y; each line offset by its row.
-        const offset = Math.round((i - (lines.length - 1) / 2) * lineHeight)
-        const out = `tx${chainCounter++}`
-        parts.push(
-          `[${videoLabel}]drawtext=font='${fontName}':text=${escapeDrawtextText(line)}:` +
-            `fontsize=${size}:fontcolor=${color}${box}${shadow}:` +
-            `x=${xExpr}:y=${overlay.y.toFixed(4)}*h+(${offset})-text_h/2:${enable}[${out}]`
-        )
-        videoLabel = out
-      })
+    assFile = {
+      path: join(tmpdir(), ASS_FILENAME),
+      content: buildAssDocument(model.textOverlays, width, height)
     }
+    const out = `tx${chainCounter++}`
+    parts.push(`[${videoLabel}]subtitles=f='${ASS_FILENAME}'[${out}]`)
+    videoLabel = out
   }
 
   let audioLabel: string | null = null
@@ -303,5 +285,5 @@ export async function buildFiltergraph(
     parts.push(`${audioLabels.map((label) => `[${label}]`).join('')}amix=inputs=${audioLabels.length}:normalize=0:dropout_transition=0[aout]`)
   }
 
-  return { inputs, filterComplex: parts.join(';'), videoLabel, audioLabel, durationSeconds, textTempFiles }
+  return { inputs, filterComplex: parts.join(';'), videoLabel, audioLabel, durationSeconds, assFile }
 }

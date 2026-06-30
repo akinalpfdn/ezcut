@@ -14,6 +14,7 @@ import { useMediaStore } from '../../../stores/mediaStore'
 import { useProxyStore } from '../../../stores/proxyStore'
 import { toMediaUrl } from '../../../utils/mediaUrl'
 import { previewNeedsProxy } from '../../../utils/proxyPolicy'
+import { animState } from '../textAnimation'
 
 interface ClipRef {
   clipId: string
@@ -100,16 +101,40 @@ export function useCanvasCompositor(
 
       const texts = model.textOverlays
         .filter((overlay) => playheadTime >= overlay.start && playheadTime < overlay.start + overlay.duration)
-        .map((overlay) => ({
-          text: overlay.text,
-          x: overlay.x,
-          y: overlay.y,
-          fontSize: overlay.fontSize,
-          color: overlay.color,
-          background: overlay.background,
-          fontFamily: overlay.fontFamily,
-          align: overlay.align
-        }))
+        .map((overlay) => {
+          const anim = animState(
+            overlay.animationIn,
+            overlay.animationOut,
+            overlay.animInDuration,
+            overlay.animOutDuration,
+            playheadTime - overlay.start,
+            overlay.start + overlay.duration - playheadTime
+          )
+          return {
+            text: overlay.text,
+            x: overlay.x,
+            y: overlay.y,
+            fontSize: overlay.fontSize,
+            color: overlay.color,
+            background: overlay.background,
+            fontFamily: overlay.fontFamily,
+            align: overlay.align,
+            bold: overlay.bold,
+            italic: overlay.italic,
+            outlineColor: overlay.outlineColor,
+            outlineWidth: overlay.outlineWidth,
+            boxColor: overlay.boxColor,
+            boxOpacity: overlay.boxOpacity,
+            boxRadius: overlay.boxRadius,
+            boxPadding: overlay.boxPadding,
+            opacity: overlay.opacity,
+            rotation: overlay.rotation,
+            animAlpha: anim.alpha,
+            animDx: anim.dx,
+            animDy: anim.dy,
+            animScale: anim.scale
+          }
+        })
 
       let hasActiveClip = false
       let active: ClipRef | null = null
@@ -167,7 +192,10 @@ export function useCanvasCompositor(
       // playback sourceUs advances every frame (so it posts, as needed), but
       // while paused/idle this skips the per-frame structured-clone to the worker.
       const textsSig = texts
-        .map((t) => `${t.text}|${t.x}|${t.y}|${t.fontSize}|${t.color}|${t.background}|${t.fontFamily}|${t.align}`)
+        .map(
+          (t) =>
+            `${t.text}|${t.x}|${t.y}|${t.fontSize}|${t.color}|${t.background}|${t.fontFamily}|${t.align}|${t.bold}|${t.italic}|${t.outlineColor}|${t.outlineWidth}|${t.boxColor}|${t.boxOpacity}|${t.boxRadius}|${t.boxPadding}|${t.opacity}|${t.rotation}|${t.animAlpha.toFixed(3)}|${t.animDx.toFixed(4)}|${t.animDy.toFixed(4)}|${t.animScale.toFixed(3)}`
+        )
         .join('~')
       const sig = `${hasActiveClip}|${active?.clipId ?? ''}|${active?.fileUrl ?? ''}|${active?.sourceUs ?? ''}|${next?.clipId ?? ''}|${next?.fileUrl ?? ''}|${next?.sourceUs ?? ''}|${fallbackUrl ?? ''}|${transition?.clipId ?? ''}|${transition?.sourceUs ?? ''}|${transition?.transitionType ?? ''}|${transition?.progress ?? ''}|${textsSig}`
       if (sig !== lastSig) {

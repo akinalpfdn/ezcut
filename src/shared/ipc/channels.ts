@@ -17,6 +17,7 @@ export const IpcChannels = {
   saveSettings: 'settings:save',
   selectExportPath: 'export:selectPath',
   showInFolder: 'shell:showInFolder',
+  listFonts: 'fonts:list',
   startExport: 'export:start',
   cancelExport: 'export:cancel',
   exportProgress: 'export:progress',

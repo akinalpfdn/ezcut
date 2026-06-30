@@ -70,6 +70,9 @@ export interface ElectronAPI {
   /** Reveals a file in the OS file manager (selected in its folder). */
   showInFolder(path: string): Promise<Result<void>>
 
+  /** Lists installed system font family names (sorted), for the text font picker. */
+  listFonts(): Promise<Result<string[]>>
+
   /** Runs the export to completion (or cancellation). Progress arrives via onExportProgress. */
   startExport(request: ExportRequest): Promise<Result<void>>
 

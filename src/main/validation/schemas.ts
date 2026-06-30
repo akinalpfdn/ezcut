@@ -99,8 +99,29 @@ const textOverlaySchema = z.object({
   color: z.string(),
   // Defaulted so overlays from pre-TX3 projects still load.
   background: z.boolean().default(false),
-  fontFamily: z.enum(['sans', 'serif', 'mono']).default('sans'),
-  align: z.enum(['left', 'center', 'right']).default('center')
+  fontFamily: z.string().default('sans'),
+  align: z.enum(['left', 'center', 'right']).default('center'),
+  // Rich styling (Phase 28) — all defaulted so pre-TX5 projects still load.
+  // Bold defaults true: pre-TX5 text always rendered bold.
+  bold: z.boolean().default(true),
+  italic: z.boolean().default(false),
+  outlineColor: z.string().default('#000000'),
+  outlineWidth: z.number().default(0),
+  boxColor: z.string().default('#000000'),
+  boxOpacity: z.number().default(0.5),
+  boxRadius: z.number().default(0),
+  boxPadding: z.number().default(0.25),
+  opacity: z.number().default(1),
+  rotation: z.number().default(0),
+  // Animations (Phase 30)
+  animationIn: z
+    .enum(['none', 'fade', 'slideUp', 'slideDown', 'slideLeft', 'slideRight', 'scale', 'pop'])
+    .default('none'),
+  animationOut: z
+    .enum(['none', 'fade', 'slideUp', 'slideDown', 'slideLeft', 'slideRight', 'scale', 'pop'])
+    .default('none'),
+  animInDuration: z.number().default(0.4),
+  animOutDuration: z.number().default(0.4)
 })
 
 const projectFileSchema = z.object({

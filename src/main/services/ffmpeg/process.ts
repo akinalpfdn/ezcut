@@ -14,6 +14,9 @@ export interface FfmpegProgressOptions {
   onProgress?: (ratio: number) => void
   /** Receives the spawned child so the caller can cancel (kill) it. */
   onSpawn?: (child: ChildProcess) => void
+  /** Working directory for the process (lets the subtitles filter reference the
+   * .ass file by basename, avoiding Windows filtergraph path escaping). */
+  cwd?: string
 }
 
 /** Parses ffmpeg's `time=HH:MM:SS.ms` stderr progress marker into seconds. */
@@ -34,7 +37,7 @@ export function runFfmpegWithProgress(
   options: FfmpegProgressOptions
 ): Promise<void> {
   return new Promise((resolve, reject) => {
-    const child = spawn(binaryPath, args as string[], { windowsHide: true })
+    const child = spawn(binaryPath, args as string[], { windowsHide: true, cwd: options.cwd })
     options.onSpawn?.(child)
     let stderrTail = ''
     child.stderr.on('data', (chunk: Buffer) => {
