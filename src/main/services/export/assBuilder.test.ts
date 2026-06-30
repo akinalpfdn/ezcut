@@ -21,17 +21,16 @@ function overlay(extra: Partial<TextOverlay> = {}): TextOverlay {
     align: 'center',
     bold: true,
     italic: false,
-    outlineColor: '#000000',
-    outlineWidth: 0,
+    effect: 'none',
+    effectColor: '#000000',
+    effectIntensity: 0.5,
+    effectDirection: 135,
     boxColor: '#000000',
     boxOpacity: 0.5,
     boxRadius: 0,
     boxPadding: 0.25,
     opacity: 1,
     rotation: 0,
-    glow: false,
-    glowColor: '#00e5ff',
-    glowStrength: 0.5,
     animationIn: 'none',
     animationOut: 'none',
     animInDuration: 0.4,
@@ -78,7 +77,7 @@ describe('buildAssDocument', () => {
 
   it('should emit one Dialogue with the right timing', () => {
     const doc = buildAssDocument([overlay({ start: 2, duration: 3 })], 1280, 720)
-    expect(doc).toContain('Dialogue: 0,0:00:02.00,0:00:05.00,')
+    expect(doc).toContain(',0:00:02.00,0:00:05.00,')
   })
 
   it('should hard-break multi-line text with \\N', () => {
@@ -128,20 +127,36 @@ describe('buildAssDocument', () => {
     expect(buildAssDocument([overlay({ opacity: 0.5 })], 1280, 720)).toContain('\\1a&H80&')
   })
 
-  it('should emit an outline with colour when outlineWidth > 0', () => {
-    const doc = buildAssDocument([overlay({ outlineWidth: 0.1, outlineColor: '#ff0000' })], 1280, 720)
-    expect(doc).toContain('\\bord7') // round(0.1 * 72) = 7
-    expect(doc).toContain('\\3c&H0000FF&')
+  it('should emit an outline effect with colour', () => {
+    const doc = buildAssDocument([overlay({ effect: 'outline', effectColor: '#ff0000', effectIntensity: 0.5 })], 1280, 720)
+    expect(doc).toContain('\\3c&H0000FF&') // red → BGR
+    expect(doc).toMatch(/\\bord\d/)
   })
 
-  it('should layer a box behind outlined text when both are set', () => {
-    const doc = buildAssDocument([overlay({ background: true, outlineWidth: 0.1 })], 1280, 720)
+  it('should layer a box behind the text when background is on', () => {
+    const doc = buildAssDocument([overlay({ background: true })], 1280, 720)
     const dialogues = doc.split('\n').filter((line) => line.startsWith('Dialogue:'))
     expect(dialogues).toHaveLength(2)
-    expect(dialogues[0]).toContain(',Box,') // behind, layer 0
-    expect(dialogues[0]).toContain('Dialogue: 0,')
-    expect(dialogues[1]).toContain(',Plain,') // outlined text on top, layer 1
-    expect(dialogues[1]).toContain('Dialogue: 1,')
+    expect(dialogues[0]).toContain(',Box,') // box behind (layer 0), invisible text
+    expect(dialogues[0]).toContain('\\1a&HFF&')
+    expect(dialogues[1]).toContain(',Plain,') // text on top (layer 2)
+  })
+
+  it('should burn offset copies for echo and glitch effects', () => {
+    const echo = buildAssDocument([overlay({ effect: 'echo' })], 1280, 720)
+    expect(echo.split('\n').filter((l) => l.startsWith('Dialogue:'))).toHaveLength(3) // 2 echoes + main
+    const glitch = buildAssDocument([overlay({ effect: 'glitch' })], 1280, 720)
+    const lines = glitch.split('\n').filter((l) => l.startsWith('Dialogue:'))
+    expect(lines).toHaveLength(3)
+    expect(glitch).toContain('\\1c&H3C00FF&') // red split copy
+    expect(glitch).toContain('\\1c&HFFE600&') // cyan split copy
+  })
+
+  it('should make the fill transparent for a hollow effect', () => {
+    const doc = buildAssDocument([overlay({ effect: 'hollow' })], 1280, 720)
+    const main = doc.split('\n').filter((l) => l.startsWith('Dialogue:')).at(-1) ?? ''
+    expect(main).toContain('\\1a&HFF&') // invisible fill
+    expect(main).toMatch(/\\bord\d/) // outline shows
   })
 
   it('should rotate clockwise via negated ASS angle', () => {
@@ -194,8 +209,8 @@ describe('buildAssDocument animations', () => {
     expect(doc).toContain('\\t(4600,5000,\\fscx0\\fscy0)')
   })
 
-  it('should render a neon glow as a blurred coloured outline', () => {
-    const doc = buildAssDocument([overlay({ glow: true, glowColor: '#00e5ff' })], 1280, 720)
+  it('should render a neon effect as a blurred coloured outline', () => {
+    const doc = buildAssDocument([overlay({ effect: 'neon', effectColor: '#00e5ff' })], 1280, 720)
     expect(doc).toContain('\\blur')
     expect(doc).toContain('\\3c&HFFE500&') // #00e5ff → BGR
   })

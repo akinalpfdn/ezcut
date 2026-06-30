@@ -196,6 +196,17 @@
     "linear": "Linear gradient",
     "radial": "Radial gradient"
   },
+  "effect": {
+    "none": "None",
+    "shadow": "Shadow",
+    "outline": "Outline",
+    "hollow": "Hollow",
+    "lift": "Lift",
+    "splice": "Splice",
+    "echo": "Echo",
+    "glitch": "Glitch",
+    "neon": "Neon"
+  },
   "align": {
     "left": "Left",
     "center": "Center",

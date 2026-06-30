@@ -4,6 +4,7 @@ import {
   FONT_FAMILIES,
   TEXT_ALIGNS,
   TEXT_ANIMATIONS,
+  TEXT_EFFECTS,
   type FillType,
   type TextAnimation,
   type TextOverlay
@@ -29,6 +30,9 @@ export function TextInspector() {
   if (!overlay) return null
 
   const update = (patch: Partial<TextOverlay>): void => useTimelineStore.getState().updateTextOverlay(overlay.id, patch)
+
+  const effectShowsColor = ['shadow', 'outline', 'splice', 'echo', 'glitch', 'neon'].includes(overlay.effect)
+  const effectShowsDirection = ['shadow', 'echo', 'glitch', 'splice'].includes(overlay.effect)
 
   const animOptions = (
     <>
@@ -180,21 +184,6 @@ export function TextInspector() {
         </div>
 
         <label className={styles.field}>
-          <span className={styles.label}>{t('textInspector.outline')}</span>
-          <ColorField value={overlay.outlineColor} onChange={(outlineColor) => update({ outlineColor })} />
-        </label>
-
-        <label className={styles.field}>
-          <span className={styles.label}>{t('textInspector.outlineWidth')}</span>
-          <SliderField
-            min={0}
-            max={50}
-            value={Math.round(overlay.outlineWidth * 100)}
-            onChange={(value) => update({ outlineWidth: Math.max(0, value / 100) })}
-          />
-        </label>
-
-        <label className={styles.field}>
           <span className={styles.label}>{t('textInspector.rotation')}</span>
           <SliderField
             min={-180}
@@ -252,29 +241,45 @@ export function TextInspector() {
 
       <div className={styles.section}>
         <span className={styles.sectionTitle}>{t('textInspector.grpEffect')}</span>
-        <button
-          type="button"
-          className={
-            overlay.glow ? `${styles.toggle} ${styles.toggleOn} ${styles.block}` : `${styles.toggle} ${styles.block}`
-          }
-          aria-pressed={overlay.glow}
-          onClick={() => update({ glow: !overlay.glow })}
-        >
-          {t('textInspector.glow')}
-        </button>
-        {overlay.glow ? (
+        <div className={styles.effectGrid}>
+          {TEXT_EFFECTS.map((eff) => (
+            <button
+              key={eff}
+              type="button"
+              className={overlay.effect === eff ? `${styles.effectCell} ${styles.toggleOn}` : styles.effectCell}
+              aria-pressed={overlay.effect === eff}
+              onClick={() => update({ effect: eff })}
+            >
+              {t(`effect.${eff}`)}
+            </button>
+          ))}
+        </div>
+        {overlay.effect !== 'none' ? (
           <>
-            <label className={styles.field}>
-              <span className={styles.label}>{t('textInspector.glowColor')}</span>
-              <ColorField value={overlay.glowColor} onChange={(glowColor) => update({ glowColor })} />
-            </label>
+            {effectShowsColor ? (
+              <label className={styles.field}>
+                <span className={styles.label}>{t('textInspector.color')}</span>
+                <ColorField value={overlay.effectColor} onChange={(effectColor) => update({ effectColor })} />
+              </label>
+            ) : null}
             <label className={styles.field}>
               <span className={styles.label}>{t('textInspector.glowStrength')}</span>
               <SliderField
-                value={Math.round(overlay.glowStrength * 100)}
-                onChange={(value) => update({ glowStrength: Math.max(0, value / 100) })}
+                value={Math.round(overlay.effectIntensity * 100)}
+                onChange={(value) => update({ effectIntensity: Math.max(0, value / 100) })}
               />
             </label>
+            {effectShowsDirection ? (
+              <label className={styles.field}>
+                <span className={styles.label}>{t('textInspector.gradAngle')}</span>
+                <SliderField
+                  min={0}
+                  max={360}
+                  value={Math.round(overlay.effectDirection)}
+                  onChange={(value) => update({ effectDirection: value })}
+                />
+              </label>
+            ) : null}
           </>
         ) : null}
       </div>

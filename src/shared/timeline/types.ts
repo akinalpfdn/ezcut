@@ -127,6 +127,29 @@ export const TEXT_ALIGNS: TextAlign[] = ['left', 'center', 'right']
 export type FillType = 'solid' | 'linear' | 'radial'
 export const FILL_TYPES: FillType[] = ['solid', 'linear', 'radial']
 
+/** One-click text effect applied to the glyphs (exclusive, Canva-style). */
+export type TextEffect =
+  | 'none'
+  | 'shadow'
+  | 'outline'
+  | 'hollow'
+  | 'lift'
+  | 'splice'
+  | 'echo'
+  | 'glitch'
+  | 'neon'
+export const TEXT_EFFECTS: TextEffect[] = [
+  'none',
+  'shadow',
+  'outline',
+  'hollow',
+  'lift',
+  'splice',
+  'echo',
+  'glitch',
+  'neon'
+]
+
 /** In/out animation preset for a text overlay (applied at its start/end edges). */
 export type TextAnimation =
   | 'none'
@@ -179,9 +202,13 @@ export interface TextOverlay {
   align: TextAlign
   bold: boolean
   italic: boolean
-  /** Outline (stroke) around the glyphs. Width is a fraction of font size (0 = off). */
-  outlineColor: string
-  outlineWidth: number
+  /** Glyph effect (exclusive). effectColor/Intensity/Direction parameterise it. */
+  effect: TextEffect
+  effectColor: string
+  /** 0..1: scales the effect's offset / blur / stroke width. */
+  effectIntensity: number
+  /** Direction (degrees) of the effect's offset (shadow/echo/glitch). */
+  effectDirection: number
   /** Background box appearance (when `background`). Radius/padding are fractions of font size. */
   boxColor: string
   boxOpacity: number
@@ -191,11 +218,6 @@ export interface TextOverlay {
   opacity: number
   /** Rotation in degrees, clockwise, around the anchor. */
   rotation: number
-  /** Neon-style glow around the glyphs. */
-  glow: boolean
-  glowColor: string
-  /** Glow spread, 0..1 (fraction of font size). */
-  glowStrength: number
   /** Entry/exit animations and their durations (seconds). */
   animationIn: TextAnimation
   animationOut: TextAnimation

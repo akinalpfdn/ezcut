@@ -196,6 +196,17 @@
     "linear": "Doğrusal gradyan",
     "radial": "Dairesel gradyan"
   },
+  "effect": {
+    "none": "Yok",
+    "shadow": "Gölge",
+    "outline": "Kenarlık",
+    "hollow": "İçi boş",
+    "lift": "Kabartma",
+    "splice": "Birleşik",
+    "echo": "Eko",
+    "glitch": "Glitch",
+    "neon": "Neon"
+  },
   "align": {
     "left": "Sol",
     "center": "Orta",

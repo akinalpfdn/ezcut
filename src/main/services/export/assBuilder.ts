@@ -186,7 +186,6 @@ export function buildAssDocument(overlays: readonly TextOverlay[], width: number
     const y = Math.round(overlay.y * height)
     const an = ALIGN_AN[overlay.align]
     const fontName = resolveFamilyFontName(overlay.fontFamily)
-    const shadow = Math.max(1, Math.round(size * 0.03))
     const fillAlpha = assAlpha(overlay.opacity)
     const frz = overlay.rotation ? `\\frz${-overlay.rotation}` : '' // ASS rotates CCW; ours is CW
     // Typewriter-in needs a per-character body, so it bypasses the move/scale tags
@@ -212,32 +211,62 @@ export function buildAssDocument(overlays: readonly TextOverlay[], width: number
     const base = `\\an${an}${posTag}\\fn${fontName}\\fs${size}\\1c${assColor(overlay.color)}\\1a${fillAlpha}${overlay.bold ? '\\b1' : '\\b0'}${overlay.italic ? '\\i1' : '\\i0'}${frz}${animTags}`
     const start = assTime(overlay.start)
     const end = assTime(overlay.start + overlay.duration)
-    const hasOutline = overlay.outlineWidth > 0
-    const outline = `\\bord${Math.round(size * overlay.outlineWidth)}\\3c${assColor(overlay.outlineColor)}\\3a${fillAlpha}`
+    const bi = `${overlay.bold ? '\\b1' : '\\b0'}${overlay.italic ? '\\i1' : '\\i0'}`
+    const ec = assColor(overlay.effectColor)
+    const events: string[] = []
 
+    // Background box: an invisible-text BorderStyle=3 layer behind everything.
     if (overlay.background) {
       const pad = Math.max(1, Math.round(size * overlay.boxPadding))
-      // BorderStyle=3 box: \bord is the padding, the box is filled with the OUTLINE
-      // colour (\3c/\3a), not BackColour (verified against libass).
-      const boxShadow = hasOutline ? '\\shad0' : `\\shad${shadow}`
-      const box = `Dialogue: 0,${start},${end},Box,,0,0,0,,{${base}\\bord${pad}\\3c${assColor(overlay.boxColor)}\\3a${assAlpha(overlay.boxOpacity)}${boxShadow}}${text}`
-      if (!hasOutline) return [box]
-      // BorderStyle can't be inline, so an outlined text-on-box needs a second
-      // layer above the box (same pos/text, so it overlays exactly).
-      const textLayer = `Dialogue: 1,${start},${end},Plain,,0,0,0,,{${base}${outline}\\shad${shadow}}${text}`
-      return [box, textLayer]
+      events.push(
+        `Dialogue: 0,${start},${end},Box,,0,0,0,,{\\an${an}${posTag}\\fn${fontName}\\fs${size}${bi}${frz}${animTags}\\1a&HFF&\\bord${pad}\\3c${assColor(overlay.boxColor)}\\3a${assAlpha(overlay.boxOpacity)}\\shad0}${text}`
+      )
     }
 
-    if (overlay.glow) {
-      // Neon glow: a blurred bright outline in the glow colour around the fill.
-      const glowBord = Math.max(1, Math.round(size * 0.05))
-      const glowBlur = Math.max(1, Math.round(overlay.glowStrength * size * 0.15))
-      const tags = `${base}\\bord${glowBord}\\3c${assColor(overlay.glowColor)}\\3a${fillAlpha}\\blur${glowBlur}\\shad0`
-      return [`Dialogue: 0,${start},${end},Plain,,0,0,0,,{${tags}}${text}`]
+    // Glyph effect. Directional effects (echo/glitch) burn offset copies as their
+    // own layers behind the main text; the rest are inline tag suffixes.
+    const off = Math.round(overlay.effectIntensity * size * 0.18)
+    const rad = (overlay.effectDirection * Math.PI) / 180
+    const ox = Math.round(Math.cos(rad) * off)
+    const oy = Math.round(Math.sin(rad) * off)
+    const w = Math.max(1, Math.round(size * overlay.effectIntensity * 0.14))
+    const layer = (lx: number, ly: number, colorAss: string, alphaAss: string): string =>
+      `Dialogue: 1,${start},${end},Plain,,0,0,0,,{\\an${an}\\fn${fontName}\\fs${size}${bi}${frz}${animTags}\\pos(${x + lx},${y + ly})\\1c${colorAss}\\1a${alphaAss}\\bord0\\shad0}${text}`
+
+    let suffix = '\\bord0\\shad0'
+    switch (overlay.effect) {
+      case 'shadow':
+        suffix = `\\bord0\\shad${Math.max(1, Math.round(overlay.effectIntensity * size * 0.15))}\\4c${ec}\\4a${assAlpha(0.85)}`
+        break
+      case 'lift':
+        suffix = `\\bord0\\shad${Math.max(1, Math.round(size * (0.04 + overlay.effectIntensity * 0.06)))}\\4c&H000000&\\4a&H50&`
+        break
+      case 'outline':
+        suffix = `\\bord${Math.max(1, Math.round(size * overlay.effectIntensity * 0.12))}\\3c${ec}\\3a${fillAlpha}\\shad0`
+        break
+      case 'hollow':
+        suffix = `\\1a&HFF&\\bord${w}\\3c${assColor(overlay.color)}\\3a${fillAlpha}\\shad0`
+        break
+      case 'splice':
+        suffix = `\\1a&HFF&\\bord${w}\\3c${assColor(overlay.color)}\\3a${fillAlpha}\\shad${Math.max(1, Math.round(overlay.effectIntensity * size * 0.12))}\\4c${ec}\\4a${assAlpha(0.85)}`
+        break
+      case 'echo':
+        events.push(layer(ox * 2, oy * 2, ec, assAlpha(0.25)))
+        events.push(layer(ox, oy, ec, assAlpha(0.45)))
+        break
+      case 'glitch':
+        events.push(layer(ox, oy, '&H3C00FF&', assAlpha(0.85)))
+        events.push(layer(-ox, -oy, '&HFFE600&', assAlpha(0.85)))
+        break
+      case 'neon':
+        suffix = `\\bord${Math.max(1, Math.round(size * 0.05))}\\3c${ec}\\3a${fillAlpha}\\blur${Math.max(1, Math.round(overlay.effectIntensity * size * 0.15))}\\shad0`
+        break
+      default:
+        suffix = '\\bord0\\shad0'
     }
 
-    const tags = hasOutline ? `${base}${outline}\\shad${shadow}` : `${base}\\bord0\\shad${shadow}`
-    return [`Dialogue: 0,${start},${end},Plain,,0,0,0,,{${tags}}${text}`]
+    events.push(`Dialogue: 2,${start},${end},Plain,,0,0,0,,{${base}${suffix}}${text}`)
+    return events
   })
   return [...HEADER, ...playRes, '', ...STYLES, '', ...EVENTS_FORMAT, ...events, ''].join('\n')
 }

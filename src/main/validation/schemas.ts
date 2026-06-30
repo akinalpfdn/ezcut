@@ -109,17 +109,18 @@ const textOverlaySchema = z.object({
   // Bold defaults true: pre-TX5 text always rendered bold.
   bold: z.boolean().default(true),
   italic: z.boolean().default(false),
-  outlineColor: z.string().default('#000000'),
-  outlineWidth: z.number().default(0),
+  effect: z
+    .enum(['none', 'shadow', 'outline', 'hollow', 'lift', 'splice', 'echo', 'glitch', 'neon'])
+    .default('none'),
+  effectColor: z.string().default('#000000'),
+  effectIntensity: z.number().default(0.5),
+  effectDirection: z.number().default(135),
   boxColor: z.string().default('#000000'),
   boxOpacity: z.number().default(0.5),
   boxRadius: z.number().default(0),
   boxPadding: z.number().default(0.25),
   opacity: z.number().default(1),
   rotation: z.number().default(0),
-  glow: z.boolean().default(false),
-  glowColor: z.string().default('#00e5ff'),
-  glowStrength: z.number().default(0.5),
   // Animations (Phase 30 + typewriter)
   animationIn: z
     .enum(['none', 'fade', 'slideUp', 'slideDown', 'slideLeft', 'slideRight', 'scale', 'pop', 'typewriter'])

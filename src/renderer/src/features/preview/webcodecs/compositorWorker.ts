@@ -1,4 +1,4 @@
-import type { FontFamily, TextAlign, TransitionType } from '@shared'
+import type { FontFamily, TextAlign, TextEffect, TransitionType } from '@shared'
 import { ClipVideoSource } from './clipVideoSource'
 
 /** A clip to draw/prefetch: the resolved decode url (proxy or original) + the
@@ -33,8 +33,10 @@ interface TextDraw {
   align: TextAlign
   bold: boolean
   italic: boolean
-  outlineColor: string
-  outlineWidth: number
+  effect: TextEffect
+  effectColor: string
+  effectIntensity: number
+  effectDirection: number
   boxColor: string
   boxOpacity: number
   boxRadius: number
@@ -348,42 +350,82 @@ function drawTexts(texts: TextDraw[]): void {
         c.roundRect(boxLeft, cy - boxH / 2, boxW, boxH, radius)
         c.fill()
       }
-      const setShadow = (): void => {
-        c.shadowColor = 'rgba(0, 0, 0, 0.7)'
-        c.shadowBlur = size * 0.08
-        c.shadowOffsetY = size * 0.03
-      }
       const clearShadow = (): void => {
         c.shadowColor = 'transparent'
         c.shadowBlur = 0
-        c.shadowOffsetY = 0
-      }
-      if (overlay.glow) {
-        // Neon: bright blurred copies build the glow, then a crisp fill on top.
-        c.shadowColor = hexToRgba(overlay.glowColor, 1)
-        c.shadowBlur = Math.max(2, overlay.glowStrength * size * 0.8)
         c.shadowOffsetX = 0
         c.shadowOffsetY = 0
-        c.fillStyle = fill
-        c.fillText(line, anchorX, cy)
-        c.fillText(line, anchorX, cy)
-        c.shadowColor = 'transparent'
-        c.shadowBlur = 0
-        c.fillText(line, anchorX, cy)
-      } else if (overlay.outlineWidth > 0) {
-        // Outline casts the shadow, then the fill draws clean on top.
-        setShadow()
-        c.lineWidth = size * overlay.outlineWidth * 2
-        c.strokeStyle = hexToRgba(overlay.outlineColor, overlay.opacity)
+      }
+      const rad = (overlay.effectDirection * Math.PI) / 180
+      const off = overlay.effectIntensity * size * 0.18
+      const ox = Math.cos(rad) * off
+      const oy = Math.sin(rad) * off
+      const ec = (a: number): string => hexToRgba(overlay.effectColor, overlay.opacity * a)
+      const stroke = (style: string | CanvasGradient, w: number): void => {
+        c.lineWidth = w
+        c.strokeStyle = style
         c.strokeText(line, anchorX, cy)
-        clearShadow()
-        c.fillStyle = fill
-        c.fillText(line, anchorX, cy)
-      } else {
-        setShadow()
-        c.fillStyle = fill
-        c.fillText(line, anchorX, cy)
-        clearShadow()
+      }
+      switch (overlay.effect) {
+        case 'shadow':
+          c.shadowColor = ec(0.85)
+          c.shadowBlur = overlay.effectIntensity * size * 0.25
+          c.shadowOffsetX = ox
+          c.shadowOffsetY = oy
+          c.fillStyle = fill
+          c.fillText(line, anchorX, cy)
+          clearShadow()
+          break
+        case 'lift':
+          c.shadowColor = 'rgba(0, 0, 0, 0.35)'
+          c.shadowBlur = size * (0.12 + overlay.effectIntensity * 0.2)
+          c.shadowOffsetY = size * 0.04
+          c.fillStyle = fill
+          c.fillText(line, anchorX, cy)
+          clearShadow()
+          break
+        case 'outline':
+          stroke(ec(1), Math.max(1, size * overlay.effectIntensity * 0.18))
+          c.fillStyle = fill
+          c.fillText(line, anchorX, cy)
+          break
+        case 'hollow':
+          stroke(fill, Math.max(1, size * Math.max(0.06, overlay.effectIntensity * 0.14)))
+          break
+        case 'splice':
+          c.fillStyle = ec(1)
+          c.fillText(line, anchorX + ox, cy + oy)
+          stroke(fill, Math.max(1, size * Math.max(0.05, overlay.effectIntensity * 0.12)))
+          break
+        case 'echo':
+          c.fillStyle = ec(0.25)
+          c.fillText(line, anchorX + ox * 2, cy + oy * 2)
+          c.fillStyle = ec(0.45)
+          c.fillText(line, anchorX + ox, cy + oy)
+          c.fillStyle = fill
+          c.fillText(line, anchorX, cy)
+          break
+        case 'glitch':
+          c.fillStyle = `rgba(255, 0, 60, ${overlay.opacity * 0.85})`
+          c.fillText(line, anchorX + ox, cy + oy)
+          c.fillStyle = `rgba(0, 230, 255, ${overlay.opacity * 0.85})`
+          c.fillText(line, anchorX - ox, cy - oy)
+          c.fillStyle = fill
+          c.fillText(line, anchorX, cy)
+          break
+        case 'neon':
+          c.shadowColor = hexToRgba(overlay.effectColor, 1)
+          c.shadowBlur = Math.max(2, overlay.effectIntensity * size * 0.9)
+          c.fillStyle = fill
+          c.fillText(line, anchorX, cy)
+          c.fillText(line, anchorX, cy)
+          clearShadow()
+          c.fillStyle = fill
+          c.fillText(line, anchorX, cy)
+          break
+        default:
+          c.fillStyle = fill
+          c.fillText(line, anchorX, cy)
       }
     }
     c.restore()
