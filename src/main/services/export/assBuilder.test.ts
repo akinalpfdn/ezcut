@@ -25,6 +25,9 @@ function overlay(extra: Partial<TextOverlay> = {}): TextOverlay {
     boxPadding: 0.25,
     opacity: 1,
     rotation: 0,
+    glow: false,
+    glowColor: '#00e5ff',
+    glowStrength: 0.5,
     animationIn: 'none',
     animationOut: 'none',
     animInDuration: 0.4,
@@ -165,6 +168,18 @@ describe('buildAssDocument animations', () => {
   it('should scale out via \\t near the end', () => {
     const doc = buildAssDocument([overlay({ duration: 5, animationOut: 'pop', animOutDuration: 0.4 })], 1280, 720)
     expect(doc).toContain('\\t(4600,5000,\\fscx0\\fscy0)')
+  })
+
+  it('should render a neon glow as a blurred coloured outline', () => {
+    const doc = buildAssDocument([overlay({ glow: true, glowColor: '#00e5ff' })], 1280, 720)
+    expect(doc).toContain('\\blur')
+    expect(doc).toContain('\\3c&HFFE500&') // #00e5ff → BGR
+  })
+
+  it('should reveal text per character for a typewriter in-animation', () => {
+    const doc = buildAssDocument([overlay({ text: 'Hi', animationIn: 'typewriter', animInDuration: 0.4 })], 1280, 720)
+    expect(doc).toContain('{\\alpha&HFF&\\t(0,1,\\alpha&H00&)}H')
+    expect(doc).toContain('{\\alpha&HFF&\\t(200,201,\\alpha&H00&)}i') // 2nd of 2 chars at 0.5*400
   })
 
   it('should leave a static overlay with plain \\pos and no animation tags', () => {

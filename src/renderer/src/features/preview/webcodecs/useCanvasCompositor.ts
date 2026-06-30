@@ -129,10 +129,14 @@ export function useCanvasCompositor(
             boxPadding: overlay.boxPadding,
             opacity: overlay.opacity,
             rotation: overlay.rotation,
+            glow: overlay.glow,
+            glowColor: overlay.glowColor,
+            glowStrength: overlay.glowStrength,
             animAlpha: anim.alpha,
             animDx: anim.dx,
             animDy: anim.dy,
-            animScale: anim.scale
+            animScale: anim.scale,
+            animReveal: anim.reveal
           }
         })
 
@@ -194,7 +198,7 @@ export function useCanvasCompositor(
       const textsSig = texts
         .map(
           (t) =>
-            `${t.text}|${t.x}|${t.y}|${t.fontSize}|${t.color}|${t.background}|${t.fontFamily}|${t.align}|${t.bold}|${t.italic}|${t.outlineColor}|${t.outlineWidth}|${t.boxColor}|${t.boxOpacity}|${t.boxRadius}|${t.boxPadding}|${t.opacity}|${t.rotation}|${t.animAlpha.toFixed(3)}|${t.animDx.toFixed(4)}|${t.animDy.toFixed(4)}|${t.animScale.toFixed(3)}`
+            `${t.text}|${t.x}|${t.y}|${t.fontSize}|${t.color}|${t.background}|${t.fontFamily}|${t.align}|${t.bold}|${t.italic}|${t.outlineColor}|${t.outlineWidth}|${t.boxColor}|${t.boxOpacity}|${t.boxRadius}|${t.boxPadding}|${t.opacity}|${t.rotation}|${t.glow}|${t.glowColor}|${t.glowStrength}|${t.animAlpha.toFixed(3)}|${t.animDx.toFixed(4)}|${t.animDy.toFixed(4)}|${t.animScale.toFixed(3)}|${t.animReveal.toFixed(3)}`
         )
         .join('~')
       const sig = `${hasActiveClip}|${active?.clipId ?? ''}|${active?.fileUrl ?? ''}|${active?.sourceUs ?? ''}|${next?.clipId ?? ''}|${next?.fileUrl ?? ''}|${next?.sourceUs ?? ''}|${fallbackUrl ?? ''}|${transition?.clipId ?? ''}|${transition?.sourceUs ?? ''}|${transition?.transitionType ?? ''}|${transition?.progress ?? ''}|${textsSig}`

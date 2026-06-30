@@ -96,17 +96,19 @@ export function ClipInspector() {
         {t('inspector.fx')}
       </span>
 
-      {(['normalize', 'gate', 'compressor', 'eq'] as const).map((key) => (
-        <button
-          key={key}
-          type="button"
-          className={clip.audioFx[key] ? `${styles.toggle} ${styles.toggleOn}` : styles.toggle}
-          aria-pressed={clip.audioFx[key]}
-          onClick={() => useTimelineStore.getState().setClipAudioFx(clip.id, { [key]: !clip.audioFx[key] })}
-        >
-          {t(`inspector.${key}`)}
-        </button>
-      ))}
+      <div className={styles.toggleGroup}>
+        {(['normalize', 'gate', 'compressor', 'eq'] as const).map((key) => (
+          <button
+            key={key}
+            type="button"
+            className={clip.audioFx[key] ? `${styles.toggle} ${styles.toggleOn}` : styles.toggle}
+            aria-pressed={clip.audioFx[key]}
+            onClick={() => useTimelineStore.getState().setClipAudioFx(clip.id, { [key]: !clip.audioFx[key] })}
+          >
+            {t(`inspector.${key}`)}
+          </button>
+        ))}
+      </div>
 
       {clip.audioFx.eq
         ? (['eqLow', 'eqMid', 'eqHigh'] as const).map((band) => (

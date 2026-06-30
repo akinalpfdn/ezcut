@@ -4,6 +4,7 @@ import { LanguageSwitcher } from './components/LanguageSwitcher'
 import { Button } from './components/Button/Button'
 import { MediaBin } from './features/mediaBin/MediaBin'
 import { Preview } from './features/preview/Preview'
+import { InspectorPanel } from './features/preview/InspectorPanel'
 import { Timeline } from './features/timeline/Timeline'
 import { SettingsPanel } from './features/settings/SettingsPanel'
 import { ExportDialog } from './features/export/ExportDialog'
@@ -79,6 +80,7 @@ export function App() {
         <div className={styles.top}>
           <MediaBin />
           <Preview />
+          <InspectorPanel />
         </div>
         <Timeline />
       </main>

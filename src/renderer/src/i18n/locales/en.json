@@ -68,6 +68,7 @@
     "dropHint": "Drag clips here from the bin"
   },
   "inspector": {
+    "empty": "Select a clip or text to edit its properties",
     "speed": "Speed",
     "volume": "Volume",
     "fadeIn": "Fade in",
@@ -91,6 +92,12 @@
   "textInspector": {
     "placeholder": "Enter text…",
     "font": "Font",
+    "grpStyle": "Style",
+    "grpBox": "Box",
+    "grpEffect": "Effect",
+    "grpAnimation": "Animation",
+    "glow": "Neon glow",
+    "glowColor": "Color",
     "genericFonts": "Presets",
     "systemFonts": "System",
     "size": "Size",
@@ -118,7 +125,8 @@
     "slideLeft": "Slide left",
     "slideRight": "Slide right",
     "scale": "Scale",
-    "pop": "Pop"
+    "pop": "Pop",
+    "typewriter": "Typewriter"
   },
   "transition": {
     "label": "Transition",

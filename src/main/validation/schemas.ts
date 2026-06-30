@@ -113,12 +113,15 @@ const textOverlaySchema = z.object({
   boxPadding: z.number().default(0.25),
   opacity: z.number().default(1),
   rotation: z.number().default(0),
-  // Animations (Phase 30)
+  glow: z.boolean().default(false),
+  glowColor: z.string().default('#00e5ff'),
+  glowStrength: z.number().default(0.5),
+  // Animations (Phase 30 + typewriter)
   animationIn: z
-    .enum(['none', 'fade', 'slideUp', 'slideDown', 'slideLeft', 'slideRight', 'scale', 'pop'])
+    .enum(['none', 'fade', 'slideUp', 'slideDown', 'slideLeft', 'slideRight', 'scale', 'pop', 'typewriter'])
     .default('none'),
   animationOut: z
-    .enum(['none', 'fade', 'slideUp', 'slideDown', 'slideLeft', 'slideRight', 'scale', 'pop'])
+    .enum(['none', 'fade', 'slideUp', 'slideDown', 'slideLeft', 'slideRight', 'scale', 'pop', 'typewriter'])
     .default('none'),
   animInDuration: z.number().default(0.4),
   animOutDuration: z.number().default(0.4)

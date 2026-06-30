@@ -68,6 +68,7 @@
     "dropHint": "Bin'den buraya klip sürükle"
   },
   "inspector": {
+    "empty": "Düzenlemek için bir klip ya da metin seç",
     "speed": "Hız",
     "volume": "Ses",
     "fadeIn": "Açılış",
@@ -91,6 +92,12 @@
   "textInspector": {
     "placeholder": "Metin gir…",
     "font": "Yazı tipi",
+    "grpStyle": "Stil",
+    "grpBox": "Kutu",
+    "grpEffect": "Efekt",
+    "grpAnimation": "Animasyon",
+    "glow": "Neon ışıma",
+    "glowColor": "Renk",
     "genericFonts": "Hazır",
     "systemFonts": "Sistem",
     "size": "Boyut",
@@ -118,7 +125,8 @@
     "slideLeft": "Sola kaydır",
     "slideRight": "Sağa kaydır",
     "scale": "Ölçek",
-    "pop": "Patla"
+    "pop": "Patla",
+    "typewriter": "Daktilo"
   },
   "transition": {
     "label": "Geçiş",

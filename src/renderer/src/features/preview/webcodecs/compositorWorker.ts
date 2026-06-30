@@ -37,10 +37,14 @@ interface TextDraw {
   boxPadding: number
   opacity: number
   rotation: number
+  glow: boolean
+  glowColor: string
+  glowStrength: number
   animAlpha: number
   animDx: number
   animDy: number
   animScale: number
+  animReveal: number
 }
 
 /** Maps a font family to a canvas font token: a generic keyword for the presets,
@@ -283,8 +287,15 @@ function drawTexts(texts: TextDraw[]): void {
     c.textAlign = overlay.align
     c.lineJoin = 'round'
     const firstCenterY = anchorY - ((lines.length - 1) / 2) * lineHeight
+    // Typewriter: reveal a growing prefix of the whole text across the lines.
+    let charBudget =
+      overlay.animReveal < 1
+        ? Math.ceil(overlay.animReveal * lines.reduce((sum, l) => sum + l.length, 0))
+        : Number.POSITIVE_INFINITY
     for (let i = 0; i < lines.length; i += 1) {
-      const line = lines[i] ?? ''
+      const fullLine = lines[i] ?? ''
+      const line = charBudget === Number.POSITIVE_INFINITY ? fullLine : fullLine.slice(0, Math.max(0, charBudget))
+      charBudget -= fullLine.length
       const cy = firstCenterY + i * lineHeight
       const lineW = c.measureText(line).width
       if (overlay.background && line.length > 0) {
@@ -313,7 +324,19 @@ function drawTexts(texts: TextDraw[]): void {
         c.shadowBlur = 0
         c.shadowOffsetY = 0
       }
-      if (overlay.outlineWidth > 0) {
+      if (overlay.glow) {
+        // Neon: bright blurred copies build the glow, then a crisp fill on top.
+        c.shadowColor = hexToRgba(overlay.glowColor, 1)
+        c.shadowBlur = Math.max(2, overlay.glowStrength * size * 0.8)
+        c.shadowOffsetX = 0
+        c.shadowOffsetY = 0
+        c.fillStyle = hexToRgba(overlay.color, overlay.opacity)
+        c.fillText(line, anchorX, cy)
+        c.fillText(line, anchorX, cy)
+        c.shadowColor = 'transparent'
+        c.shadowBlur = 0
+        c.fillText(line, anchorX, cy)
+      } else if (overlay.outlineWidth > 0) {
         // Outline casts the shadow, then the fill draws clean on top.
         setShadow()
         c.lineWidth = size * overlay.outlineWidth * 2

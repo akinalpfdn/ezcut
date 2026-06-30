@@ -129,6 +129,25 @@ function animationTags(
   return { posTag, animTags: `${fade}${scale}` }
 }
 
+/** ASS text body that reveals one character at a time over durationMs (typewriter).
+ * Each char starts transparent (\alpha FF) and flips visible at its slot via \t. */
+function typewriterText(text: string, durationMs: number): string {
+  const chars = [...text]
+  const visible = Math.max(1, chars.filter((ch) => ch !== '\n').length)
+  let shown = 0
+  let out = ''
+  for (const ch of chars) {
+    if (ch === '\n') {
+      out += '\\N'
+      continue
+    }
+    const t = Math.round((shown / visible) * durationMs)
+    out += `{\\alpha&HFF&\\t(${t},${t + 1},\\alpha&H00&)}${escapeAssText(ch)}`
+    shown += 1
+  }
+  return out
+}
+
 /** Builds the full .ass document text for the overlays at the given export size. */
 export function buildAssDocument(overlays: readonly TextOverlay[], width: number, height: number): string {
   const playRes = [`PlayResX: ${width}`, `PlayResY: ${height}`]
@@ -141,12 +160,26 @@ export function buildAssDocument(overlays: readonly TextOverlay[], width: number
     const shadow = Math.max(1, Math.round(size * 0.03))
     const fillAlpha = assAlpha(overlay.opacity)
     const frz = overlay.rotation ? `\\frz${-overlay.rotation}` : '' // ASS rotates CCW; ours is CW
-    const { posTag, animTags } = animationTags(overlay, x, y, height)
+    // Typewriter-in needs a per-character body, so it bypasses the move/scale tags
+    // (out animation still fades). Everything else uses the standard animation tags.
+    let posTag: string
+    let animTags: string
+    let text: string
+    if (overlay.animationIn === 'typewriter') {
+      posTag = `\\pos(${x},${y})`
+      const outMs = overlay.animationOut !== 'none' ? Math.round(overlay.animOutDuration * 1000) : 0
+      animTags = outMs ? `\\fad(0,${outMs})` : ''
+      text = typewriterText(overlay.text, Math.round(overlay.animInDuration * 1000))
+    } else {
+      const tags = animationTags(overlay, x, y, height)
+      posTag = tags.posTag
+      animTags = tags.animTags
+      text = escapeAssText(overlay.text)
+    }
     // Tags shared by every layer of this overlay (position + animation included).
     const base = `\\an${an}${posTag}\\fn${fontName}\\fs${size}\\1c${assColor(overlay.color)}\\1a${fillAlpha}${overlay.bold ? '\\b1' : '\\b0'}${overlay.italic ? '\\i1' : '\\i0'}${frz}${animTags}`
     const start = assTime(overlay.start)
     const end = assTime(overlay.start + overlay.duration)
-    const text = escapeAssText(overlay.text)
     const hasOutline = overlay.outlineWidth > 0
     const outline = `\\bord${Math.round(size * overlay.outlineWidth)}\\3c${assColor(overlay.outlineColor)}\\3a${fillAlpha}`
 
@@ -161,6 +194,14 @@ export function buildAssDocument(overlays: readonly TextOverlay[], width: number
       // layer above the box (same pos/text, so it overlays exactly).
       const textLayer = `Dialogue: 1,${start},${end},Plain,,0,0,0,,{${base}${outline}\\shad${shadow}}${text}`
       return [box, textLayer]
+    }
+
+    if (overlay.glow) {
+      // Neon glow: a blurred bright outline in the glow colour around the fill.
+      const glowBord = Math.max(1, Math.round(size * 0.05))
+      const glowBlur = Math.max(1, Math.round(overlay.glowStrength * size * 0.15))
+      const tags = `${base}\\bord${glowBord}\\3c${assColor(overlay.glowColor)}\\3a${fillAlpha}\\blur${glowBlur}\\shad0`
+      return [`Dialogue: 0,${start},${end},Plain,,0,0,0,,{${tags}}${text}`]
     }
 
     const tags = hasOutline ? `${base}${outline}\\shad${shadow}` : `${base}\\bord0\\shad${shadow}`

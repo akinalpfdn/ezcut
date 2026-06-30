@@ -7,9 +7,11 @@ export interface AnimState {
   dx: number
   dy: number
   scale: number
+  /** Fraction of the text revealed (typewriter); 1 = all. */
+  reveal: number
 }
 
-const NEUTRAL: AnimState = { alpha: 1, dx: 0, dy: 0, scale: 1 }
+const NEUTRAL: AnimState = { alpha: 1, dx: 0, dy: 0, scale: 1, reveal: 1 }
 const SLIDE = 0.12 // entry offset as a fraction of the frame height (matches the exporter)
 
 function easeOut(p: number): number {
@@ -27,19 +29,21 @@ function phase(anim: TextAnimation, p: number): AnimState {
   const e = easeOut(p)
   switch (anim) {
     case 'fade':
-      return { alpha: p, dx: 0, dy: 0, scale: 1 }
+      return { alpha: p, dx: 0, dy: 0, scale: 1, reveal: 1 }
     case 'slideUp':
-      return { alpha: p, dx: 0, dy: SLIDE * (1 - e), scale: 1 }
+      return { alpha: p, dx: 0, dy: SLIDE * (1 - e), scale: 1, reveal: 1 }
     case 'slideDown':
-      return { alpha: p, dx: 0, dy: -SLIDE * (1 - e), scale: 1 }
+      return { alpha: p, dx: 0, dy: -SLIDE * (1 - e), scale: 1, reveal: 1 }
     case 'slideLeft':
-      return { alpha: p, dx: SLIDE * (1 - e), dy: 0, scale: 1 }
+      return { alpha: p, dx: SLIDE * (1 - e), dy: 0, scale: 1, reveal: 1 }
     case 'slideRight':
-      return { alpha: p, dx: -SLIDE * (1 - e), dy: 0, scale: 1 }
+      return { alpha: p, dx: -SLIDE * (1 - e), dy: 0, scale: 1, reveal: 1 }
     case 'scale':
-      return { alpha: p, dx: 0, dy: 0, scale: e }
+      return { alpha: p, dx: 0, dy: 0, scale: e, reveal: 1 }
     case 'pop':
-      return { alpha: p, dx: 0, dy: 0, scale: easeOutBack(Math.max(0.0001, p)) }
+      return { alpha: p, dx: 0, dy: 0, scale: easeOutBack(Math.max(0.0001, p)), reveal: 1 }
+    case 'typewriter':
+      return { alpha: 1, dx: 0, dy: 0, scale: 1, reveal: p }
     default:
       return NEUTRAL
   }

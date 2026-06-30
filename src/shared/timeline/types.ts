@@ -133,6 +133,7 @@ export type TextAnimation =
   | 'slideRight'
   | 'scale'
   | 'pop'
+  | 'typewriter'
 export const TEXT_ANIMATIONS: TextAnimation[] = [
   'none',
   'fade',
@@ -141,7 +142,8 @@ export const TEXT_ANIMATIONS: TextAnimation[] = [
   'slideLeft',
   'slideRight',
   'scale',
-  'pop'
+  'pop',
+  'typewriter'
 ]
 
 /** A time-ranged text title rendered on top of the video (its own overlay layer,
@@ -179,6 +181,11 @@ export interface TextOverlay {
   opacity: number
   /** Rotation in degrees, clockwise, around the anchor. */
   rotation: number
+  /** Neon-style glow around the glyphs. */
+  glow: boolean
+  glowColor: string
+  /** Glow spread, 0..1 (fraction of font size). */
+  glowStrength: number
   /** Entry/exit animations and their durations (seconds). */
   animationIn: TextAnimation
   animationOut: TextAnimation

@@ -6,8 +6,6 @@ import { useTransportStore } from '../../stores/transportStore'
 import { useCanvasCompositor } from './webcodecs/useCanvasCompositor'
 import { useTimelineAudio } from './audio/useTimelineAudio'
 import { Transport } from './Transport'
-import { ClipInspector } from './ClipInspector'
-import { TextInspector } from './TextInspector'
 import styles from './Preview.module.css'
 
 // A throwaway canvas used only to measure text width on the main thread (matching
@@ -148,8 +146,6 @@ export function Preview() {
         />
         {!hasClips ? <div className={styles.empty}>{t('preview.empty')}</div> : null}
       </div>
-      <ClipInspector />
-      <TextInspector />
       <Transport />
     </div>
   )
