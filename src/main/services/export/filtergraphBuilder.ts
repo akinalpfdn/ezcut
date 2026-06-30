@@ -254,9 +254,10 @@ export async function buildFiltergraph(
     videoLabel = chain
   }
 
-  // Text overlays: a drawtext per overlay on top of the video. Font by family via
-  // fontconfig (no fontfile path), text inline (no textfile path) — keeps absolute
-  // Windows paths out of the filtergraph entirely. Centred via text_w/text_h.
+  // Text overlays: a drawtext per LINE on top of the video (one filter per line
+  // avoids escaping newlines in the filtergraph and lets us center each line
+  // explicitly). Font by family via fontconfig (no fontfile path), text inline (no
+  // textfile path) — keeps absolute Windows paths out of the filtergraph entirely.
   const textTempFiles: string[] = []
   if (model.textOverlays.length > 0) {
     for (const overlay of model.textOverlays) {
@@ -264,19 +265,33 @@ export async function buildFiltergraph(
       const size = Math.max(1, Math.round(overlay.fontSize * height))
       const color = overlay.color.replace('#', '0x')
       const end = overlay.start + overlay.duration
-      const out = `tx${chainCounter++}`
+      const enable = `enable='between(t,${overlay.start.toFixed(3)},${end.toFixed(3)})'`
       // Subtle shadow for legibility (mirrors the preview); optional translucent box.
       const shadow = `:shadowcolor=black@0.6:shadowx=0:shadowy=${Math.max(1, Math.round(size * 0.03))}`
       const box = overlay.background
         ? `:box=1:boxcolor=black@0.5:boxborderw=${Math.max(1, Math.round(size * 0.25))}`
         : ''
-      parts.push(
-        `[${videoLabel}]drawtext=font='${fontName}':text=${escapeDrawtextText(overlay.text)}:` +
-          `fontsize=${size}:fontcolor=${color}${box}${shadow}:` +
-          `x=${overlay.x.toFixed(4)}*w-text_w/2:y=${overlay.y.toFixed(4)}*h-text_h/2:` +
-          `enable='between(t,${overlay.start.toFixed(3)},${end.toFixed(3)})'[${out}]`
-      )
-      videoLabel = out
+      // Anchor x depends on alignment (left edge / centre / right edge at overlay.x).
+      const xExpr =
+        overlay.align === 'left'
+          ? `${overlay.x.toFixed(4)}*w`
+          : overlay.align === 'right'
+            ? `${overlay.x.toFixed(4)}*w-text_w`
+            : `${overlay.x.toFixed(4)}*w-text_w/2`
+      const lines = overlay.text.split('\n')
+      const lineHeight = Math.round(size * 1.2)
+      lines.forEach((line, i) => {
+        if (line.trim().length === 0) return // blank line: keep its vertical slot, draw nothing
+        // Center the whole block on overlay.y; each line offset by its row.
+        const offset = Math.round((i - (lines.length - 1) / 2) * lineHeight)
+        const out = `tx${chainCounter++}`
+        parts.push(
+          `[${videoLabel}]drawtext=font='${fontName}':text=${escapeDrawtextText(line)}:` +
+            `fontsize=${size}:fontcolor=${color}${box}${shadow}:` +
+            `x=${xExpr}:y=${overlay.y.toFixed(4)}*h+(${offset})-text_h/2:${enable}[${out}]`
+        )
+        videoLabel = out
+      })
     }
   }
 

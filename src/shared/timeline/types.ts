@@ -116,6 +116,10 @@ export interface Clip {
 export type FontFamily = 'sans' | 'serif' | 'mono'
 export const FONT_FAMILIES: FontFamily[] = ['sans', 'serif', 'mono']
 
+/** Horizontal alignment of a (possibly multi-line) text overlay relative to its anchor. */
+export type TextAlign = 'left' | 'center' | 'right'
+export const TEXT_ALIGNS: TextAlign[] = ['left', 'center', 'right']
+
 /** A time-ranged text title rendered on top of the video (its own overlay layer,
  * not a media clip). Position/size are normalized to the frame so they scale across
  * resolutions. */
@@ -135,6 +139,8 @@ export interface TextOverlay {
   /** Draw a translucent box behind the text for legibility. */
   background: boolean
   fontFamily: FontFamily
+  /** Horizontal alignment of the text block (matters for multi-line). */
+  align: TextAlign
 }
 
 export interface TimelineModel {

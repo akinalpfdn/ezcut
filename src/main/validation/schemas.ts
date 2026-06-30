@@ -99,7 +99,8 @@ const textOverlaySchema = z.object({
   color: z.string(),
   // Defaulted so overlays from pre-TX3 projects still load.
   background: z.boolean().default(false),
-  fontFamily: z.enum(['sans', 'serif', 'mono']).default('sans')
+  fontFamily: z.enum(['sans', 'serif', 'mono']).default('sans'),
+  align: z.enum(['left', 'center', 'right']).default('center')
 })
 
 const projectFileSchema = z.object({

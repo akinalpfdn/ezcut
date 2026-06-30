@@ -107,7 +107,8 @@ export function useCanvasCompositor(
           fontSize: overlay.fontSize,
           color: overlay.color,
           background: overlay.background,
-          fontFamily: overlay.fontFamily
+          fontFamily: overlay.fontFamily,
+          align: overlay.align
         }))
 
       let hasActiveClip = false
@@ -166,7 +167,7 @@ export function useCanvasCompositor(
       // playback sourceUs advances every frame (so it posts, as needed), but
       // while paused/idle this skips the per-frame structured-clone to the worker.
       const textsSig = texts
-        .map((t) => `${t.text}|${t.x}|${t.y}|${t.fontSize}|${t.color}|${t.background}|${t.fontFamily}`)
+        .map((t) => `${t.text}|${t.x}|${t.y}|${t.fontSize}|${t.color}|${t.background}|${t.fontFamily}|${t.align}`)
         .join('~')
       const sig = `${hasActiveClip}|${active?.clipId ?? ''}|${active?.fileUrl ?? ''}|${active?.sourceUs ?? ''}|${next?.clipId ?? ''}|${next?.fileUrl ?? ''}|${next?.sourceUs ?? ''}|${fallbackUrl ?? ''}|${transition?.clipId ?? ''}|${transition?.sourceUs ?? ''}|${transition?.transitionType ?? ''}|${transition?.progress ?? ''}|${textsSig}`
       if (sig !== lastSig) {

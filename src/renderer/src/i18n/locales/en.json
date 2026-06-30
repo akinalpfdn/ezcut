@@ -93,8 +93,9 @@
     "font": "Font",
     "size": "Size",
     "color": "Color",
+    "align": "Align",
     "box": "Box",
-    "dragHint": "Drag the text in the preview to position it",
+    "dragHint": "Click a text in the preview to select it, then drag to position",
     "remove": "Remove"
   },
   "transition": {
@@ -153,6 +154,11 @@
     "sans": "Sans",
     "serif": "Serif",
     "mono": "Mono"
+  },
+  "align": {
+    "left": "Left",
+    "center": "Center",
+    "right": "Right"
   },
   "export": {
     "title": "Export",

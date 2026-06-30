@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { FONT_FAMILIES, type FontFamily, type TextOverlay } from '@shared'
+import { FONT_FAMILIES, TEXT_ALIGNS, type FontFamily, type TextOverlay } from '@shared'
 import { useTimelineStore } from '../../stores/timelineStore'
 import { NumberField } from '../../components/NumberField'
 import styles from './ClipInspector.module.css'
@@ -20,9 +20,9 @@ export function TextInspector() {
 
   return (
     <div className={styles.inspector}>
-      <input
-        className={styles.textInput}
-        type="text"
+      <textarea
+        className={styles.textArea}
+        rows={2}
         value={overlay.text}
         placeholder={t('textInspector.placeholder')}
         onChange={(event) => update({ text: event.target.value })}
@@ -58,6 +58,23 @@ export function TextInspector() {
         <span className={styles.label}>{t('textInspector.color')}</span>
         <input type="color" value={overlay.color} onChange={(event) => update({ color: event.target.value })} />
       </label>
+
+      <div className={styles.field}>
+        <span className={styles.label}>{t('textInspector.align')}</span>
+        <div className={styles.alignRow}>
+          {TEXT_ALIGNS.map((align) => (
+            <button
+              key={align}
+              type="button"
+              className={overlay.align === align ? `${styles.toggle} ${styles.toggleOn}` : styles.toggle}
+              aria-pressed={overlay.align === align}
+              onClick={() => update({ align })}
+            >
+              {t(`align.${align}`)}
+            </button>
+          ))}
+        </div>
+      </div>
 
       <button
         type="button"

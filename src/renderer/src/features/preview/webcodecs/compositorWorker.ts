@@ -1,4 +1,4 @@
-import type { FontFamily, TransitionType } from '@shared'
+import type { FontFamily, TextAlign, TransitionType } from '@shared'
 import { ClipVideoSource } from './clipVideoSource'
 
 /** A clip to draw/prefetch: the resolved decode url (proxy or original) + the
@@ -26,6 +26,7 @@ interface TextDraw {
   color: string
   background: boolean
   fontFamily: FontFamily
+  align: TextAlign
 }
 
 /** Maps a font family to a CSS generic the canvas understands. */
@@ -235,29 +236,42 @@ function drawTexts(texts: TextDraw[]): void {
   const c = ctx
   const width = canvas.width
   const height = canvas.height
-  c.textAlign = 'center'
   c.textBaseline = 'middle'
   for (const overlay of texts) {
+    const lines = overlay.text.split('\n')
     const size = Math.max(1, overlay.fontSize * height)
+    const lineHeight = size * 1.2
     c.font = `bold ${size}px ${cssFontFamily(overlay.fontFamily)}`
-    const px = overlay.x * width
-    const py = overlay.y * height
-    if (overlay.background) {
-      const pad = size * 0.25
-      const boxW = c.measureText(overlay.text).width + pad * 2
-      const boxH = size + pad * 2
-      c.fillStyle = 'rgba(0, 0, 0, 0.5)'
-      c.fillRect(px - boxW / 2, py - boxH / 2, boxW, boxH)
+    c.textAlign = overlay.align
+    const anchorX = overlay.x * width
+    // Vertically center the whole block on the anchor.
+    const firstCenterY = overlay.y * height - ((lines.length - 1) / 2) * lineHeight
+    for (let i = 0; i < lines.length; i += 1) {
+      const line = lines[i] ?? ''
+      const cy = firstCenterY + i * lineHeight
+      if (overlay.background && line.length > 0) {
+        const pad = size * 0.25
+        const lineW = c.measureText(line).width
+        // Box left depends on how the line sits relative to the anchor.
+        const boxLeft =
+          overlay.align === 'left'
+            ? anchorX - pad
+            : overlay.align === 'right'
+              ? anchorX - lineW - pad
+              : anchorX - lineW / 2 - pad
+        c.fillStyle = 'rgba(0, 0, 0, 0.5)'
+        c.fillRect(boxLeft, cy - size / 2 - pad, lineW + pad * 2, size + pad * 2)
+      }
+      // A subtle shadow keeps text legible over any footage.
+      c.shadowColor = 'rgba(0, 0, 0, 0.7)'
+      c.shadowBlur = size * 0.08
+      c.shadowOffsetY = size * 0.03
+      c.fillStyle = overlay.color
+      c.fillText(line, anchorX, cy)
+      c.shadowColor = 'transparent'
+      c.shadowBlur = 0
+      c.shadowOffsetY = 0
     }
-    // A subtle shadow keeps text legible over any footage.
-    c.shadowColor = 'rgba(0, 0, 0, 0.7)'
-    c.shadowBlur = size * 0.08
-    c.shadowOffsetY = size * 0.03
-    c.fillStyle = overlay.color
-    c.fillText(overlay.text, px, py)
-    c.shadowColor = 'transparent'
-    c.shadowBlur = 0
-    c.shadowOffsetY = 0
   }
 }
 

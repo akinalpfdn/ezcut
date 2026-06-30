@@ -93,8 +93,9 @@
     "font": "Yazı tipi",
     "size": "Boyut",
     "color": "Renk",
+    "align": "Hizala",
     "box": "Kutu",
-    "dragHint": "Konumlandırmak için metni önizlemede sürükle",
+    "dragHint": "Önizlemede metne tıklayıp seç, sürükleyerek konumlandır",
     "remove": "Kaldır"
   },
   "transition": {
@@ -153,6 +154,11 @@
     "sans": "Sans",
     "serif": "Serif",
     "mono": "Mono"
+  },
+  "align": {
+    "left": "Sol",
+    "center": "Orta",
+    "right": "Sağ"
   },
   "export": {
     "title": "Dışa aktar",

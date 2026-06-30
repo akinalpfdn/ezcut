@@ -180,3 +180,32 @@ describe('buildFiltergraph (transitions via xfade)', () => {
     expect(graph.filterComplex).not.toContain('xfade')
   })
 })
+
+function textModel(text: string, align: 'left' | 'center' | 'right'): TimelineModel {
+  const model = imageModel()
+  model.textOverlays = [
+    { id: 't1', text, start: 0, duration: 5, x: 0.5, y: 0.5, fontSize: 0.1, color: '#ffffff', background: false, fontFamily: 'sans', align }
+  ]
+  return model
+}
+
+const render = { width: 1280, height: 720, fps: 30 }
+const countDrawtext = (filter: string): number => (filter.match(/drawtext=/g) ?? []).length
+
+describe('buildFiltergraph (text overlays)', () => {
+  it('should emit one drawtext per line for multi-line text', async () => {
+    const graph = await buildFiltergraph(textModel('Line A\nLine B', 'center'), imageMedia, render, async () => '')
+    expect(countDrawtext(graph.filterComplex)).toBe(2)
+  })
+
+  it('should anchor left-aligned text without centering by text_w', async () => {
+    const graph = await buildFiltergraph(textModel('Hi', 'left'), imageMedia, render, async () => '')
+    expect(graph.filterComplex).toContain('x=0.5000*w:')
+    expect(graph.filterComplex).not.toContain('text_w')
+  })
+
+  it('should skip blank lines but keep their vertical slot', async () => {
+    const graph = await buildFiltergraph(textModel('Top\n\nBottom', 'center'), imageMedia, render, async () => '')
+    expect(countDrawtext(graph.filterComplex)).toBe(2)
+  })
+})
