@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { TextOverlay } from '@shared'
-import { assAlpha, assColor, assTime, buildAssDocument, escapeAssText } from './assBuilder'
+import { assAlpha, assColor, assColorLerp, assTime, buildAssDocument, escapeAssText } from './assBuilder'
 
 function overlay(extra: Partial<TextOverlay> = {}): TextOverlay {
   return {
@@ -12,6 +12,10 @@ function overlay(extra: Partial<TextOverlay> = {}): TextOverlay {
     y: 0.5,
     fontSize: 0.1,
     color: '#ffffff',
+    fillType: 'solid',
+    gradientFrom: '#ff0000',
+    gradientTo: '#0000ff',
+    gradientAngle: 0,
     background: false,
     fontFamily: 'mono',
     align: 'center',
@@ -143,6 +147,26 @@ describe('buildAssDocument', () => {
   it('should rotate clockwise via negated ASS angle', () => {
     expect(buildAssDocument([overlay({ rotation: 30 })], 1280, 720)).toContain('\\frz-30')
     expect(buildAssDocument([overlay({ rotation: 0 })], 1280, 720)).not.toContain('\\frz')
+  })
+})
+
+describe('buildAssDocument gradient', () => {
+  it('should interpolate colour per character for a gradient fill', () => {
+    const doc = buildAssDocument(
+      [overlay({ text: 'AB', fillType: 'linear', gradientFrom: '#ff0000', gradientTo: '#0000ff' })],
+      1280,
+      720
+    )
+    // First char = from (red → &H0000FF&), last char = to (blue → &HFF0000&).
+    expect(doc).toContain('{\\1c&H0000FF&}A')
+    expect(doc).toContain('{\\1c&HFF0000&}B')
+  })
+})
+
+describe('assColorLerp', () => {
+  it('should return the endpoints at t=0 and t=1', () => {
+    expect(assColorLerp('#ff0000', '#0000ff', 0)).toBe('&H0000FF&')
+    expect(assColorLerp('#ff0000', '#0000ff', 1)).toBe('&HFF0000&')
   })
 })
 

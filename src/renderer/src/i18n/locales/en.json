@@ -101,13 +101,19 @@
     "genericFonts": "Presets",
     "systemFonts": "System",
     "size": "Size",
+    "fill": "Fill",
+    "gradFrom": "From",
+    "gradTo": "To",
+    "gradAngle": "Angle",
     "color": "Color",
     "align": "Align",
     "bold": "B",
     "italic": "I",
     "opacity": "Opacity",
     "outline": "Outline",
+    "outlineWidth": "Width",
     "rotation": "Rotate",
+    "glowStrength": "Strength",
     "box": "Box",
     "boxColor": "Fill",
     "boxRadius": "Radius",
@@ -184,6 +190,11 @@
     "sans": "Sans",
     "serif": "Serif",
     "mono": "Mono"
+  },
+  "fillType": {
+    "solid": "Solid",
+    "linear": "Linear gradient",
+    "radial": "Radial gradient"
   },
   "align": {
     "left": "Left",

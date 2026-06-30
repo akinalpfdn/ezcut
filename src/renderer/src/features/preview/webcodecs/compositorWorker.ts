@@ -24,6 +24,10 @@ interface TextDraw {
   y: number
   fontSize: number
   color: string
+  fillType: 'solid' | 'linear' | 'radial'
+  gradientFrom: string
+  gradientTo: string
+  gradientAngle: number
   background: boolean
   fontFamily: FontFamily
   align: TextAlign
@@ -63,6 +67,33 @@ function hexToRgba(hex: string, alpha: number): string {
   const g = parseInt(h.slice(2, 4), 16)
   const b = parseInt(h.slice(4, 6), 16)
   return `rgba(${r}, ${g}, ${b}, ${alpha})`
+}
+
+/** Fill style for a text line: a solid colour or a gradient across its bounding box. */
+function lineFill(
+  c: OffscreenCanvasRenderingContext2D,
+  overlay: TextDraw,
+  left: number,
+  cy: number,
+  lineW: number,
+  size: number
+): string | CanvasGradient {
+  if (overlay.fillType === 'solid') return hexToRgba(overlay.color, overlay.opacity)
+  const from = hexToRgba(overlay.gradientFrom, overlay.opacity)
+  const to = hexToRgba(overlay.gradientTo, overlay.opacity)
+  const cx = left + lineW / 2
+  if (overlay.fillType === 'radial') {
+    const g = c.createRadialGradient(cx, cy, 0, cx, cy, Math.max(lineW, size) / 2)
+    g.addColorStop(0, from)
+    g.addColorStop(1, to)
+    return g
+  }
+  const rad = (overlay.gradientAngle * Math.PI) / 180
+  const r = Math.max(lineW, size) / 2
+  const g = c.createLinearGradient(cx - Math.cos(rad) * r, cy - Math.sin(rad) * r, cx + Math.cos(rad) * r, cy + Math.sin(rad) * r)
+  g.addColorStop(0, from)
+  g.addColorStop(1, to)
+  return g
 }
 
 interface InitMessage {
@@ -298,6 +329,9 @@ function drawTexts(texts: TextDraw[]): void {
       charBudget -= fullLine.length
       const cy = firstCenterY + i * lineHeight
       const lineW = c.measureText(line).width
+      const textLeft =
+        overlay.align === 'left' ? anchorX : overlay.align === 'right' ? anchorX - lineW : anchorX - lineW / 2
+      const fill = lineFill(c, overlay, textLeft, cy, lineW, size)
       if (overlay.background && line.length > 0) {
         const pad = size * overlay.boxPadding
         const boxLeft =
@@ -330,7 +364,7 @@ function drawTexts(texts: TextDraw[]): void {
         c.shadowBlur = Math.max(2, overlay.glowStrength * size * 0.8)
         c.shadowOffsetX = 0
         c.shadowOffsetY = 0
-        c.fillStyle = hexToRgba(overlay.color, overlay.opacity)
+        c.fillStyle = fill
         c.fillText(line, anchorX, cy)
         c.fillText(line, anchorX, cy)
         c.shadowColor = 'transparent'
@@ -343,11 +377,11 @@ function drawTexts(texts: TextDraw[]): void {
         c.strokeStyle = hexToRgba(overlay.outlineColor, overlay.opacity)
         c.strokeText(line, anchorX, cy)
         clearShadow()
-        c.fillStyle = hexToRgba(overlay.color, overlay.opacity)
+        c.fillStyle = fill
         c.fillText(line, anchorX, cy)
       } else {
         setShadow()
-        c.fillStyle = hexToRgba(overlay.color, overlay.opacity)
+        c.fillStyle = fill
         c.fillText(line, anchorX, cy)
         clearShadow()
       }

@@ -97,6 +97,10 @@ const textOverlaySchema = z.object({
   y: z.number(),
   fontSize: z.number(),
   color: z.string(),
+  fillType: z.enum(['solid', 'linear', 'radial']).default('solid'),
+  gradientFrom: z.string().default('#ff5e62'),
+  gradientTo: z.string().default('#ff9966'),
+  gradientAngle: z.number().default(0),
   // Defaulted so overlays from pre-TX3 projects still load.
   background: z.boolean().default(false),
   fontFamily: z.string().default('sans'),

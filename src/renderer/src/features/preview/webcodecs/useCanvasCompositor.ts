@@ -116,6 +116,10 @@ export function useCanvasCompositor(
             y: overlay.y,
             fontSize: overlay.fontSize,
             color: overlay.color,
+            fillType: overlay.fillType,
+            gradientFrom: overlay.gradientFrom,
+            gradientTo: overlay.gradientTo,
+            gradientAngle: overlay.gradientAngle,
             background: overlay.background,
             fontFamily: overlay.fontFamily,
             align: overlay.align,
@@ -198,7 +202,7 @@ export function useCanvasCompositor(
       const textsSig = texts
         .map(
           (t) =>
-            `${t.text}|${t.x}|${t.y}|${t.fontSize}|${t.color}|${t.background}|${t.fontFamily}|${t.align}|${t.bold}|${t.italic}|${t.outlineColor}|${t.outlineWidth}|${t.boxColor}|${t.boxOpacity}|${t.boxRadius}|${t.boxPadding}|${t.opacity}|${t.rotation}|${t.glow}|${t.glowColor}|${t.glowStrength}|${t.animAlpha.toFixed(3)}|${t.animDx.toFixed(4)}|${t.animDy.toFixed(4)}|${t.animScale.toFixed(3)}|${t.animReveal.toFixed(3)}`
+            `${t.text}|${t.x}|${t.y}|${t.fontSize}|${t.color}|${t.fillType}|${t.gradientFrom}|${t.gradientTo}|${t.gradientAngle}|${t.background}|${t.fontFamily}|${t.align}|${t.bold}|${t.italic}|${t.outlineColor}|${t.outlineWidth}|${t.boxColor}|${t.boxOpacity}|${t.boxRadius}|${t.boxPadding}|${t.opacity}|${t.rotation}|${t.glow}|${t.glowColor}|${t.glowStrength}|${t.animAlpha.toFixed(3)}|${t.animDx.toFixed(4)}|${t.animDy.toFixed(4)}|${t.animScale.toFixed(3)}|${t.animReveal.toFixed(3)}`
         )
         .join('~')
       const sig = `${hasActiveClip}|${active?.clipId ?? ''}|${active?.fileUrl ?? ''}|${active?.sourceUs ?? ''}|${next?.clipId ?? ''}|${next?.fileUrl ?? ''}|${next?.sourceUs ?? ''}|${fallbackUrl ?? ''}|${transition?.clipId ?? ''}|${transition?.sourceUs ?? ''}|${transition?.transitionType ?? ''}|${transition?.progress ?? ''}|${textsSig}`

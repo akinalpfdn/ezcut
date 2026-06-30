@@ -123,6 +123,10 @@ export const FONT_FAMILIES: FontFamily[] = ['sans', 'serif', 'mono']
 export type TextAlign = 'left' | 'center' | 'right'
 export const TEXT_ALIGNS: TextAlign[] = ['left', 'center', 'right']
 
+/** Text fill: a solid colour or a gradient. */
+export type FillType = 'solid' | 'linear' | 'radial'
+export const FILL_TYPES: FillType[] = ['solid', 'linear', 'radial']
+
 /** In/out animation preset for a text overlay (applied at its start/end edges). */
 export type TextAnimation =
   | 'none'
@@ -160,8 +164,14 @@ export interface TextOverlay {
   y: number
   /** Font size as a fraction of frame height (e.g. 0.06 = 6%). */
   fontSize: number
-  /** Hex color, e.g. "#ffffff". */
+  /** Hex color, e.g. "#ffffff" (used when fillType is 'solid'). */
   color: string
+  /** Fill type; gradient uses gradientFrom/To/Angle. */
+  fillType: FillType
+  gradientFrom: string
+  gradientTo: string
+  /** Linear gradient angle in degrees. */
+  gradientAngle: number
   /** Draw a box behind the text for legibility. */
   background: boolean
   fontFamily: FontFamily

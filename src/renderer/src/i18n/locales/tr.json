@@ -101,13 +101,19 @@
     "genericFonts": "Hazır",
     "systemFonts": "Sistem",
     "size": "Boyut",
+    "fill": "Dolgu",
+    "gradFrom": "Başlangıç",
+    "gradTo": "Bitiş",
+    "gradAngle": "Açı",
     "color": "Renk",
     "align": "Hizala",
     "bold": "B",
     "italic": "I",
     "opacity": "Opaklık",
     "outline": "Kenarlık",
+    "outlineWidth": "Kalınlık",
     "rotation": "Döndür",
+    "glowStrength": "Şiddet",
     "box": "Kutu",
     "boxColor": "Dolgu",
     "boxRadius": "Köşe",
@@ -184,6 +190,11 @@
     "sans": "Sans",
     "serif": "Serif",
     "mono": "Mono"
+  },
+  "fillType": {
+    "solid": "Düz",
+    "linear": "Doğrusal gradyan",
+    "radial": "Dairesel gradyan"
   },
   "align": {
     "left": "Sol",

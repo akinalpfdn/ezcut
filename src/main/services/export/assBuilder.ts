@@ -35,6 +35,16 @@ export function assAlpha(opacity: number): string {
   return `&H${a.toString(16).padStart(2, '0').toUpperCase()}&`
 }
 
+/** Interpolates two hex colours and returns the ASS colour at fraction t (0..1). */
+export function assColorLerp(from: string, to: string, t: number): string {
+  const a = from.replace('#', '').padEnd(6, '0')
+  const b = to.replace('#', '').padEnd(6, '0')
+  const mix = (i: number): number =>
+    Math.round(parseInt(a.slice(i, i + 2), 16) + (parseInt(b.slice(i, i + 2), 16) - parseInt(a.slice(i, i + 2), 16)) * t)
+  const hex = (n: number): string => n.toString(16).padStart(2, '0')
+  return `&H${hex(mix(4))}${hex(mix(2))}${hex(mix(0))}&`.toUpperCase()
+}
+
 // Horizontal alignment → ASS numpad anchor (vertical is always middle, since our
 // y is the block's vertical centre): left edge / centre / right edge at \pos.
 const ALIGN_AN: Record<TextOverlay['align'], number> = { left: 4, center: 5, right: 6 }
@@ -148,6 +158,25 @@ function typewriterText(text: string, durationMs: number): string {
   return out
 }
 
+/** ASS text body with a per-character colour interpolation — approximates a linear
+ * gradient (libass has no native text gradient). */
+function gradientText(text: string, from: string, to: string): string {
+  const chars = [...text]
+  const visible = Math.max(1, chars.filter((ch) => ch !== '\n').length)
+  let i = 0
+  let out = ''
+  for (const ch of chars) {
+    if (ch === '\n') {
+      out += '\\N'
+      continue
+    }
+    const f = visible === 1 ? 0 : i / (visible - 1)
+    out += `{\\1c${assColorLerp(from, to, f)}}${escapeAssText(ch)}`
+    i += 1
+  }
+  return out
+}
+
 /** Builds the full .ass document text for the overlays at the given export size. */
 export function buildAssDocument(overlays: readonly TextOverlay[], width: number, height: number): string {
   const playRes = [`PlayResX: ${width}`, `PlayResY: ${height}`]
@@ -174,7 +203,10 @@ export function buildAssDocument(overlays: readonly TextOverlay[], width: number
       const tags = animationTags(overlay, x, y, height)
       posTag = tags.posTag
       animTags = tags.animTags
-      text = escapeAssText(overlay.text)
+      text =
+        overlay.fillType !== 'solid'
+          ? gradientText(overlay.text, overlay.gradientFrom, overlay.gradientTo)
+          : escapeAssText(overlay.text)
     }
     // Tags shared by every layer of this overlay (position + animation included).
     const base = `\\an${an}${posTag}\\fn${fontName}\\fs${size}\\1c${assColor(overlay.color)}\\1a${fillAlpha}${overlay.bold ? '\\b1' : '\\b0'}${overlay.italic ? '\\i1' : '\\i0'}${frz}${animTags}`

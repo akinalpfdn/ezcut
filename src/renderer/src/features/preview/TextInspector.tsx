@@ -1,7 +1,17 @@
 import { useTranslation } from 'react-i18next'
-import { FONT_FAMILIES, TEXT_ALIGNS, TEXT_ANIMATIONS, type TextAnimation, type TextOverlay } from '@shared'
+import {
+  FILL_TYPES,
+  FONT_FAMILIES,
+  TEXT_ALIGNS,
+  TEXT_ANIMATIONS,
+  type FillType,
+  type TextAnimation,
+  type TextOverlay
+} from '@shared'
 import { useTimelineStore } from '../../stores/timelineStore'
 import { NumberField } from '../../components/NumberField'
+import { ColorField } from '../../components/ColorField'
+import { SliderField } from '../../components/SliderField'
 import { useSystemFonts } from './useSystemFonts'
 import styles from './ClipInspector.module.css'
 
@@ -100,15 +110,55 @@ export function TextInspector() {
         </label>
 
         <label className={styles.field}>
-          <span className={styles.label}>{t('textInspector.color')}</span>
-          <input type="color" value={overlay.color} onChange={(event) => update({ color: event.target.value })} />
-          <NumberField
-            className={styles.number}
-            min={0}
-            max={100}
-            step={5}
+          <span className={styles.label}>{t('textInspector.fill')}</span>
+          <select
+            className={styles.select}
+            value={overlay.fillType}
+            // options are exactly the FillType union members
+            onChange={(event) => update({ fillType: event.target.value as FillType })}
+          >
+            {FILL_TYPES.map((fillType) => (
+              <option key={fillType} value={fillType}>
+                {t(`fillType.${fillType}`)}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        {overlay.fillType === 'solid' ? (
+          <label className={styles.field}>
+            <span className={styles.label}>{t('textInspector.color')}</span>
+            <ColorField value={overlay.color} onChange={(color) => update({ color })} />
+          </label>
+        ) : (
+          <>
+            <label className={styles.field}>
+              <span className={styles.label}>{t('textInspector.gradFrom')}</span>
+              <ColorField value={overlay.gradientFrom} onChange={(gradientFrom) => update({ gradientFrom })} />
+            </label>
+            <label className={styles.field}>
+              <span className={styles.label}>{t('textInspector.gradTo')}</span>
+              <ColorField value={overlay.gradientTo} onChange={(gradientTo) => update({ gradientTo })} />
+            </label>
+            {overlay.fillType === 'linear' ? (
+              <label className={styles.field}>
+                <span className={styles.label}>{t('textInspector.gradAngle')}</span>
+                <SliderField
+                  min={0}
+                  max={360}
+                  value={Math.round(overlay.gradientAngle)}
+                  onChange={(value) => update({ gradientAngle: value })}
+                />
+              </label>
+            ) : null}
+          </>
+        )}
+
+        <label className={styles.field}>
+          <span className={styles.label}>{t('textInspector.opacity')}</span>
+          <SliderField
             value={Math.round(overlay.opacity * 100)}
-            onCommit={(value) => update({ opacity: Math.min(1, Math.max(0, value / 100)) })}
+            onChange={(value) => update({ opacity: Math.min(1, Math.max(0, value / 100)) })}
           />
         </label>
 
@@ -131,30 +181,26 @@ export function TextInspector() {
 
         <label className={styles.field}>
           <span className={styles.label}>{t('textInspector.outline')}</span>
-          <input
-            type="color"
-            value={overlay.outlineColor}
-            onChange={(event) => update({ outlineColor: event.target.value })}
-          />
-          <NumberField
-            className={styles.number}
+          <ColorField value={overlay.outlineColor} onChange={(outlineColor) => update({ outlineColor })} />
+        </label>
+
+        <label className={styles.field}>
+          <span className={styles.label}>{t('textInspector.outlineWidth')}</span>
+          <SliderField
             min={0}
             max={50}
-            step={1}
             value={Math.round(overlay.outlineWidth * 100)}
-            onCommit={(value) => update({ outlineWidth: Math.max(0, value / 100) })}
+            onChange={(value) => update({ outlineWidth: Math.max(0, value / 100) })}
           />
         </label>
 
         <label className={styles.field}>
           <span className={styles.label}>{t('textInspector.rotation')}</span>
-          <NumberField
-            className={styles.number}
+          <SliderField
             min={-180}
             max={180}
-            step={1}
             value={Math.round(overlay.rotation)}
-            onCommit={(value) => update({ rotation: value })}
+            onChange={(value) => update({ rotation: value })}
           />
         </label>
       </div>
@@ -176,40 +222,28 @@ export function TextInspector() {
           <>
             <label className={styles.field}>
               <span className={styles.label}>{t('textInspector.boxColor')}</span>
-              <input
-                type="color"
-                value={overlay.boxColor}
-                onChange={(event) => update({ boxColor: event.target.value })}
-              />
-              <NumberField
-                className={styles.number}
-                min={0}
-                max={100}
-                step={5}
+              <ColorField value={overlay.boxColor} onChange={(boxColor) => update({ boxColor })} />
+            </label>
+            <label className={styles.field}>
+              <span className={styles.label}>{t('textInspector.opacity')}</span>
+              <SliderField
                 value={Math.round(overlay.boxOpacity * 100)}
-                onCommit={(value) => update({ boxOpacity: Math.min(1, Math.max(0, value / 100)) })}
+                onChange={(value) => update({ boxOpacity: Math.min(1, Math.max(0, value / 100)) })}
               />
             </label>
             <label className={styles.field}>
               <span className={styles.label}>{t('textInspector.boxRadius')}</span>
-              <NumberField
-                className={styles.number}
-                min={0}
-                max={100}
-                step={5}
+              <SliderField
                 value={Math.round(overlay.boxRadius * 100)}
-                onCommit={(value) => update({ boxRadius: Math.max(0, value / 100) })}
+                onChange={(value) => update({ boxRadius: Math.max(0, value / 100) })}
               />
             </label>
             <label className={styles.field}>
               <span className={styles.label}>{t('textInspector.boxPadding')}</span>
-              <NumberField
-                className={styles.number}
-                min={0}
+              <SliderField
                 max={200}
-                step={5}
                 value={Math.round(overlay.boxPadding * 100)}
-                onCommit={(value) => update({ boxPadding: Math.max(0, value / 100) })}
+                onChange={(value) => update({ boxPadding: Math.max(0, value / 100) })}
               />
             </label>
           </>
@@ -229,22 +263,19 @@ export function TextInspector() {
           {t('textInspector.glow')}
         </button>
         {overlay.glow ? (
-          <label className={styles.field}>
-            <span className={styles.label}>{t('textInspector.glowColor')}</span>
-            <input
-              type="color"
-              value={overlay.glowColor}
-              onChange={(event) => update({ glowColor: event.target.value })}
-            />
-            <NumberField
-              className={styles.number}
-              min={0}
-              max={100}
-              step={5}
-              value={Math.round(overlay.glowStrength * 100)}
-              onCommit={(value) => update({ glowStrength: Math.max(0, value / 100) })}
-            />
-          </label>
+          <>
+            <label className={styles.field}>
+              <span className={styles.label}>{t('textInspector.glowColor')}</span>
+              <ColorField value={overlay.glowColor} onChange={(glowColor) => update({ glowColor })} />
+            </label>
+            <label className={styles.field}>
+              <span className={styles.label}>{t('textInspector.glowStrength')}</span>
+              <SliderField
+                value={Math.round(overlay.glowStrength * 100)}
+                onChange={(value) => update({ glowStrength: Math.max(0, value / 100) })}
+              />
+            </label>
+          </>
         ) : null}
       </div>
 
