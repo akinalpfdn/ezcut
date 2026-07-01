@@ -26,6 +26,7 @@ function makeClip(overrides: Partial<Clip> = {}): Clip {
     sourceIn: 0,
     sourceOut: 10,
     speed: 1,
+    preservePitch: true,
     volume: 1,
     fadeIn: 0,
     fadeOut: 0,

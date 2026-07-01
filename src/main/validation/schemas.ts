@@ -29,6 +29,8 @@ const clipSchema = z.object({
   sourceIn: z.number(),
   sourceOut: z.number(),
   speed: z.number(),
+  // Defaulted true so projects predating the pitch toggle keep their pitch.
+  preservePitch: z.boolean().default(true),
   volume: z.number(),
   // Defaulted so projects predating fades/mute still load.
   fadeIn: z.number().default(0),

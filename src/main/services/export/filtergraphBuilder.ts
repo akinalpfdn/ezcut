@@ -59,7 +59,8 @@ export interface FiltergraphResult {
 export type ProxyResolver = (mediaPath: string, strength: number) => Promise<string>
 
 /** atempo only accepts 0.5..2.0; chain factors to reach any speed. Returns a
- * filter fragment ending with a comma (or "" for normal speed). */
+ * filter fragment ending with a comma (or "" for normal speed). Pitch-preserving
+ * (tempo change only). */
 function atempoChain(speed: number): string {
   if (speed === 1) return ''
   const parts: string[] = []
@@ -74,6 +75,23 @@ function atempoChain(speed: number): string {
   }
   parts.push(`atempo=${remaining.toFixed(4)}`)
   return `${parts.join(',')},`
+}
+
+/** Sample rate the non-pitch-preserving path normalizes to, so `asetrate` gives a
+ * pitch factor of exactly `speed` regardless of the source's real rate. */
+const RESAMPLE_HZ = 48000
+
+/**
+ * Per-clip speed change for audio (trailing comma), or "" at 1x. When
+ * `preservePitch` is true, uses `atempo` (tempo change, pitch kept — the default).
+ * When false, resamples via `asetrate` so the audio pitches up/down with speed
+ * (the classic tape effect); the stream is forced to a known rate first so the
+ * pitch factor is exactly `speed` no matter the source rate.
+ */
+export function speedAudioChain(speed: number, preservePitch: boolean): string {
+  if (speed === 1) return ''
+  if (preservePitch) return atempoChain(speed)
+  return `aresample=${RESAMPLE_HZ},asetrate=${Math.round(RESAMPLE_HZ * speed)},aresample=${RESAMPLE_HZ},`
 }
 
 /**
@@ -227,7 +245,7 @@ export async function buildFiltergraph(
         const crossFades = audioFadeChain(crossIn, crossOut, length)
         parts.push(
           `[${audioInput}:a]atrim=start=${clip.sourceIn}:end=${clip.sourceOut},asetpts=PTS-STARTPTS,` +
-            `${atempoChain(speed)}${fx}${fades}${crossFades}volume=${clip.volume},adelay=${delayMs}:all=1[${label}]`
+            `${speedAudioChain(speed, clip.preservePitch)}${fx}${fades}${crossFades}volume=${clip.volume},adelay=${delayMs}:all=1[${label}]`
         )
         audioLabels.push(label)
       }

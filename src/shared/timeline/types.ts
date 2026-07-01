@@ -98,6 +98,8 @@ export interface Clip {
   sourceOut: number
   /** Playback rate; 1 = normal. Affects timeline length. */
   speed: number
+  /** Keep the original pitch when speed != 1 (tempo change, not resample). */
+  preservePitch: boolean
   /** Gain 0..1+ applied in preview and export. */
   volume: number
   /** Audio fade-in / fade-out at the clip edges, in timeline seconds (0 = none). */

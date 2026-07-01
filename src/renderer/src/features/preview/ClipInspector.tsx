@@ -3,9 +3,10 @@ import { TRANSITION_TYPES, type TransitionType } from '@shared'
 import { useTimelineStore } from '../../stores/timelineStore'
 import { useMediaStore } from '../../stores/mediaStore'
 import { useDenoiseStore } from '../../stores/denoiseStore'
-import { MAX_CLIP_VOLUME, PLAYBACK_SPEEDS } from '../../config/playback'
+import { MAX_CLIP_VOLUME } from '../../config/playback'
 import { NumberField } from '../../components/NumberField'
 import { SliderField } from '../../components/SliderField'
+import { SpeedField } from '../../components/SpeedField'
 import styles from './ClipInspector.module.css'
 
 export function ClipInspector() {
@@ -68,18 +69,18 @@ export function ClipInspector() {
 
       <label className={styles.field}>
         <span className={styles.label}>{t('inspector.speed')}</span>
-        <select
-          className={styles.select}
-          value={clip.speed}
-          onChange={(event) => useTimelineStore.getState().setClipSpeed(clip.id, Number(event.target.value))}
-        >
-          {PLAYBACK_SPEEDS.map((speed) => (
-            <option key={speed} value={speed}>
-              {speed}×
-            </option>
-          ))}
-        </select>
+        <SpeedField value={clip.speed} onChange={(speed) => useTimelineStore.getState().setClipSpeed(clip.id, speed)} />
       </label>
+
+      <button
+        type="button"
+        className={clip.preservePitch ? `${styles.toggle} ${styles.toggleOn} ${styles.block}` : `${styles.toggle} ${styles.block}`}
+        aria-pressed={clip.preservePitch}
+        title={t('inspector.preservePitchHint')}
+        onClick={() => useTimelineStore.getState().setClipPreservePitch(clip.id, !clip.preservePitch)}
+      >
+        {t('inspector.preservePitch')}
+      </button>
 
       <label className={styles.field}>
         <span className={styles.label}>{t('inspector.volume')}</span>
@@ -137,6 +138,7 @@ export function ClipInspector() {
             type="button"
             className={clip.audioFx[key] ? `${styles.toggle} ${styles.toggleOn}` : styles.toggle}
             aria-pressed={clip.audioFx[key]}
+            title={t(`inspector.${key}Hint`)}
             onClick={() => useTimelineStore.getState().setClipAudioFx(clip.id, { [key]: !clip.audioFx[key] })}
           >
             {t(`inspector.${key}`)}

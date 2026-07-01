@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_AUDIO_FX, type MediaItem, type TimelineModel } from '@shared'
-import { buildAudioFxChain, buildFiltergraph } from './filtergraphBuilder'
+import { buildAudioFxChain, buildFiltergraph, speedAudioChain } from './filtergraphBuilder'
 
 function imageModel(): TimelineModel {
   return {
@@ -14,6 +14,7 @@ function imageModel(): TimelineModel {
         sourceIn: 0,
         sourceOut: 5,
         speed: 1,
+        preservePitch: true,
         volume: 1,
         fadeIn: 0,
         fadeOut: 0,
@@ -55,6 +56,7 @@ function videoClip(id: string, mediaId: string, start: number, extra: Record<str
     sourceIn: 0,
     sourceOut: 3,
     speed: 1,
+    preservePitch: true,
     volume: 1,
     fadeIn: 0,
     fadeOut: 0,
@@ -123,6 +125,35 @@ describe('buildAudioFxChain', () => {
     expect(chain).toContain('loudnorm')
     expect(chain).not.toContain('agate')
     expect(chain).not.toContain('acompressor')
+  })
+})
+
+describe('speedAudioChain', () => {
+  it('should be empty at 1x regardless of pitch mode', () => {
+    expect(speedAudioChain(1, true)).toBe('')
+    expect(speedAudioChain(1, false)).toBe('')
+  })
+
+  it('should use atempo (pitch preserved) when preservePitch is true', () => {
+    const chain = speedAudioChain(1.5, true)
+    expect(chain).toContain('atempo=1.5000')
+    expect(chain).not.toContain('asetrate')
+    expect(chain.endsWith(',')).toBe(true)
+  })
+
+  it('should chain multiple atempo stages for speeds beyond 2x', () => {
+    const chain = speedAudioChain(4, true)
+    expect(chain).toContain('atempo=2.0')
+    // 4 = 2 * 2 → two stages
+    expect(chain.match(/atempo/g)?.length).toBe(2)
+  })
+
+  it('should resample via asetrate (pitch shifts) when preservePitch is false', () => {
+    const chain = speedAudioChain(1.5, false)
+    // Normalized to 48000, reinterpreted at 48000*1.5, resampled back → pitch factor 1.5.
+    expect(chain).toContain('asetrate=72000')
+    expect(chain).toContain('aresample=48000')
+    expect(chain).not.toContain('atempo')
   })
 })
 

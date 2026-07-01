@@ -20,11 +20,22 @@ interface Anchor {
 }
 
 interface ScheduledClip {
-  source: AudioBufferSourceNode
   gain: GainNode
+  /** Tears down this clip's audio — a buffer source, or a media element + timers. */
+  stop: () => void
 }
 
 const SEEK_REANCHOR_THRESHOLD = 0.25
+
+/**
+ * A sped clip that must keep its original pitch can't use an AudioBufferSourceNode
+ * (its playbackRate resamples, shifting pitch). Chromium media elements have native
+ * pitch-preserving time-stretch (`preservesPitch`), so those clips stream through an
+ * <audio> element instead. At 1x, or when pitch-shift is desired, the buffer path is
+ * used (identical output, sample-accurate).
+ */
+const needsPitchElement = (clip: Clip): boolean =>
+  (clip.speed > 0 ? clip.speed : 1) !== 1 && clip.preservePitch
 
 /**
  * Sample-accurate multi-track audio. The AudioContext is the master clock: it
@@ -138,11 +149,9 @@ export function useTimelineAudio(): void {
   }
 
   const stopAll = (): void => {
-    for (const { source } of scheduledRef.current.values()) {
+    for (const { stop } of scheduledRef.current.values()) {
       try {
-        source.onended = null
-        source.stop()
-        source.disconnect()
+        stop()
       } catch {
         // already stopped
       }
@@ -212,11 +221,105 @@ export function useTimelineAudio(): void {
     source.connect(gain).connect(master)
     applyClipGain(gain, clip, anchor)
     source.start(Math.max(when, now), Math.max(0, offset), remaining)
-    const entry: ScheduledClip = { source, gain }
+    const entry: ScheduledClip = {
+      gain,
+      stop: () => {
+        source.onended = null
+        try {
+          source.stop()
+        } catch {
+          // already stopped
+        }
+        source.disconnect()
+        gain.disconnect()
+      }
+    }
     source.onended = () => {
       if (scheduledRef.current.get(clip.id) === entry) scheduledRef.current.delete(clip.id)
     }
     scheduledRef.current.set(clip.id, entry)
+  }
+
+  // Pitch-preserving playback for a sped clip: stream it through a media element
+  // (native `preservesPitch`) instead of a buffer source. The <audio> loads via the
+  // ezmedia protocol (CORS-enabled + Range, so it stays untainted and seekable) and
+  // routes through the same per-clip gain envelope. Timeline scheduling is done with
+  // timers rather than sample-accurate start(), which is fine for preview.
+  const playClipElement = (clip: Clip, url: string, anchor: Anchor): void => {
+    const { ctx, master } = ensureContext()
+    if (scheduledRef.current.has(clip.id) || anchorRef.current !== anchor) return
+
+    const speed = clip.speed > 0 ? clip.speed : 1
+    const clipStartCtx = anchor.ctxTime + (clip.startOnTimeline - anchor.playhead)
+    const now = ctx.currentTime
+    let when = clipStartCtx
+    let offset = clip.sourceIn
+    if (clipStartCtx < now) {
+      offset = clip.sourceIn + (now - clipStartCtx) * speed
+      when = now
+    }
+    if (offset >= clip.sourceOut) return
+    // Timeline seconds this clip still plays from `when` (source span / speed).
+    const remaining = (clip.sourceOut - offset) / speed
+    if (remaining <= 0) return
+
+    const el = new Audio()
+    el.crossOrigin = 'anonymous' // untainted via the protocol's ACAO:* → real samples in the graph
+    el.preservesPitch = true // keep pitch while time-stretching (Chromium native)
+    el.src = url
+    const node = ctx.createMediaElementSource(el)
+    const gain = ctx.createGain()
+    node.connect(gain).connect(master)
+    applyClipGain(gain, clip, anchor)
+
+    let startTimer: ReturnType<typeof setTimeout> | null = null
+    let stopTimer: ReturnType<typeof setTimeout> | null = null
+    const teardown = (): void => {
+      if (startTimer) clearTimeout(startTimer)
+      if (stopTimer) clearTimeout(stopTimer)
+      startTimer = null
+      stopTimer = null
+      try {
+        el.pause()
+      } catch {
+        // ignore
+      }
+      el.src = ''
+      try {
+        node.disconnect()
+        gain.disconnect()
+      } catch {
+        // already disconnected
+      }
+    }
+
+    const entry: ScheduledClip = { gain, stop: teardown }
+
+    const beginPlayback = (): void => {
+      if (anchorRef.current !== anchor) return
+      el.playbackRate = speed
+      const seekAndPlay = (): void => {
+        try {
+          el.currentTime = offset
+        } catch {
+          // seek attempted before metadata — falls back to playing from 0
+        }
+        void el.play().catch(() => {
+          // loading/autoplay race — ignore
+        })
+        stopTimer = setTimeout(() => {
+          teardown()
+          if (scheduledRef.current.get(clip.id) === entry) scheduledRef.current.delete(clip.id)
+        }, remaining * 1000 + 60)
+      }
+      if (el.readyState >= 1) seekAndPlay()
+      else el.addEventListener('loadedmetadata', seekAndPlay, { once: true })
+    }
+
+    scheduledRef.current.set(clip.id, entry)
+    const delay = Math.max(0, when - now)
+    if (delay <= 0) beginPlayback()
+    else startTimer = setTimeout(beginPlayback, delay * 1000)
   }
 
   const scheduleAll = (anchor: Anchor): void => {
@@ -226,6 +329,10 @@ export function useTimelineAudio(): void {
       const media = items.find((item) => item.id === clip.mediaId)
       if (!media || !media.hasAudio) continue
       const url = urlForClip(clip, media.path)
+      if (needsPitchElement(clip)) {
+        playClipElement(clip, url, anchor)
+        continue
+      }
       const buffer = getBuffer(url)
       if (buffer) {
         playClip(clip, buffer, anchor)
@@ -306,9 +413,7 @@ export function useTimelineAudio(): void {
         if (anchor) applyClipGain(entry.gain, clip, anchor)
       } else {
         try {
-          entry.source.onended = null
-          entry.source.stop()
-          entry.source.disconnect()
+          entry.stop()
         } catch {
           // already stopped
         }

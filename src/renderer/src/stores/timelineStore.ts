@@ -110,6 +110,7 @@ interface TimelineState {
   closeGaps: () => void
   addAudioTrack: () => void
   setClipSpeed: (clipId: string, speed: number) => void
+  setClipPreservePitch: (clipId: string, preservePitch: boolean) => void
   setClipVolume: (clipId: string, volume: number) => void
   setAspectRatio: (aspect: AspectRatio) => void
   setClipTransform: (clipId: string, patch: { scale?: number; posX?: number; posY?: number }) => void
@@ -206,6 +207,7 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
       sourceIn: 0,
       sourceOut: sourceDuration,
       speed: 1,
+      preservePitch: true,
       volume: 1,
       fadeIn: 0,
       fadeOut: 0,
@@ -390,6 +392,12 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
     const clip = get().model.clips[clipId]
     if (!clip || speed <= 0 || speed === clip.speed) return
     get().execute(setClipPropertyCommand(clipId, { speed: clip.speed }, { speed }))
+  },
+
+  setClipPreservePitch: (clipId, preservePitch) => {
+    const clip = get().model.clips[clipId]
+    if (!clip || preservePitch === clip.preservePitch) return
+    get().execute(setClipPropertyCommand(clipId, { preservePitch: clip.preservePitch }, { preservePitch }))
   },
 
   setClipVolume: (clipId, volume) => {
