@@ -1,4 +1,4 @@
-import type { FontFamily, TextAlign, TextEffect, TransitionType } from '@shared'
+import type { BubbleShape, FontFamily, TextAlign, TextEffect, TransitionType } from '@shared'
 import { ClipVideoSource } from './clipVideoSource'
 
 /** Scale + pan of a clip within the composition (1 = contain-fit, 0 = centred). */
@@ -37,6 +37,7 @@ interface TextDraw {
   gradientTo: string
   gradientAngle: number
   background: boolean
+  bubble: BubbleShape
   fontFamily: FontFamily
   align: TextAlign
   bold: boolean
@@ -328,6 +329,68 @@ function drawThumbnail(url: string, t: Transform): void {
 
 /** Draws text overlays on top of the current canvas (positions/size are fractions
  * of the frame, so they scale with resolution). */
+/** Traces the bubble shape into the current path and fills it (caller sets
+ * fillStyle). Coordinates are the padded background box (x,y,w,h); `size` is the
+ * font size (drives tail/notch proportions). Mirrors the ASS export shapes. */
+function drawBubbleShape(
+  c: OffscreenCanvasRenderingContext2D,
+  shape: BubbleShape,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  size: number,
+  radius: number
+): void {
+  c.beginPath()
+  switch (shape) {
+    case 'pill':
+      c.roundRect(x, y, w, h, h / 2)
+      break
+    case 'tape': {
+      // Parallelogram — slanted left/right edges (washi-tape look).
+      const s = h * 0.35
+      c.moveTo(x + s, y)
+      c.lineTo(x + w, y)
+      c.lineTo(x + w - s, y + h)
+      c.lineTo(x, y + h)
+      c.closePath()
+      break
+    }
+    case 'banner': {
+      // Ribbon with V-notched ends.
+      const n = h * 0.4
+      c.moveTo(x, y)
+      c.lineTo(x + w, y)
+      c.lineTo(x + w - n, y + h / 2)
+      c.lineTo(x + w, y + h)
+      c.lineTo(x, y + h)
+      c.lineTo(x + n, y + h / 2)
+      c.closePath()
+      break
+    }
+    case 'speech': {
+      // Rounded rect + a downward tail near the lower-left.
+      const r = Math.min(size * 0.35, h / 2, w / 2)
+      c.roundRect(x, y, w, h, r)
+      c.moveTo(x + w * 0.22, y + h)
+      c.lineTo(x + w * 0.4, y + h)
+      c.lineTo(x + w * 0.26, y + h + size * 0.4)
+      c.closePath()
+      break
+    }
+    case 'bar':
+      // Highlighter bar over the lower portion of the text.
+      c.rect(x, y + h * 0.52, w, h * 0.42)
+      break
+    case 'rounded':
+    default:
+      c.roundRect(x, y, w, h, Math.min(size * radius, w / 2, h / 2))
+      break
+  }
+  c.fill()
+}
+
 function drawTexts(texts: TextDraw[]): void {
   if (!canvas || !ctx || texts.length === 0) return
   const c = ctx
@@ -353,6 +416,24 @@ function drawTexts(texts: TextDraw[]): void {
     c.textAlign = overlay.align
     c.lineJoin = 'round'
     const firstCenterY = anchorY - ((lines.length - 1) / 2) * lineHeight
+    // Whole-block background shape: drawn once behind all lines (measured from the
+    // full text so it stays stable while a typewriter reveal types in).
+    if (overlay.background) {
+      let maxW = 1
+      for (const l of lines) maxW = Math.max(maxW, c.measureText(l).width)
+      const pad = size * overlay.boxPadding
+      const boxLeft =
+        overlay.align === 'left'
+          ? anchorX - pad
+          : overlay.align === 'right'
+            ? anchorX - maxW - pad
+            : anchorX - maxW / 2 - pad
+      const boxW = maxW + pad * 2
+      const boxTop = firstCenterY - size / 2 - pad
+      const boxH = (lines.length - 1) * lineHeight + size + pad * 2
+      c.fillStyle = hexToRgba(overlay.boxColor, overlay.boxOpacity)
+      drawBubbleShape(c, overlay.bubble, boxLeft, boxTop, boxW, boxH, size, overlay.boxRadius)
+    }
     // Typewriter: reveal a growing prefix of the whole text across the lines.
     let charBudget =
       overlay.animReveal < 1
@@ -367,22 +448,6 @@ function drawTexts(texts: TextDraw[]): void {
       const textLeft =
         overlay.align === 'left' ? anchorX : overlay.align === 'right' ? anchorX - lineW : anchorX - lineW / 2
       const fill = lineFill(c, overlay, textLeft, cy, lineW, size)
-      if (overlay.background && line.length > 0) {
-        const pad = size * overlay.boxPadding
-        const boxLeft =
-          overlay.align === 'left'
-            ? anchorX - pad
-            : overlay.align === 'right'
-              ? anchorX - lineW - pad
-              : anchorX - lineW / 2 - pad
-        const boxW = lineW + pad * 2
-        const boxH = size + pad * 2
-        const radius = Math.min(size * overlay.boxRadius, boxW / 2, boxH / 2)
-        c.fillStyle = hexToRgba(overlay.boxColor, overlay.boxOpacity)
-        c.beginPath()
-        c.roundRect(boxLeft, cy - boxH / 2, boxW, boxH, radius)
-        c.fill()
-      }
       const clearShadow = (): void => {
         c.shadowColor = 'transparent'
         c.shadowBlur = 0

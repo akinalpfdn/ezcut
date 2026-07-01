@@ -66,14 +66,13 @@ const HEADER = [
   'ScaledBorderAndShadow: yes'
 ]
 
-// Two base styles; everything else is overridden per-event. BorderStyle cannot be
-// set inline, so box-on vs box-off needs distinct styles: Plain = outline style
-// (we use shadow only), Box = opaque box (BorderStyle 3, BackColour is the box).
+// One base style; everything else is overridden per-event. Backgrounds are drawn
+// as \p vector shapes on their own layer (not opaque boxes), so a single outline
+// style suffices.
 const STYLES = [
   '[V4+ Styles]',
   'Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding',
-  'Style: Plain,Arial,48,&H00FFFFFF,&H000000FF,&H00000000,&H66000000,0,0,0,0,100,100,0,0,1,0,2,5,0,0,0,1',
-  'Style: Box,Arial,48,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,3,18,2,5,0,0,0,1'
+  'Style: Plain,Arial,48,&H00FFFFFF,&H000000FF,&H00000000,&H66000000,0,0,0,0,100,100,0,0,1,0,2,5,0,0,0,1'
 ]
 
 const EVENTS_FORMAT = [
@@ -177,6 +176,61 @@ function gradientText(text: string, from: string, to: string): string {
   return out
 }
 
+// libass can't measure fonts, so \p bubble shapes are sized from an estimated
+// text width (avg glyph ≈ this fraction of the font size). Slightly generous so
+// the shape doesn't clip the text. 'rounded' avoids this by using the auto-sized
+// BorderStyle=3 box instead.
+const EST_CHAR_W = 0.58
+
+/** ASS \p drawing commands for a rounded rectangle w×h with corner radius r. */
+function roundRectAss(w: number, h: number, r: number): string {
+  const rad = Math.max(0, Math.min(r, Math.floor(w / 2), Math.floor(h / 2)))
+  const k = Math.round(rad * 0.4477) // control-point offset for a bezier quarter-arc
+  return [
+    `m ${rad} 0`,
+    `l ${w - rad} 0`,
+    `b ${w - rad + k} 0 ${w} ${rad - k} ${w} ${rad}`,
+    `l ${w} ${h - rad}`,
+    `b ${w} ${h - rad + k} ${w - rad + k} ${h} ${w - rad} ${h}`,
+    `l ${rad} ${h}`,
+    `b ${rad - k} ${h} 0 ${h - rad + k} 0 ${h - rad}`,
+    `l 0 ${rad}`,
+    `b 0 ${rad - k} ${rad - k} 0 ${rad} 0`
+  ].join(' ')
+}
+
+/** ASS \p drawing for a bubble shape, in a w×h box with origin at its top-left.
+ * Mirrors the canvas preview shapes (drawBubbleShape). */
+function bubbleDrawing(shape: TextOverlay['bubble'], w: number, h: number, size: number, radiusPx: number): string {
+  switch (shape) {
+    case 'pill':
+      return roundRectAss(w, h, Math.floor(h / 2))
+    case 'tape': {
+      const s = Math.round(h * 0.35)
+      return `m ${s} 0 l ${w} 0 l ${w - s} ${h} l 0 ${h}`
+    }
+    case 'banner': {
+      const n = Math.round(h * 0.4)
+      const hm = Math.round(h / 2)
+      return `m 0 0 l ${w} 0 l ${w - n} ${hm} l ${w} ${h} l 0 ${h} l ${n} ${hm}`
+    }
+    case 'speech': {
+      const r = Math.min(Math.round(size * 0.35), Math.floor(h / 2), Math.floor(w / 2))
+      const tailY = h + Math.round(size * 0.4)
+      // Rounded body + a second subpath for the downward tail (fill unions them).
+      return `${roundRectAss(w, h, r)} m ${Math.round(w * 0.22)} ${h} l ${Math.round(w * 0.4)} ${h} l ${Math.round(w * 0.26)} ${tailY}`
+    }
+    case 'bar': {
+      const top = Math.round(h * 0.52)
+      const bot = Math.round(h * 0.94)
+      return `m 0 ${top} l ${w} ${top} l ${w} ${bot} l 0 ${bot}`
+    }
+    case 'rounded':
+    default:
+      return roundRectAss(w, h, radiusPx)
+  }
+}
+
 /** Builds the full .ass document text for the overlays at the given export size. */
 export function buildAssDocument(overlays: readonly TextOverlay[], width: number, height: number): string {
   const playRes = [`PlayResX: ${width}`, `PlayResY: ${height}`]
@@ -215,11 +269,25 @@ export function buildAssDocument(overlays: readonly TextOverlay[], width: number
     const ec = assColor(overlay.effectColor)
     const events: string[] = []
 
-    // Background box: an invisible-text BorderStyle=3 layer behind everything.
+    // Background shape behind everything: a \p vector drawing on layer 0. libass
+    // can't measure fonts, so the block is sized from an estimated width (the
+    // canvas preview uses real metrics — a small, documented discrepancy).
     if (overlay.background) {
       const pad = Math.max(1, Math.round(size * overlay.boxPadding))
+      const lines = overlay.text.split('\n')
+      const maxW = Math.max(1, ...lines.map((line) => [...line].length * size * EST_CHAR_W))
+      const lineHeight = size * 1.2
+      const blockH = Math.round((lines.length - 1) * lineHeight + size)
+      const boxW = Math.round(maxW + pad * 2)
+      const boxH = blockH + pad * 2
+      const boxTop = Math.round(y - blockH / 2 - pad)
+      const boxLeft = Math.round(
+        overlay.align === 'left' ? x - pad : overlay.align === 'right' ? x - maxW - pad : x - maxW / 2 - pad
+      )
+      const radiusPx = Math.round(size * overlay.boxRadius)
+      const draw = bubbleDrawing(overlay.bubble, boxW, boxH, size, radiusPx)
       events.push(
-        `Dialogue: 0,${start},${end},Box,,0,0,0,,{\\an${an}${posTag}\\fn${fontName}\\fs${size}${bi}${frz}${animTags}\\1a&HFF&\\bord${pad}\\3c${assColor(overlay.boxColor)}\\3a${assAlpha(overlay.boxOpacity)}\\shad0}${text}`
+        `Dialogue: 0,${start},${end},Plain,,0,0,0,,{\\an7\\pos(${boxLeft},${boxTop})\\1c${assColor(overlay.boxColor)}\\1a${assAlpha(overlay.boxOpacity)}\\bord0\\shad0${animTags}\\p1}${draw}`
       )
     }
 

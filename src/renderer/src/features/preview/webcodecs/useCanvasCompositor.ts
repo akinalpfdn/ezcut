@@ -137,6 +137,7 @@ export function useCanvasCompositor(
             gradientTo: overlay.gradientTo,
             gradientAngle: overlay.gradientAngle,
             background: overlay.background,
+            bubble: overlay.bubble,
             fontFamily: overlay.fontFamily,
             align: overlay.align,
             bold: overlay.bold,
@@ -225,7 +226,7 @@ export function useCanvasCompositor(
       const textsSig = texts
         .map(
           (t) =>
-            `${t.text}|${t.x}|${t.y}|${t.fontSize}|${t.color}|${t.fillType}|${t.gradientFrom}|${t.gradientTo}|${t.gradientAngle}|${t.background}|${t.fontFamily}|${t.align}|${t.bold}|${t.italic}|${t.effect}|${t.effectColor}|${t.effectIntensity}|${t.effectDirection}|${t.boxColor}|${t.boxOpacity}|${t.boxRadius}|${t.boxPadding}|${t.opacity}|${t.rotation}|${t.animAlpha.toFixed(3)}|${t.animDx.toFixed(4)}|${t.animDy.toFixed(4)}|${t.animScale.toFixed(3)}|${t.animReveal.toFixed(3)}`
+            `${t.text}|${t.x}|${t.y}|${t.fontSize}|${t.color}|${t.fillType}|${t.gradientFrom}|${t.gradientTo}|${t.gradientAngle}|${t.background}|${t.bubble}|${t.fontFamily}|${t.align}|${t.bold}|${t.italic}|${t.effect}|${t.effectColor}|${t.effectIntensity}|${t.effectDirection}|${t.boxColor}|${t.boxOpacity}|${t.boxRadius}|${t.boxPadding}|${t.opacity}|${t.rotation}|${t.animAlpha.toFixed(3)}|${t.animDx.toFixed(4)}|${t.animDy.toFixed(4)}|${t.animScale.toFixed(3)}|${t.animReveal.toFixed(3)}`
         )
         .join('~')
       const tSig = `${transition?.transform.scale ?? ''}|${transition?.transform.posX ?? ''}|${transition?.transform.posY ?? ''}`

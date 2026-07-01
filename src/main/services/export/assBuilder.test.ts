@@ -17,6 +17,7 @@ function overlay(extra: Partial<TextOverlay> = {}): TextOverlay {
     gradientTo: '#0000ff',
     gradientAngle: 0,
     background: false,
+    bubble: 'rounded',
     fontFamily: 'mono',
     align: 'center',
     bold: true,
@@ -99,20 +100,18 @@ describe('buildAssDocument', () => {
     expect(doc).toContain('\\1c&H0000FF&')
   })
 
-  it('should use the Box style with padding when background is on, else Plain', () => {
+  it('should draw a \\p background shape when on, and none when off', () => {
     const boxed = buildAssDocument([overlay({ background: true })], 1280, 720)
-    expect(boxed).toContain(',Box,')
-    expect(boxed).toContain('\\bord18') // 0.25 * (0.1*720=72) = 18
+    expect(boxed).toContain('\\p1') // vector drawing present
     const plain = buildAssDocument([overlay({ background: false })], 1280, 720)
-    expect(plain).toContain(',Plain,')
-    expect(plain).toContain('\\bord0')
+    expect(plain).not.toContain('\\p1')
   })
 
-  it('should fill the box via the outline channel (libass BorderStyle=3)', () => {
+  it('should fill the background shape via primary colour + alpha', () => {
     const doc = buildAssDocument([overlay({ background: true, boxColor: '#00ff00', boxOpacity: 0.5 })], 1280, 720)
-    const box = doc.split('\n').find((line) => line.includes(',Box,')) ?? ''
-    expect(box).toContain('\\3c&H00FF00&')
-    expect(box).toContain('\\3a&H80&')
+    const bg = doc.split('\n').find((line) => line.includes('\\p1')) ?? ''
+    expect(bg).toContain('\\1c&H00FF00&') // green (BGR)
+    expect(bg).toContain('\\1a&H80&') // 50% opacity
   })
 
   it('should map bold and italic', () => {
@@ -133,13 +132,45 @@ describe('buildAssDocument', () => {
     expect(doc).toMatch(/\\bord\d/)
   })
 
-  it('should layer a box behind the text when background is on', () => {
+  it('should layer the background shape behind the text when background is on', () => {
     const doc = buildAssDocument([overlay({ background: true })], 1280, 720)
     const dialogues = doc.split('\n').filter((line) => line.startsWith('Dialogue:'))
     expect(dialogues).toHaveLength(2)
-    expect(dialogues[0]).toContain(',Box,') // box behind (layer 0), invisible text
-    expect(dialogues[0]).toContain('\\1a&HFF&')
-    expect(dialogues[1]).toContain(',Plain,') // text on top (layer 2)
+    expect(dialogues[0]).toContain('Dialogue: 0,') // shape behind (layer 0)
+    expect(dialogues[0]).toContain('\\p1')
+    expect(dialogues[1]).toContain('Dialogue: 2,') // text on top (layer 2)
+  })
+
+  it('should draw a vector \\p shape for non-rounded bubbles, not a Box', () => {
+    const pill = buildAssDocument([overlay({ background: true, bubble: 'pill' })], 1280, 720)
+    const bg = pill.split('\n').filter((l) => l.startsWith('Dialogue:'))[0] ?? ''
+    expect(bg).toContain(',Plain,') // not the BorderStyle=3 Box
+    expect(bg).toContain('\\p1') // drawing mode
+    expect(bg).toMatch(/\}m \d/) // path starts with a moveto
+    expect(pill).not.toContain(',Box,')
+  })
+
+  it('should tint the \\p bubble via primary colour + alpha', () => {
+    const doc = buildAssDocument([overlay({ background: true, bubble: 'banner', boxColor: '#00ff00', boxOpacity: 0.5 })], 1280, 720)
+    const bg = doc.split('\n').filter((l) => l.startsWith('Dialogue:'))[0] ?? ''
+    expect(bg).toContain('\\1c&H00FF00&') // green fill (BGR)
+    expect(bg).toContain('\\1a&H80&') // 50% opacity
+  })
+
+  it('should give the speech bubble a tail (two subpaths)', () => {
+    const doc = buildAssDocument([overlay({ background: true, bubble: 'speech' })], 1280, 720)
+    const bg = doc.split('\n').filter((l) => l.startsWith('Dialogue:'))[0] ?? ''
+    const drawing = bg.slice(bg.indexOf('\\p1'))
+    // Two moveto commands: the rounded body + the tail subpath.
+    expect((drawing.match(/m -?\d/g) ?? []).length).toBeGreaterThanOrEqual(2)
+  })
+
+  it('should draw rounded bubbles as a rounded \\p rectangle (bezier corners)', () => {
+    const doc = buildAssDocument([overlay({ background: true, bubble: 'rounded', boxRadius: 0.3 })], 1280, 720)
+    const bg = doc.split('\n').filter((l) => l.startsWith('Dialogue:'))[0] ?? ''
+    expect(bg).toContain('\\p1')
+    expect(bg).toMatch(/\bb \d/) // bezier command → rounded corners
+    expect(doc).not.toContain(',Box,')
   })
 
   it('should burn offset copies for echo and glitch effects', () => {

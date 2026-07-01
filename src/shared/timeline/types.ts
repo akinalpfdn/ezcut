@@ -134,6 +134,10 @@ export const TEXT_ALIGNS: TextAlign[] = ['left', 'center', 'right']
 export type FillType = 'solid' | 'linear' | 'radial'
 export const FILL_TYPES: FillType[] = ['solid', 'linear', 'radial']
 
+/** Shape of the background drawn behind a text overlay (when `background` is on). */
+export type BubbleShape = 'rounded' | 'pill' | 'speech' | 'tape' | 'banner' | 'bar'
+export const BUBBLE_SHAPES: BubbleShape[] = ['rounded', 'pill', 'speech', 'tape', 'banner', 'bar']
+
 /** One-click text effect applied to the glyphs (exclusive, Canva-style). */
 export type TextEffect =
   | 'none'
@@ -202,8 +206,10 @@ export interface TextOverlay {
   gradientTo: string
   /** Linear gradient angle in degrees. */
   gradientAngle: number
-  /** Draw a box behind the text for legibility. */
+  /** Draw a shaped background behind the text for legibility (master on/off). */
   background: boolean
+  /** Which background shape to draw when `background` is on. */
+  bubble: BubbleShape
   fontFamily: FontFamily
   /** Horizontal alignment of the text block (matters for multi-line). */
   align: TextAlign

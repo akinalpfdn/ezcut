@@ -579,6 +579,7 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
       gradientTo: '#ff9966',
       gradientAngle: 0,
       background: false,
+      bubble: 'rounded',
       fontFamily: 'sans',
       align: 'center',
       bold: true,

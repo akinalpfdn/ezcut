@@ -209,6 +209,14 @@
     "linear": "Doğrusal gradyan",
     "radial": "Dairesel gradyan"
   },
+  "bubble": {
+    "rounded": "Yuvarlak",
+    "pill": "Hap",
+    "speech": "Balon",
+    "tape": "Bant",
+    "banner": "Şerit",
+    "bar": "Çubuk"
+  },
   "effect": {
     "none": "Yok",
     "shadow": "Gölge",

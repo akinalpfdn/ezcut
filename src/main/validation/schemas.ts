@@ -109,6 +109,8 @@ const textOverlaySchema = z.object({
   gradientAngle: z.number().default(0),
   // Defaulted so overlays from pre-TX3 projects still load.
   background: z.boolean().default(false),
+  // Default 'rounded' so pre-bubble projects render their box unchanged.
+  bubble: z.enum(['rounded', 'pill', 'speech', 'tape', 'banner', 'bar']).default('rounded'),
   fontFamily: z.string().default('sans'),
   align: z.enum(['left', 'center', 'right']).default('center'),
   // Rich styling (Phase 28) — all defaulted so pre-TX5 projects still load.

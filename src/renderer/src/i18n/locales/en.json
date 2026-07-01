@@ -209,6 +209,14 @@
     "linear": "Linear gradient",
     "radial": "Radial gradient"
   },
+  "bubble": {
+    "rounded": "Rounded",
+    "pill": "Pill",
+    "speech": "Speech",
+    "tape": "Tape",
+    "banner": "Banner",
+    "bar": "Bar"
+  },
   "effect": {
     "none": "None",
     "shadow": "Shadow",

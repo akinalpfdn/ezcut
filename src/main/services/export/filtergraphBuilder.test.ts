@@ -237,6 +237,7 @@ function textModel(text: string): TimelineModel {
       gradientTo: '#0000ff',
       gradientAngle: 0,
       background: false,
+      bubble: 'rounded',
       fontFamily: 'sans',
       align: 'center',
       bold: true,

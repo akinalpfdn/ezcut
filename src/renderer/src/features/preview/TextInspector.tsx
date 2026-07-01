@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import {
+  BUBBLE_SHAPES,
   FILL_TYPES,
   FONT_FAMILIES,
   TEXT_ALIGNS,
@@ -209,6 +210,19 @@ export function TextInspector() {
 
         {overlay.background ? (
           <>
+            <div className={styles.effectGrid}>
+              {BUBBLE_SHAPES.map((shape) => (
+                <button
+                  key={shape}
+                  type="button"
+                  className={overlay.bubble === shape ? `${styles.effectCell} ${styles.toggleOn}` : styles.effectCell}
+                  aria-pressed={overlay.bubble === shape}
+                  onClick={() => update({ bubble: shape })}
+                >
+                  {t(`bubble.${shape}`)}
+                </button>
+              ))}
+            </div>
             <label className={styles.field}>
               <span className={styles.label}>{t('textInspector.boxColor')}</span>
               <ColorField value={overlay.boxColor} onChange={(boxColor) => update({ boxColor })} />
@@ -220,13 +234,15 @@ export function TextInspector() {
                 onChange={(value) => update({ boxOpacity: Math.min(1, Math.max(0, value / 100)) })}
               />
             </label>
-            <label className={styles.field}>
-              <span className={styles.label}>{t('textInspector.boxRadius')}</span>
-              <SliderField
-                value={Math.round(overlay.boxRadius * 100)}
-                onChange={(value) => update({ boxRadius: Math.max(0, value / 100) })}
-              />
-            </label>
+            {overlay.bubble === 'rounded' ? (
+              <label className={styles.field}>
+                <span className={styles.label}>{t('textInspector.boxRadius')}</span>
+                <SliderField
+                  value={Math.round(overlay.boxRadius * 100)}
+                  onChange={(value) => update({ boxRadius: Math.max(0, value / 100) })}
+                />
+              </label>
+            ) : null}
             <label className={styles.field}>
               <span className={styles.label}>{t('textInspector.boxPadding')}</span>
               <SliderField
