@@ -139,6 +139,8 @@
     "boxPadding": "Boşluk",
     "animIn": "Giriş",
     "animOut": "Çıkış",
+    "easing": "Yumuşatma",
+    "loop": "Döngü",
     "dragHint": "Önizlemede metne tıklayıp seç, sürükleyerek konumlandır",
     "remove": "Kaldır"
   },
@@ -151,7 +153,27 @@
     "slideRight": "Sağa kaydır",
     "scale": "Ölçek",
     "pop": "Patla",
-    "typewriter": "Daktilo"
+    "bounce": "Zıpla",
+    "rise": "Yüksel",
+    "spin": "Döndür",
+    "blurIn": "Bulanık gir",
+    "wave": "Dalga",
+    "typewriter": "Daktilo",
+    "revealWord": "Kelime kelime"
+  },
+  "easing": {
+    "linear": "Doğrusal",
+    "easeOut": "Yavaşlayarak",
+    "easeInOut": "Yumuşak",
+    "back": "Geri tepme"
+  },
+  "loop": {
+    "none": "Yok",
+    "pulse": "Nabız",
+    "wiggle": "Sallan",
+    "shake": "Titre",
+    "breathe": "Nefes",
+    "blink": "Yanıp sön"
   },
   "transition": {
     "label": "Geçiş",

@@ -66,7 +66,10 @@ interface TextDraw {
   animDx: number
   animDy: number
   animScale: number
+  animRotate: number
+  animBlur: number
   animReveal: number
+  animRevealMode: 'none' | 'char' | 'word'
 }
 
 /** Maps a font family to a canvas font token: a generic keyword for the presets,
@@ -416,9 +419,12 @@ function drawTexts(texts: TextDraw[]): void {
     // Slide (global) then rotate + scale about the anchor.
     c.translate(overlay.animDx * height, overlay.animDy * height)
     c.translate(anchorX, anchorY)
-    if (overlay.rotation) c.rotate((overlay.rotation * Math.PI) / 180)
+    const totalRot = overlay.rotation + overlay.animRotate
+    if (totalRot) c.rotate((totalRot * Math.PI) / 180)
     if (overlay.animScale !== 1) c.scale(overlay.animScale, overlay.animScale)
     c.translate(-anchorX, -anchorY)
+    // blur-in animation: blur the whole overlay (reset by restore()).
+    if (overlay.animBlur > 0) c.filter = `blur(${overlay.animBlur * size}px)`
     const weight = effectiveFontWeight(overlay.bold, overlay.fontWeight)
     c.font = `${overlay.italic ? 'italic ' : ''}${weight} ${size}px ${cssFontFamily(overlay.fontFamily)}`
     c.textAlign = overlay.align
@@ -443,15 +449,27 @@ function drawTexts(texts: TextDraw[]): void {
       c.fillStyle = hexToRgba(overlay.boxColor, overlay.boxOpacity)
       drawBubbleShape(c, overlay.bubble, boxLeft, boxTop, boxW, boxH, size, overlay.boxRadius)
     }
-    // Typewriter: reveal a growing prefix of the whole text across the lines.
-    let charBudget =
-      overlay.animReveal < 1
-        ? Math.ceil(overlay.animReveal * lines.reduce((sum, l) => sum + l.length, 0))
-        : Number.POSITIVE_INFINITY
+    // Reveal a growing prefix of the whole text across lines: typewriter reveals
+    // by character, revealWord by word; 'none' shows everything.
+    const revealChars = overlay.animRevealMode === 'char' && overlay.animReveal < 1
+    const revealWords = overlay.animRevealMode === 'word' && overlay.animReveal < 1
+    let charBudget = revealChars
+      ? Math.ceil(overlay.animReveal * lines.reduce((sum, l) => sum + l.length, 0))
+      : Number.POSITIVE_INFINITY
+    let wordBudget = revealWords
+      ? Math.ceil(overlay.animReveal * lines.reduce((sum, l) => sum + l.split(' ').length, 0))
+      : Number.POSITIVE_INFINITY
     for (let i = 0; i < lines.length; i += 1) {
       const fullLine = lines[i] ?? ''
-      const line = charBudget === Number.POSITIVE_INFINITY ? fullLine : fullLine.slice(0, Math.max(0, charBudget))
-      charBudget -= fullLine.length
+      let line = fullLine
+      if (charBudget !== Number.POSITIVE_INFINITY) {
+        line = fullLine.slice(0, Math.max(0, charBudget))
+        charBudget -= fullLine.length
+      } else if (wordBudget !== Number.POSITIVE_INFINITY) {
+        const words = fullLine.split(' ')
+        line = words.slice(0, Math.max(0, Math.min(words.length, wordBudget))).join(' ')
+        wordBudget -= words.length
+      }
       const cy = firstCenterY + i * lineHeight
       const lineW = c.measureText(line).width
       const textLeft =

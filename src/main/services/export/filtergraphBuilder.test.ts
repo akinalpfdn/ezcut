@@ -261,7 +261,9 @@ function textModel(text: string): TimelineModel {
       animationIn: 'none',
       animationOut: 'none',
       animInDuration: 0.4,
-      animOutDuration: 0.4
+      animOutDuration: 0.4,
+      easing: 'easeOut',
+      loop: 'none'
     }
   ]
   return model

@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import {
   BUBBLE_SHAPES,
+  EASINGS,
   FILL_TYPES,
   FONT_FAMILIES,
   FONT_WEIGHTS,
@@ -8,9 +9,12 @@ import {
   TEXT_ANIMATIONS,
   TEXT_CASES,
   TEXT_EFFECTS,
+  TEXT_LOOPS,
+  type Easing,
   type FillType,
   type TextAnimation,
   type TextCase,
+  type TextLoop,
   type TextOverlay
 } from '@shared'
 import { useTimelineStore } from '../../stores/timelineStore'
@@ -415,6 +419,36 @@ export function TextInspector() {
             value={overlay.animOutDuration}
             onCommit={(value) => update({ animOutDuration: Math.max(0, value) })}
           />
+        </label>
+
+        <label className={styles.field}>
+          <span className={styles.label}>{t('textInspector.easing')}</span>
+          <select
+            className={styles.select}
+            value={overlay.easing}
+            onChange={(event) => update({ easing: event.target.value as Easing })}
+          >
+            {EASINGS.map((es) => (
+              <option key={es} value={es}>
+                {t(`easing.${es}`)}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className={styles.field}>
+          <span className={styles.label}>{t('textInspector.loop')}</span>
+          <select
+            className={styles.select}
+            value={overlay.loop}
+            onChange={(event) => update({ loop: event.target.value as TextLoop })}
+          >
+            {TEXT_LOOPS.map((lp) => (
+              <option key={lp} value={lp}>
+                {t(`loop.${lp}`)}
+              </option>
+            ))}
+          </select>
         </label>
       </div>
 

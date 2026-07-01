@@ -42,6 +42,8 @@ function overlay(extra: Partial<TextOverlay> = {}): TextOverlay {
     animationOut: 'none',
     animInDuration: 0.4,
     animOutDuration: 0.4,
+    easing: 'easeOut',
+    loop: 'none',
     ...extra
   }
 }
@@ -263,10 +265,56 @@ describe('buildAssDocument animations', () => {
     expect(doc).toContain('\\move(640,446,640,360,0,500)')
   })
 
-  it('should scale in via \\t and a zero base scale', () => {
+  it('should scale in via \\t and a zero base scale, with an easing accel', () => {
+    // default easing easeOut → accel 0.6
     const doc = buildAssDocument([overlay({ animationIn: 'scale', animInDuration: 0.4 })], 1280, 720)
     expect(doc).toContain('\\fscx0\\fscy0')
-    expect(doc).toContain('\\t(0,400,\\fscx100\\fscy100)')
+    expect(doc).toContain('\\t(0,400,0.6,\\fscx100\\fscy100)')
+    // linear easing → accel 1
+    const lin = buildAssDocument([overlay({ animationIn: 'scale', animInDuration: 0.4, easing: 'linear' })], 1280, 720)
+    expect(lin).toContain('\\t(0,400,1,\\fscx100\\fscy100)')
+  })
+
+  it('should rise in with a larger \\move offset', () => {
+    const doc = buildAssDocument([overlay({ animationIn: 'rise', animInDuration: 0.5 })], 1280, 720)
+    // rise offset = 1.6 * 0.12 * 720 ≈ 138 → starts below at y+138
+    expect(doc).toContain('\\move(640,498,640,360,0,500)')
+  })
+
+  it('should spin in via an animated \\frz', () => {
+    const doc = buildAssDocument([overlay({ animationIn: 'spin', animInDuration: 0.4 })], 1280, 720)
+    expect(doc).toContain('\\frz-360') // full turn to rest at 0
+    expect(doc).toMatch(/\\t\(0,400,[\d.]+,\\frz0\)/)
+  })
+
+  it('should blur in via an animated \\blur', () => {
+    const doc = buildAssDocument([overlay({ animationIn: 'blurIn', animInDuration: 0.4 })], 1280, 720)
+    expect(doc).toMatch(/\\blur\d+/)
+    expect(doc).toContain('\\t(0,400,\\blur0)')
+  })
+
+  it('should overshoot for a bounce/pop scale-in', () => {
+    const doc = buildAssDocument([overlay({ animationIn: 'bounce', animInDuration: 0.4 })], 1280, 720)
+    expect(doc).toContain('\\fscx115\\fscy115') // overshoot keyframe
+  })
+
+  it('should reveal per word for a revealWord in-animation', () => {
+    const doc = buildAssDocument([overlay({ text: 'one two', animationIn: 'revealWord', animInDuration: 0.4 })], 1280, 720)
+    // two words, each its own reveal chunk; not a single body
+    expect(doc).toContain('{\\alpha&HFF&\\t(0,1,\\alpha&H00&)}one')
+    expect(doc).toContain('{\\alpha&HFF&\\t(200,201,\\alpha&H00&)}two')
+  })
+
+  it('should emit repeating \\t cycles for a pulse loop', () => {
+    const doc = buildAssDocument([overlay({ duration: 2, loop: 'pulse' })], 1280, 720)
+    const main = doc.split('\n').filter((l) => l.startsWith('Dialogue: 2,')).at(-1) ?? ''
+    // 2s / 800ms period → 3 cycles, each scales to 107 and back
+    expect((main.match(/\\fscx107\\fscy107/g) ?? []).length).toBeGreaterThanOrEqual(2)
+  })
+
+  it('should emit alpha cycles for a blink loop', () => {
+    const doc = buildAssDocument([overlay({ duration: 2, loop: 'blink' })], 1280, 720)
+    expect(doc).toContain('\\t(500,560,\\alpha&HFF&)')
   })
 
   it('should scale out via \\t near the end', () => {

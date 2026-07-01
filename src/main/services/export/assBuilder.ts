@@ -1,4 +1,4 @@
-import type { TextAnimation, TextOverlay } from '@shared'
+import type { Easing, TextAnimation, TextLoop, TextOverlay } from '@shared'
 import { applyTextCase, effectiveFontWeight } from '@shared'
 import { resolveFamilyFontName } from './textFont'
 
@@ -83,60 +83,118 @@ const EVENTS_FORMAT = [
 
 const ANIM_SLIDE = 0.12 // entry offset as a fraction of the frame height
 
-function isSlide(a: TextAnimation): boolean {
-  return a === 'slideUp' || a === 'slideDown' || a === 'slideLeft' || a === 'slideRight'
-}
-function isScale(a: TextAnimation): boolean {
-  return a === 'scale' || a === 'pop'
-}
-/** Entry offset (px) for a slide: where the text sits before sliding to its place. */
-function slideOffset(a: TextAnimation, height: number): [number, number] {
-  const d = Math.round(ANIM_SLIDE * height)
-  if (a === 'slideUp') return [0, d]
-  if (a === 'slideDown') return [0, -d]
-  if (a === 'slideLeft') return [d, 0]
-  if (a === 'slideRight') return [-d, 0]
-  return [0, 0]
+/** ASS \t acceleration for an easing: 1 = linear, <1 = decelerate (ease-out).
+ * A single accel can't express an S-curve/overshoot, so easeInOut/back approximate. */
+function easingAccel(easing: Easing): number {
+  return easing === 'linear' || easing === 'easeInOut' || easing === 'back' ? 1 : 0.6
 }
 
-/** ASS position + animation tags (fade/move/scale) for an overlay's in/out presets. */
-function animationTags(
-  overlay: TextOverlay,
-  x: number,
-  y: number,
-  height: number
-): { posTag: string; animTags: string } {
+/** Entry position offset (px) for translating animations; null if it doesn't move. */
+function moveOffset(a: TextAnimation, height: number): [number, number] | null {
+  const d = Math.round(ANIM_SLIDE * height)
+  switch (a) {
+    case 'slideUp':
+      return [0, d]
+    case 'slideDown':
+      return [0, -d]
+    case 'slideLeft':
+      return [d, 0]
+    case 'slideRight':
+      return [-d, 0]
+    case 'wave': // approximated as a slide-up in export (no per-char wave)
+      return [0, d]
+    case 'rise':
+      return [0, Math.round(d * 1.6)]
+    default:
+      return null
+  }
+}
+
+/** Whether an animation scales in; `back` = overshoot (pop/bounce). */
+function scaleInfo(a: TextAnimation): { back: boolean } | null {
+  if (a === 'scale') return { back: false }
+  if (a === 'pop' || a === 'bounce') return { back: true }
+  return null
+}
+
+/**
+ * ASS position + animation tags for an overlay's in/out presets: \move for slides,
+ * \fad, \fscx/\fscy scale (with pop/bounce overshoot), \frz spin, and \blur for
+ * blur-in. Easing maps to the \t acceleration where a single curve suffices.
+ */
+function animationTags(overlay: TextOverlay, x: number, y: number, height: number): { posTag: string; animTags: string } {
+  const size = Math.max(1, Math.round(overlay.fontSize * height))
   const durMs = Math.round(overlay.duration * 1000)
   const inMs = Math.round(overlay.animInDuration * 1000)
   const outMs = Math.round(overlay.animOutDuration * 1000)
+  const outStart = Math.max(0, durMs - outMs)
   const { animationIn: animIn, animationOut: animOut } = overlay
+  const accel = easingAccel(overlay.easing)
 
-  // Position: a slide replaces \pos with \move. (\move does one segment, so an
-  // in-slide takes priority; a paired out-slide leans on the fade.)
+  // Position: a \move (one segment) — in-slide prioritised, else out-slide.
   let posTag = `\\pos(${x},${y})`
-  if (isSlide(animIn)) {
-    const [ox, oy] = slideOffset(animIn, height)
-    posTag = `\\move(${x + ox},${y + oy},${x},${y},0,${inMs})`
-  } else if (isSlide(animOut)) {
-    const [ox, oy] = slideOffset(animOut, height)
-    posTag = `\\move(${x},${y},${x + ox},${y + oy},${Math.max(0, durMs - outMs)},${durMs})`
-  }
+  const inMove = moveOffset(animIn, height)
+  const outMove = moveOffset(animOut, height)
+  if (inMove) posTag = `\\move(${x + inMove[0]},${y + inMove[1]},${x},${y},0,${inMs})`
+  else if (outMove) posTag = `\\move(${x},${y},${x + outMove[0]},${y + outMove[1]},${outStart},${durMs})`
 
-  // Fade applies to every non-none animation (looks better and is the export of pop/scale's opacity).
+  // Fade for any non-none animation.
   const fadeIn = animIn !== 'none' ? inMs : 0
   const fadeOut = animOut !== 'none' ? outMs : 0
-  const fade = fadeIn || fadeOut ? `\\fad(${fadeIn},${fadeOut})` : ''
+  let tags = fadeIn || fadeOut ? `\\fad(${fadeIn},${fadeOut})` : ''
 
-  let scale = ''
-  const scaleIn = isScale(animIn)
-  const scaleOut = isScale(animOut)
-  if (scaleIn || scaleOut) {
-    const baseScale = scaleIn ? 0 : 100
-    scale = `\\fscx${baseScale}\\fscy${baseScale}`
-    if (scaleIn) scale += `\\t(0,${inMs},\\fscx100\\fscy100)`
-    if (scaleOut) scale += `\\t(${Math.max(0, durMs - outMs)},${durMs},\\fscx0\\fscy0)`
+  // Scale (scale / pop / bounce). Overshoot via two keyframes.
+  const inScale = scaleInfo(animIn)
+  const outScale = scaleInfo(animOut)
+  if (inScale || outScale) {
+    tags += `\\fscx${inScale ? 0 : 100}\\fscy${inScale ? 0 : 100}`
+    if (inScale) {
+      tags += inScale.back
+        ? `\\t(0,${Math.round(inMs * 0.6)},\\fscx115\\fscy115)\\t(${Math.round(inMs * 0.6)},${inMs},\\fscx100\\fscy100)`
+        : `\\t(0,${inMs},${accel},\\fscx100\\fscy100)`
+    }
+    if (outScale) tags += `\\t(${outStart},${durMs},\\fscx0\\fscy0)`
   }
-  return { posTag, animTags: `${fade}${scale}` }
+
+  // Spin (\frz), around the overlay's resting angle (ASS rotates CCW → negated).
+  const baseFrz = -overlay.rotation
+  if (animIn === 'spin') tags += `\\frz${baseFrz - 360}\\t(0,${inMs},${accel},\\frz${baseFrz})`
+  else if (animOut === 'spin') tags += `\\t(${outStart},${durMs},\\frz${baseFrz - 360})`
+
+  // Blur-in.
+  const blurAmt = Math.max(1, Math.round(size * 0.25))
+  if (animIn === 'blurIn') tags += `\\blur${blurAmt}\\t(0,${inMs},\\blur0)`
+  else if (animOut === 'blurIn') tags += `\\t(${outStart},${durMs},\\blur${blurAmt})`
+
+  return { posTag, animTags: tags }
+}
+
+/**
+ * Chained \t cycles that repeat a loop animation across the clip. ASS \t can't
+ * animate \pos, so position-based loops (shake) are approximated with a fast \frz
+ * jitter around the resting angle `baseFrz`.
+ */
+function loopTags(loop: TextLoop, durMs: number, baseFrz: number): string {
+  if (loop === 'none' || durMs <= 0) return ''
+  const cycle = (period: number, build: (t: number) => string): string => {
+    let out = ''
+    for (let t = 0; t < durMs; t += period) out += build(t)
+    return out
+  }
+  switch (loop) {
+    case 'pulse':
+      return cycle(800, (t) => `\\t(${t},${t + 400},\\fscx107\\fscy107)\\t(${t + 400},${t + 800},\\fscx100\\fscy100)`)
+    case 'breathe':
+      return cycle(2400, (t) => `\\t(${t},${t + 1200},\\fscx104\\fscy104)\\t(${t + 1200},${t + 2400},\\fscx100\\fscy100)`)
+    case 'blink':
+      return cycle(700, (t) => `\\t(${t + 500},${t + 560},\\alpha&HFF&)\\t(${t + 560},${t + 620},\\alpha&H00&)`)
+    case 'wiggle':
+      return cycle(600, (t) => `\\t(${t},${t + 300},\\frz${baseFrz + 5})\\t(${t + 300},${t + 600},\\frz${baseFrz - 5})`)
+    case 'shake':
+      return cycle(140, (t) => `\\t(${t},${t + 70},\\frz${baseFrz + 3})\\t(${t + 70},${t + 140},\\frz${baseFrz - 3})`)
+    default:
+      return ''
+  }
 }
 
 /** ASS text body that reveals one character at a time over durationMs (typewriter).
@@ -155,6 +213,26 @@ function typewriterText(text: string, durationMs: number): string {
     out += `{\\alpha&HFF&\\t(${t},${t + 1},\\alpha&H00&)}${escapeAssText(ch)}`
     shown += 1
   }
+  return out
+}
+
+/** ASS text body that reveals one WORD at a time over durationMs. Each word starts
+ * transparent and flips visible at its slot. Newlines become hard breaks. */
+function wordRevealText(text: string, durationMs: number): string {
+  const lines = text.split('\n')
+  const total = Math.max(1, lines.reduce((sum, line) => sum + line.split(' ').filter((word) => word.length > 0).length, 0))
+  let shown = 0
+  let out = ''
+  lines.forEach((line, li) => {
+    if (li > 0) out += '\\N'
+    line.split(' ').forEach((word, wi) => {
+      if (wi > 0) out += ' '
+      if (word.length === 0) return
+      const t = Math.round((shown / total) * durationMs)
+      out += `{\\alpha&HFF&\\t(${t},${t + 1},\\alpha&H00&)}${escapeAssText(word)}`
+      shown += 1
+    })
+  })
   return out
 }
 
@@ -252,21 +330,25 @@ export function buildAssDocument(overlays: readonly TextOverlay[], width: number
     const start = assTime(overlay.start)
     const end = assTime(overlay.start + overlay.duration)
     const ec = assColor(overlay.effectColor)
-    const isTypewriter = overlay.animationIn === 'typewriter'
+    // Reveal animations (typewriter/word) use a per-token body and one \pos block.
+    const isReveal = overlay.animationIn === 'typewriter' || overlay.animationIn === 'revealWord'
     const lines = sourceText.split('\n')
     const lineHeightPx = Math.max(1, Math.round(size * overlay.lineSpacing))
+    const durMs = Math.round(overlay.duration * 1000)
+    const loop = loopTags(overlay.loop, durMs, -overlay.rotation)
 
-    // Animation tags are shared; typewriter bypasses move/scale (out still fades).
+    // Animation tags are shared; reveals bypass move/scale (out still fades). Loops
+    // repeat across the whole clip and apply to every layer.
     let blockPosTag: string
     let animTags: string
-    if (isTypewriter) {
+    if (isReveal) {
       blockPosTag = `\\pos(${x},${y})`
       const outMs = overlay.animationOut !== 'none' ? Math.round(overlay.animOutDuration * 1000) : 0
-      animTags = outMs ? `\\fad(0,${outMs})` : ''
+      animTags = (outMs ? `\\fad(0,${outMs})` : '') + loop
     } else {
       const tags = animationTags(overlay, x, y, height)
       blockPosTag = tags.posTag
-      animTags = tags.animTags
+      animTags = tags.animTags + loop
     }
 
     // Per-unit style (position added per unit so multi-line can set line spacing).
@@ -346,9 +428,11 @@ export function buildAssDocument(overlays: readonly TextOverlay[], width: number
     const bodyOf = (line: string): string =>
       overlay.fillType !== 'solid' ? gradientText(line, overlay.gradientFrom, overlay.gradientTo) : escapeAssText(line)
 
-    if (isTypewriter) {
-      // Typewriter is inherently one \N body; it uses libass's default line spacing.
-      emitUnit(typewriterText(sourceText, Math.round(overlay.animInDuration * 1000)), y, blockPosTag)
+    if (isReveal) {
+      // Reveal is inherently one \N body; it uses libass's default line spacing.
+      const inMs = Math.round(overlay.animInDuration * 1000)
+      const body = overlay.animationIn === 'revealWord' ? wordRevealText(sourceText, inMs) : typewriterText(sourceText, inMs)
+      emitUnit(body, y, blockPosTag)
     } else if (lines.length <= 1) {
       emitUnit(bodyOf(sourceText), y, blockPosTag)
     } else {

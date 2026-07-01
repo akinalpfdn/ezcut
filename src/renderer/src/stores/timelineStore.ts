@@ -603,7 +603,9 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
       animationIn: 'none',
       animationOut: 'none',
       animInDuration: 0.4,
-      animOutDuration: 0.4
+      animOutDuration: 0.4,
+      easing: 'easeOut',
+      loop: 'none'
     }
     get().execute(addTextOverlayCommand(overlay))
     set({ selectedOverlayId: overlay.id, selectedClipId: null })

@@ -136,15 +136,17 @@ const textOverlaySchema = z.object({
   boxPadding: z.number().default(0.25),
   opacity: z.number().default(1),
   rotation: z.number().default(0),
-  // Animations (Phase 30 + typewriter)
+  // Animations (Phase 30 + 35). New presets/loops defaulted so old projects load.
   animationIn: z
-    .enum(['none', 'fade', 'slideUp', 'slideDown', 'slideLeft', 'slideRight', 'scale', 'pop', 'typewriter'])
+    .enum(['none', 'fade', 'slideUp', 'slideDown', 'slideLeft', 'slideRight', 'scale', 'pop', 'bounce', 'rise', 'spin', 'blurIn', 'wave', 'typewriter', 'revealWord'])
     .default('none'),
   animationOut: z
-    .enum(['none', 'fade', 'slideUp', 'slideDown', 'slideLeft', 'slideRight', 'scale', 'pop', 'typewriter'])
+    .enum(['none', 'fade', 'slideUp', 'slideDown', 'slideLeft', 'slideRight', 'scale', 'pop', 'bounce', 'rise', 'spin', 'blurIn', 'wave', 'typewriter', 'revealWord'])
     .default('none'),
   animInDuration: z.number().default(0.4),
-  animOutDuration: z.number().default(0.4)
+  animOutDuration: z.number().default(0.4),
+  easing: z.enum(['linear', 'easeOut', 'easeInOut', 'back']).default('easeOut'),
+  loop: z.enum(['none', 'pulse', 'wiggle', 'shake', 'breathe', 'blink']).default('none')
 })
 
 const projectFileSchema = z.object({

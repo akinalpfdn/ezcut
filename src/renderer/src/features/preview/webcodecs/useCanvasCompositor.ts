@@ -123,6 +123,8 @@ export function useCanvasCompositor(
             overlay.animationOut,
             overlay.animInDuration,
             overlay.animOutDuration,
+            overlay.easing,
+            overlay.loop,
             playheadTime - overlay.start,
             overlay.start + overlay.duration - playheadTime
           )
@@ -162,7 +164,10 @@ export function useCanvasCompositor(
             animDx: anim.dx,
             animDy: anim.dy,
             animScale: anim.scale,
-            animReveal: anim.reveal
+            animRotate: anim.rotate,
+            animBlur: anim.blur,
+            animReveal: anim.reveal,
+            animRevealMode: anim.revealMode
           }
         })
 
@@ -232,7 +237,7 @@ export function useCanvasCompositor(
       const textsSig = texts
         .map(
           (t) =>
-            `${t.text}|${t.x}|${t.y}|${t.fontSize}|${t.color}|${t.fillType}|${t.gradientFrom}|${t.gradientTo}|${t.gradientAngle}|${t.background}|${t.bubble}|${t.fontFamily}|${t.align}|${t.bold}|${t.italic}|${t.fontWeight}|${t.letterSpacing}|${t.lineSpacing}|${t.textCase}|${t.underline}|${t.strikethrough}|${t.effect}|${t.effectColor}|${t.effectIntensity}|${t.effectDirection}|${t.boxColor}|${t.boxOpacity}|${t.boxRadius}|${t.boxPadding}|${t.opacity}|${t.rotation}|${t.animAlpha.toFixed(3)}|${t.animDx.toFixed(4)}|${t.animDy.toFixed(4)}|${t.animScale.toFixed(3)}|${t.animReveal.toFixed(3)}`
+            `${t.text}|${t.x}|${t.y}|${t.fontSize}|${t.color}|${t.fillType}|${t.gradientFrom}|${t.gradientTo}|${t.gradientAngle}|${t.background}|${t.bubble}|${t.fontFamily}|${t.align}|${t.bold}|${t.italic}|${t.fontWeight}|${t.letterSpacing}|${t.lineSpacing}|${t.textCase}|${t.underline}|${t.strikethrough}|${t.effect}|${t.effectColor}|${t.effectIntensity}|${t.effectDirection}|${t.boxColor}|${t.boxOpacity}|${t.boxRadius}|${t.boxPadding}|${t.opacity}|${t.rotation}|${t.animAlpha.toFixed(3)}|${t.animDx.toFixed(4)}|${t.animDy.toFixed(4)}|${t.animScale.toFixed(3)}|${t.animRotate.toFixed(2)}|${t.animBlur.toFixed(3)}|${t.animReveal.toFixed(3)}|${t.animRevealMode}`
         )
         .join('~')
       const tSig = `${transition?.transform.scale ?? ''}|${transition?.transform.posX ?? ''}|${transition?.transform.posY ?? ''}`

@@ -178,7 +178,13 @@ export type TextAnimation =
   | 'slideRight'
   | 'scale'
   | 'pop'
+  | 'bounce'
+  | 'rise'
+  | 'spin'
+  | 'blurIn'
+  | 'wave'
   | 'typewriter'
+  | 'revealWord'
 export const TEXT_ANIMATIONS: TextAnimation[] = [
   'none',
   'fade',
@@ -188,8 +194,22 @@ export const TEXT_ANIMATIONS: TextAnimation[] = [
   'slideRight',
   'scale',
   'pop',
-  'typewriter'
+  'bounce',
+  'rise',
+  'spin',
+  'blurIn',
+  'wave',
+  'typewriter',
+  'revealWord'
 ]
+
+/** Continuous looping animation that runs across the whole overlay duration. */
+export type TextLoop = 'none' | 'pulse' | 'wiggle' | 'shake' | 'breathe' | 'blink'
+export const TEXT_LOOPS: TextLoop[] = ['none', 'pulse', 'wiggle', 'shake', 'breathe', 'blink']
+
+/** Easing curve applied to in/out animations. */
+export type Easing = 'linear' | 'easeOut' | 'easeInOut' | 'back'
+export const EASINGS: Easing[] = ['linear', 'easeOut', 'easeInOut', 'back']
 
 /** A time-ranged text title rendered on top of the video (its own overlay layer,
  * not a media clip). Position/size are normalized to the frame so they scale across
@@ -253,6 +273,10 @@ export interface TextOverlay {
   animationOut: TextAnimation
   animInDuration: number
   animOutDuration: number
+  /** Easing curve for the in/out animations. */
+  easing: Easing
+  /** Continuous loop animation across the whole overlay (independent of in/out). */
+  loop: TextLoop
 }
 
 /** Project aspect ratio (the composition frame the video is fitted into). */
