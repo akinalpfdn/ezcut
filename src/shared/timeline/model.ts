@@ -1,9 +1,30 @@
-import type { Clip, TimelineModel, Track, TrackKind, TransitionType } from './types'
+import type { Clip, TextCase, TimelineModel, Track, TrackKind, TransitionType } from './types'
 import type { MediaKind } from '../media/types'
 
 /** Which track kind a media item belongs on: images share the video track. */
 export function trackKindForMedia(kind: MediaKind): TrackKind {
   return kind === 'audio' ? 'audio' : 'video'
+}
+
+/** Applies a letter-case transform to text (preserves newlines). Used identically
+ * by the preview, the exporter, and the overlay hit-test so they stay in sync. */
+export function applyTextCase(text: string, textCase: TextCase): string {
+  switch (textCase) {
+    case 'upper':
+      return text.toLocaleUpperCase()
+    case 'lower':
+      return text.toLocaleLowerCase()
+    case 'title':
+      return text.replace(/\p{L}[\p{L}\p{M}'’]*/gu, (word) => word.charAt(0).toLocaleUpperCase() + word.slice(1).toLocaleLowerCase())
+    default:
+      return text
+  }
+}
+
+/** Rendered font weight: the `bold` toggle forces at least 700; otherwise the
+ * picked weight applies (so light/regular/medium need bold off). */
+export function effectiveFontWeight(bold: boolean, fontWeight: number): number {
+  return bold ? Math.max(700, fontWeight) : fontWeight
 }
 
 /** Length the clip occupies on the timeline, accounting for speed. */

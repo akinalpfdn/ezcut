@@ -22,6 +22,12 @@ function overlay(extra: Partial<TextOverlay> = {}): TextOverlay {
     align: 'center',
     bold: true,
     italic: false,
+    fontWeight: 400,
+    letterSpacing: 0,
+    lineSpacing: 1.2,
+    textCase: 'none',
+    underline: false,
+    strikethrough: false,
     effect: 'none',
     effectColor: '#000000',
     effectIntensity: 0.5,
@@ -81,9 +87,13 @@ describe('buildAssDocument', () => {
     expect(doc).toContain(',0:00:02.00,0:00:05.00,')
   })
 
-  it('should hard-break multi-line text with \\N', () => {
+  it('should render multi-line text as separate positioned lines', () => {
     const doc = buildAssDocument([overlay({ text: 'Line A\nLine B' })], 1280, 720)
-    expect(doc).toContain('Line A\\NLine B')
+    const mains = doc.split('\n').filter((l) => l.startsWith('Dialogue: 2,'))
+    expect(mains).toHaveLength(2)
+    expect(mains[0]).toContain('Line A')
+    expect(mains[1]).toContain('Line B')
+    expect(doc).not.toContain('Line A\\NLine B') // no longer a single \N body
   })
 
   it('should map alignment to the ASS numpad anchor', () => {
@@ -114,9 +124,33 @@ describe('buildAssDocument', () => {
     expect(bg).toContain('\\1a&H80&') // 50% opacity
   })
 
-  it('should map bold and italic', () => {
-    expect(buildAssDocument([overlay({ bold: true, italic: true })], 1280, 720)).toContain('\\b1\\i1')
-    expect(buildAssDocument([overlay({ bold: false, italic: false })], 1280, 720)).toContain('\\b0\\i0')
+  it('should map bold/weight and italic', () => {
+    // bold forces at least weight 700
+    expect(buildAssDocument([overlay({ bold: true, italic: true })], 1280, 720)).toContain('\\b700\\i1')
+    expect(buildAssDocument([overlay({ bold: false, fontWeight: 400, italic: false })], 1280, 720)).toContain('\\b400\\i0')
+    // an explicit heavier weight passes through when not overridden by bold
+    expect(buildAssDocument([overlay({ bold: false, fontWeight: 900 })], 1280, 720)).toContain('\\b900')
+  })
+
+  it('should emit letter spacing, underline and strikethrough tags', () => {
+    expect(buildAssDocument([overlay({ letterSpacing: 0.1 })], 1280, 720)).toContain('\\fsp7') // 0.1 * (0.1*720=72) = 7
+    expect(buildAssDocument([overlay({ underline: true })], 1280, 720)).toContain('\\u1')
+    expect(buildAssDocument([overlay({ strikethrough: true })], 1280, 720)).toContain('\\s1')
+  })
+
+  it('should apply the case transform to the rendered text', () => {
+    expect(buildAssDocument([overlay({ text: 'hello', textCase: 'upper' })], 1280, 720)).toContain('HELLO')
+    expect(buildAssDocument([overlay({ text: 'HELLO', textCase: 'lower' })], 1280, 720)).toContain('hello')
+    expect(buildAssDocument([overlay({ text: 'hello world', textCase: 'title' })], 1280, 720)).toContain('Hello World')
+  })
+
+  it('should render one positioned event per line, spaced by lineSpacing', () => {
+    const doc = buildAssDocument([overlay({ text: 'a\nb', lineSpacing: 2 })], 1280, 720)
+    const mains = doc.split('\n').filter((l) => l.startsWith('Dialogue: 2,'))
+    expect(mains).toHaveLength(2) // one \pos event per line
+    const ys = mains.map((l) => Number(/\\pos\(\d+,(\d+)\)/.exec(l)?.[1]))
+    // size = 72, lineSpacing 2 → lines 144px apart
+    expect(Math.abs(ys[1] - ys[0])).toBe(144)
   })
 
   it('should map text opacity to inverted ASS alpha', () => {

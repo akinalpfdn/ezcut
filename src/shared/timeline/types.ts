@@ -138,6 +138,13 @@ export const FILL_TYPES: FillType[] = ['solid', 'linear', 'radial']
 export type BubbleShape = 'rounded' | 'pill' | 'speech' | 'tape' | 'banner' | 'bar'
 export const BUBBLE_SHAPES: BubbleShape[] = ['rounded', 'pill', 'speech', 'tape', 'banner', 'bar']
 
+/** Letter-case transform applied to a text overlay at render time. */
+export type TextCase = 'none' | 'upper' | 'lower' | 'title'
+export const TEXT_CASES: TextCase[] = ['none', 'upper', 'lower', 'title']
+
+/** Font weights offered by the weight picker (light → black). */
+export const FONT_WEIGHTS: number[] = [300, 400, 500, 700, 900]
+
 /** One-click text effect applied to the glyphs (exclusive, Canva-style). */
 export type TextEffect =
   | 'none'
@@ -215,6 +222,16 @@ export interface TextOverlay {
   align: TextAlign
   bold: boolean
   italic: boolean
+  /** Extra weight (100–900). Effective weight = bold ? max(700, fontWeight) : fontWeight. */
+  fontWeight: number
+  /** Letter spacing as a fraction of font size (0 = normal). */
+  letterSpacing: number
+  /** Line-height multiplier for multi-line text (1.2 = default). */
+  lineSpacing: number
+  /** Letter-case transform. */
+  textCase: TextCase
+  underline: boolean
+  strikethrough: boolean
   /** Glyph effect (exclusive). effectColor/Intensity/Direction parameterise it. */
   effect: TextEffect
   effectColor: string

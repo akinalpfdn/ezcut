@@ -3,11 +3,14 @@ import {
   BUBBLE_SHAPES,
   FILL_TYPES,
   FONT_FAMILIES,
+  FONT_WEIGHTS,
   TEXT_ALIGNS,
   TEXT_ANIMATIONS,
+  TEXT_CASES,
   TEXT_EFFECTS,
   type FillType,
   type TextAnimation,
+  type TextCase,
   type TextOverlay
 } from '@shared'
 import { useTimelineStore } from '../../stores/timelineStore'
@@ -16,6 +19,9 @@ import { ColorField } from '../../components/ColorField'
 import { SliderField } from '../../components/SliderField'
 import { useSystemFonts } from './useSystemFonts'
 import styles from './ClipInspector.module.css'
+
+/** Font-weight value → i18n label key (light / regular / medium / bold / black). */
+const WEIGHT_KEY: Record<number, string> = { 300: 'light', 400: 'regular', 500: 'medium', 700: 'bold', 900: 'black' }
 
 /** Inspector shown when a text overlay is selected (mutually exclusive with the
  * clip inspector). Edits content + basic style; rendering happens in the compositor. */
@@ -101,7 +107,78 @@ export function TextInspector() {
           >
             {t('textInspector.italic')}
           </button>
+          <button
+            type="button"
+            className={overlay.underline ? `${styles.toggle} ${styles.toggleOn}` : styles.toggle}
+            aria-pressed={overlay.underline}
+            onClick={() => update({ underline: !overlay.underline })}
+          >
+            {t('textInspector.underline')}
+          </button>
+          <button
+            type="button"
+            className={overlay.strikethrough ? `${styles.toggle} ${styles.toggleOn}` : styles.toggle}
+            aria-pressed={overlay.strikethrough}
+            onClick={() => update({ strikethrough: !overlay.strikethrough })}
+          >
+            {t('textInspector.strikethrough')}
+          </button>
         </div>
+
+        <div className={styles.field}>
+          <span className={styles.label}>{t('textInspector.weight')}</span>
+          <div className={styles.effectGrid}>
+            {FONT_WEIGHTS.map((wv) => (
+              <button
+                key={wv}
+                type="button"
+                className={overlay.fontWeight === wv ? `${styles.effectCell} ${styles.toggleOn}` : styles.effectCell}
+                aria-pressed={overlay.fontWeight === wv}
+                // Keep the bold shortcut coherent with the picked weight.
+                onClick={() => update({ fontWeight: wv, bold: wv >= 600 })}
+              >
+                {t(`weight.${WEIGHT_KEY[wv]}`)}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className={styles.field}>
+          <span className={styles.label}>{t('textInspector.textCase')}</span>
+          <div className={styles.alignRow}>
+            {TEXT_CASES.map((tc) => (
+              <button
+                key={tc}
+                type="button"
+                className={overlay.textCase === tc ? `${styles.toggle} ${styles.toggleOn}` : styles.toggle}
+                aria-pressed={overlay.textCase === tc}
+                onClick={() => update({ textCase: tc as TextCase })}
+              >
+                {t(`textCase.${tc}`)}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <label className={styles.field}>
+          <span className={styles.label}>{t('textInspector.letterSpacing')}</span>
+          <SliderField
+            min={-20}
+            max={100}
+            value={Math.round(overlay.letterSpacing * 100)}
+            onChange={(value) => update({ letterSpacing: value / 100 })}
+          />
+        </label>
+
+        <label className={styles.field}>
+          <span className={styles.label}>{t('textInspector.lineSpacing')}</span>
+          <SliderField
+            min={80}
+            max={300}
+            value={Math.round(overlay.lineSpacing * 100)}
+            onChange={(value) => update({ lineSpacing: Math.max(0.8, value / 100) })}
+          />
+        </label>
 
         <label className={styles.field}>
           <span className={styles.label}>{t('textInspector.size')}</span>

@@ -117,6 +117,13 @@ const textOverlaySchema = z.object({
   // Bold defaults true: pre-TX5 text always rendered bold.
   bold: z.boolean().default(true),
   italic: z.boolean().default(false),
+  // Typography (Phase 34) — defaulted so older projects load unchanged.
+  fontWeight: z.number().default(400),
+  letterSpacing: z.number().default(0),
+  lineSpacing: z.number().default(1.2),
+  textCase: z.enum(['none', 'upper', 'lower', 'title']).default('none'),
+  underline: z.boolean().default(false),
+  strikethrough: z.boolean().default(false),
   effect: z
     .enum(['none', 'shadow', 'outline', 'hollow', 'lift', 'splice', 'echo', 'glitch', 'neon'])
     .default('none'),

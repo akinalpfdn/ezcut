@@ -1,4 +1,5 @@
-import type { BubbleShape, FontFamily, TextAlign, TextEffect, TransitionType } from '@shared'
+import type { BubbleShape, FontFamily, TextAlign, TextCase, TextEffect, TransitionType } from '@shared'
+import { applyTextCase, effectiveFontWeight } from '@shared'
 import { ClipVideoSource } from './clipVideoSource'
 
 /** Scale + pan of a clip within the composition (1 = contain-fit, 0 = centred). */
@@ -42,6 +43,12 @@ interface TextDraw {
   align: TextAlign
   bold: boolean
   italic: boolean
+  fontWeight: number
+  letterSpacing: number
+  lineSpacing: number
+  textCase: TextCase
+  underline: boolean
+  strikethrough: boolean
   effect: TextEffect
   effectColor: string
   effectIntensity: number
@@ -398,9 +405,9 @@ function drawTexts(texts: TextDraw[]): void {
   const height = canvas.height
   c.textBaseline = 'middle'
   for (const overlay of texts) {
-    const lines = overlay.text.split('\n')
+    const lines = applyTextCase(overlay.text, overlay.textCase).split('\n')
     const size = Math.max(1, overlay.fontSize * height)
-    const lineHeight = size * 1.2
+    const lineHeight = size * overlay.lineSpacing
     const anchorX = overlay.x * width
     const anchorY = overlay.y * height
 
@@ -412,8 +419,10 @@ function drawTexts(texts: TextDraw[]): void {
     if (overlay.rotation) c.rotate((overlay.rotation * Math.PI) / 180)
     if (overlay.animScale !== 1) c.scale(overlay.animScale, overlay.animScale)
     c.translate(-anchorX, -anchorY)
-    c.font = `${overlay.italic ? 'italic ' : ''}${overlay.bold ? 'bold' : 'normal'} ${size}px ${cssFontFamily(overlay.fontFamily)}`
+    const weight = effectiveFontWeight(overlay.bold, overlay.fontWeight)
+    c.font = `${overlay.italic ? 'italic ' : ''}${weight} ${size}px ${cssFontFamily(overlay.fontFamily)}`
     c.textAlign = overlay.align
+    c.letterSpacing = `${overlay.letterSpacing * size}px`
     c.lineJoin = 'round'
     const firstCenterY = anchorY - ((lines.length - 1) / 2) * lineHeight
     // Whole-block background shape: drawn once behind all lines (measured from the
@@ -524,6 +533,13 @@ function drawTexts(texts: TextDraw[]): void {
         default:
           c.fillStyle = fill
           c.fillText(line, anchorX, cy)
+      }
+      // Underline / strikethrough rules, drawn in the line's fill.
+      if (overlay.underline || overlay.strikethrough) {
+        c.fillStyle = fill
+        const rule = Math.max(1, size * 0.06)
+        if (overlay.underline) c.fillRect(textLeft, cy + size * 0.42, lineW, rule)
+        if (overlay.strikethrough) c.fillRect(textLeft, cy - rule / 2, lineW, rule)
       }
     }
     c.restore()

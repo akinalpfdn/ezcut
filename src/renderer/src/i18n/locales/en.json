@@ -122,6 +122,12 @@
     "align": "Align",
     "bold": "B",
     "italic": "I",
+    "underline": "U",
+    "strikethrough": "S",
+    "weight": "Weight",
+    "textCase": "Case",
+    "letterSpacing": "Letter",
+    "lineSpacing": "Line",
     "opacity": "Opacity",
     "outline": "Outline",
     "outlineWidth": "Width",
@@ -216,6 +222,19 @@
     "tape": "Tape",
     "banner": "Banner",
     "bar": "Bar"
+  },
+  "weight": {
+    "light": "Light",
+    "regular": "Regular",
+    "medium": "Medium",
+    "bold": "Bold",
+    "black": "Black"
+  },
+  "textCase": {
+    "none": "Aa",
+    "upper": "AA",
+    "lower": "aa",
+    "title": "Aa Bb"
   },
   "effect": {
     "none": "None",

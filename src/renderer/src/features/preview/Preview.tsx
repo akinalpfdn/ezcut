@@ -1,6 +1,14 @@
 import { useRef, type PointerEvent as ReactPointerEvent, type WheelEvent as ReactWheelEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import { clipTimelineEnd, getTrackClips, getTracksSorted, type FontFamily, type TextOverlay } from '@shared'
+import {
+  applyTextCase,
+  clipTimelineEnd,
+  effectiveFontWeight,
+  getTrackClips,
+  getTracksSorted,
+  type FontFamily,
+  type TextOverlay
+} from '@shared'
 import { useTimelineStore } from '../../stores/timelineStore'
 import { useTransportStore } from '../../stores/transportStore'
 import { useCanvasCompositor } from './webcodecs/useCanvasCompositor'
@@ -26,12 +34,14 @@ function hitsOverlay(overlay: TextOverlay, nx: number, ny: number, frameW: numbe
   const c = measureContext()
   if (!c) return false
   const sizePx = Math.max(1, overlay.fontSize * frameH)
-  const lineHeightN = (sizePx * 1.2) / frameH
+  const lineHeightN = (sizePx * overlay.lineSpacing) / frameH
   const sizeN = sizePx / frameH
   const padXN = (sizePx * 0.25) / frameW
   const padYN = (sizePx * 0.25) / frameH
-  c.font = `bold ${sizePx}px ${cssFontFamily(overlay.fontFamily)}`
-  const lines = overlay.text.split('\n')
+  const weight = effectiveFontWeight(overlay.bold, overlay.fontWeight)
+  c.font = `${overlay.italic ? 'italic ' : ''}${weight} ${sizePx}px ${cssFontFamily(overlay.fontFamily)}`
+  c.letterSpacing = `${overlay.letterSpacing * sizePx}px`
+  const lines = applyTextCase(overlay.text, overlay.textCase).split('\n')
   const firstCenterYN = overlay.y - ((lines.length - 1) / 2) * lineHeightN
   for (let i = 0; i < lines.length; i += 1) {
     const cyN = firstCenterYN + i * lineHeightN

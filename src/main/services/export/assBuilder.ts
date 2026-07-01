@@ -1,4 +1,5 @@
 import type { TextAnimation, TextOverlay } from '@shared'
+import { applyTextCase, effectiveFontWeight } from '@shared'
 import { resolveFamilyFontName } from './textFont'
 
 // Generates an ASS (Advanced SubStation Alpha) subtitle document for the text
@@ -235,6 +236,7 @@ function bubbleDrawing(shape: TextOverlay['bubble'], w: number, h: number, size:
 export function buildAssDocument(overlays: readonly TextOverlay[], width: number, height: number): string {
   const playRes = [`PlayResX: ${width}`, `PlayResY: ${height}`]
   const events = overlays.flatMap((overlay) => {
+    const sourceText = applyTextCase(overlay.text, overlay.textCase)
     const size = Math.max(1, Math.round(overlay.fontSize * height))
     const x = Math.round(overlay.x * width)
     const y = Math.round(overlay.y * height)
@@ -242,31 +244,33 @@ export function buildAssDocument(overlays: readonly TextOverlay[], width: number
     const fontName = resolveFamilyFontName(overlay.fontFamily)
     const fillAlpha = assAlpha(overlay.opacity)
     const frz = overlay.rotation ? `\\frz${-overlay.rotation}` : '' // ASS rotates CCW; ours is CW
-    // Typewriter-in needs a per-character body, so it bypasses the move/scale tags
-    // (out animation still fades). Everything else uses the standard animation tags.
-    let posTag: string
-    let animTags: string
-    let text: string
-    if (overlay.animationIn === 'typewriter') {
-      posTag = `\\pos(${x},${y})`
-      const outMs = overlay.animationOut !== 'none' ? Math.round(overlay.animOutDuration * 1000) : 0
-      animTags = outMs ? `\\fad(0,${outMs})` : ''
-      text = typewriterText(overlay.text, Math.round(overlay.animInDuration * 1000))
-    } else {
-      const tags = animationTags(overlay, x, y, height)
-      posTag = tags.posTag
-      animTags = tags.animTags
-      text =
-        overlay.fillType !== 'solid'
-          ? gradientText(overlay.text, overlay.gradientFrom, overlay.gradientTo)
-          : escapeAssText(overlay.text)
-    }
-    // Tags shared by every layer of this overlay (position + animation included).
-    const base = `\\an${an}${posTag}\\fn${fontName}\\fs${size}\\1c${assColor(overlay.color)}\\1a${fillAlpha}${overlay.bold ? '\\b1' : '\\b0'}${overlay.italic ? '\\i1' : '\\i0'}${frz}${animTags}`
+    // Typography tags shared by every layer: weight, letter spacing, decorations.
+    const weight = effectiveFontWeight(overlay.bold, overlay.fontWeight)
+    const fsp = Math.round(overlay.letterSpacing * size)
+    const typo = `${fsp ? `\\fsp${fsp}` : ''}${overlay.underline ? '\\u1' : ''}${overlay.strikethrough ? '\\s1' : ''}`
+    const bw = `\\b${weight}${overlay.italic ? '\\i1' : '\\i0'}`
     const start = assTime(overlay.start)
     const end = assTime(overlay.start + overlay.duration)
-    const bi = `${overlay.bold ? '\\b1' : '\\b0'}${overlay.italic ? '\\i1' : '\\i0'}`
     const ec = assColor(overlay.effectColor)
+    const isTypewriter = overlay.animationIn === 'typewriter'
+    const lines = sourceText.split('\n')
+    const lineHeightPx = Math.max(1, Math.round(size * overlay.lineSpacing))
+
+    // Animation tags are shared; typewriter bypasses move/scale (out still fades).
+    let blockPosTag: string
+    let animTags: string
+    if (isTypewriter) {
+      blockPosTag = `\\pos(${x},${y})`
+      const outMs = overlay.animationOut !== 'none' ? Math.round(overlay.animOutDuration * 1000) : 0
+      animTags = outMs ? `\\fad(0,${outMs})` : ''
+    } else {
+      const tags = animationTags(overlay, x, y, height)
+      blockPosTag = tags.posTag
+      animTags = tags.animTags
+    }
+
+    // Per-unit style (position added per unit so multi-line can set line spacing).
+    const styleBase = `\\an${an}\\fn${fontName}\\fs${size}\\1c${assColor(overlay.color)}\\1a${fillAlpha}${bw}${frz}${typo}${animTags}`
     const events: string[] = []
 
     // Background shape behind everything: a \p vector drawing on layer 0. libass
@@ -274,10 +278,8 @@ export function buildAssDocument(overlays: readonly TextOverlay[], width: number
     // canvas preview uses real metrics — a small, documented discrepancy).
     if (overlay.background) {
       const pad = Math.max(1, Math.round(size * overlay.boxPadding))
-      const lines = overlay.text.split('\n')
-      const maxW = Math.max(1, ...lines.map((line) => [...line].length * size * EST_CHAR_W))
-      const lineHeight = size * 1.2
-      const blockH = Math.round((lines.length - 1) * lineHeight + size)
+      const maxW = Math.max(1, ...lines.map((line) => [...line].length * (size * EST_CHAR_W + fsp)))
+      const blockH = Math.round((lines.length - 1) * lineHeightPx + size)
       const boxW = Math.round(maxW + pad * 2)
       const boxH = blockH + pad * 2
       const boxTop = Math.round(y - blockH / 2 - pad)
@@ -298,10 +300,12 @@ export function buildAssDocument(overlays: readonly TextOverlay[], width: number
     const ox = Math.round(Math.cos(rad) * off)
     const oy = Math.round(Math.sin(rad) * off)
     const w = Math.max(1, Math.round(size * overlay.effectIntensity * 0.14))
-    const layer = (lx: number, ly: number, colorAss: string, alphaAss: string): string =>
-      `Dialogue: 1,${start},${end},Plain,,0,0,0,,{\\an${an}\\fn${fontName}\\fs${size}${bi}${frz}${animTags}\\pos(${x + lx},${y + ly})\\1c${colorAss}\\1a${alphaAss}\\bord0\\shad0}${text}`
+    // An offset copy of one text unit at (x+lx, unitY+ly) — used by echo/glitch.
+    const layer = (unitText: string, unitY: number, lx: number, ly: number, colorAss: string, alphaAss: string): string =>
+      `Dialogue: 1,${start},${end},Plain,,0,0,0,,{\\an${an}\\fn${fontName}\\fs${size}${bw}${frz}${typo}${animTags}\\pos(${x + lx},${unitY + ly})\\1c${colorAss}\\1a${alphaAss}\\bord0\\shad0}${unitText}`
 
     let suffix = '\\bord0\\shad0'
+    const extraLayers: ((unitText: string, unitY: number) => string)[] = []
     switch (overlay.effect) {
       case 'shadow':
         suffix = `\\bord0\\shad${Math.max(1, Math.round(overlay.effectIntensity * size * 0.15))}\\4c${ec}\\4a${assAlpha(0.85)}`
@@ -319,12 +323,12 @@ export function buildAssDocument(overlays: readonly TextOverlay[], width: number
         suffix = `\\1a&HFF&\\bord${w}\\3c${assColor(overlay.color)}\\3a${fillAlpha}\\shad${Math.max(1, Math.round(overlay.effectIntensity * size * 0.12))}\\4c${ec}\\4a${assAlpha(0.85)}`
         break
       case 'echo':
-        events.push(layer(ox * 2, oy * 2, ec, assAlpha(0.25)))
-        events.push(layer(ox, oy, ec, assAlpha(0.45)))
+        extraLayers.push((ut, uy) => layer(ut, uy, ox * 2, oy * 2, ec, assAlpha(0.25)))
+        extraLayers.push((ut, uy) => layer(ut, uy, ox, oy, ec, assAlpha(0.45)))
         break
       case 'glitch':
-        events.push(layer(ox, oy, '&H3C00FF&', assAlpha(0.85)))
-        events.push(layer(-ox, -oy, '&HFFE600&', assAlpha(0.85)))
+        extraLayers.push((ut, uy) => layer(ut, uy, ox, oy, '&H3C00FF&', assAlpha(0.85)))
+        extraLayers.push((ut, uy) => layer(ut, uy, -ox, -oy, '&HFFE600&', assAlpha(0.85)))
         break
       case 'neon':
         suffix = `\\bord${Math.max(1, Math.round(size * 0.05))}\\3c${ec}\\3a${fillAlpha}\\blur${Math.max(1, Math.round(overlay.effectIntensity * size * 0.15))}\\shad0`
@@ -333,7 +337,29 @@ export function buildAssDocument(overlays: readonly TextOverlay[], width: number
         suffix = '\\bord0\\shad0'
     }
 
-    events.push(`Dialogue: 2,${start},${end},Plain,,0,0,0,,{${base}${suffix}}${text}`)
+    // Emit one text "unit" (its effect layers + the main event) at baseline unitY.
+    const emitUnit = (unitText: string, unitY: number, posTagU: string): void => {
+      for (const mk of extraLayers) events.push(mk(unitText, unitY))
+      events.push(`Dialogue: 2,${start},${end},Plain,,0,0,0,,{${posTagU}${styleBase}${suffix}}${unitText}`)
+    }
+
+    const bodyOf = (line: string): string =>
+      overlay.fillType !== 'solid' ? gradientText(line, overlay.gradientFrom, overlay.gradientTo) : escapeAssText(line)
+
+    if (isTypewriter) {
+      // Typewriter is inherently one \N body; it uses libass's default line spacing.
+      emitUnit(typewriterText(sourceText, Math.round(overlay.animInDuration * 1000)), y, blockPosTag)
+    } else if (lines.length <= 1) {
+      emitUnit(bodyOf(sourceText), y, blockPosTag)
+    } else {
+      // Multi-line: one \pos event per line so line spacing is honoured (ASS has no
+      // line-spacing tag). Slide-in is dropped here; fade/scale still apply.
+      const firstCy = y - Math.round(((lines.length - 1) / 2) * lineHeightPx)
+      lines.forEach((line, i) => {
+        const cy = firstCy + i * lineHeightPx
+        emitUnit(bodyOf(line), cy, `\\pos(${x},${cy})`)
+      })
+    }
     return events
   })
   return [...HEADER, ...playRes, '', ...STYLES, '', ...EVENTS_FORMAT, ...events, ''].join('\n')

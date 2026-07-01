@@ -122,6 +122,12 @@
     "align": "Hizala",
     "bold": "B",
     "italic": "I",
+    "underline": "U",
+    "strikethrough": "S",
+    "weight": "Kalınlık",
+    "textCase": "Harf",
+    "letterSpacing": "Harf ar.",
+    "lineSpacing": "Satır ar.",
     "opacity": "Opaklık",
     "outline": "Kenarlık",
     "outlineWidth": "Kalınlık",
@@ -216,6 +222,19 @@
     "tape": "Bant",
     "banner": "Şerit",
     "bar": "Çubuk"
+  },
+  "weight": {
+    "light": "İnce",
+    "regular": "Normal",
+    "medium": "Orta",
+    "bold": "Kalın",
+    "black": "Siyah"
+  },
+  "textCase": {
+    "none": "Aa",
+    "upper": "AA",
+    "lower": "aa",
+    "title": "Aa Bb"
   },
   "effect": {
     "none": "Yok",

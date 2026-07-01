@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import {
+  applyTextCase,
   canMerge,
   clipTimelineDuration,
   clipTimelineEnd,
+  effectiveFontWeight,
   getTrackClips,
   getTracksSorted,
   isClipAudible,
@@ -280,5 +282,33 @@ describe('trackKindForMedia', () => {
   it('should place video and images on a video track', () => {
     expect(trackKindForMedia('video')).toBe('video')
     expect(trackKindForMedia('image')).toBe('video')
+  })
+})
+
+describe('applyTextCase', () => {
+  it('should uppercase and lowercase', () => {
+    expect(applyTextCase('Hello World', 'upper')).toBe('HELLO WORLD')
+    expect(applyTextCase('Hello World', 'lower')).toBe('hello world')
+  })
+
+  it('should title-case each word', () => {
+    expect(applyTextCase('hello wORLD', 'title')).toBe('Hello World')
+  })
+
+  it('should leave text unchanged and preserve newlines for none', () => {
+    expect(applyTextCase('a\nb', 'none')).toBe('a\nb')
+    expect(applyTextCase('a\nb', 'upper')).toBe('A\nB')
+  })
+})
+
+describe('effectiveFontWeight', () => {
+  it('should force at least 700 when bold', () => {
+    expect(effectiveFontWeight(true, 300)).toBe(700)
+    expect(effectiveFontWeight(true, 900)).toBe(900)
+  })
+
+  it('should pass the picked weight through when not bold', () => {
+    expect(effectiveFontWeight(false, 300)).toBe(300)
+    expect(effectiveFontWeight(false, 400)).toBe(400)
   })
 })
